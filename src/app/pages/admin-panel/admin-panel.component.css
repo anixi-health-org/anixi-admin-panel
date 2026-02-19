@@ -1,0 +1,19 @@
+nz-header {
+    background-color: white;
+}
+
+nz-sider {
+    background-color: #101219;
+    border: 1px solid transparent;
+    height: 100vh;
+}
+
+.active-link {
+    color: #2dd3b1
+}
+
+.menu {
+    li:hover {
+        color: #2dd3b1;
+    }
+}

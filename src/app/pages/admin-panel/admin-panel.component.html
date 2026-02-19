@@ -1,0 +1,78 @@
+<nz-layout>
+    @if(!isCollapsed) {
+        <nz-sider [nzWidth]="250" 
+        nzBreakpoint="md"
+        (nzCollapsedChange)="onChange($event)" 
+        [nzCollapsible]="true"
+        [nzTrigger]="null">
+        <div class="p-2">
+            <div class="flex flex-row gap-4">
+                <nz-avatar nzText="A" nzSize="large"
+                style="color: white; background-color: #2dd3b1; font-size: 18px; 
+                font-weight: bolder;"></nz-avatar>
+                <p class="text-white font-black text-lg relative top-1">Anixi</p>
+            </div>
+            <div class="border-t-1 border-gray-600 w-full mt-2"></div>
+            <div class="mt-4">
+                <ul class="menu text-gray-400 pl-2">
+                    @for(menu of menuIcons; track menu.name) {
+                        <li class="hover:text-green-300 cursor-pointer mt-2"
+                        [routerLink]="menu.path"
+                        [routerLinkActive]="'active-link'"
+                        [routerLinkActiveOptions]="{exact: true}"
+                        >
+                        <span class="flex flex-row gap-4">
+                            <lucide-icon [name]="menu.icon"></lucide-icon>
+                            <p class="text-sm font-medium">{{menu.name}}</p>
+                        </span>
+                        </li>
+                    }
+                </ul>
+            </div>
+        </div>
+        </nz-sider>
+    }
+    @else {
+         <nz-sider [nzWidth]="250" 
+        nzBreakpoint="md"
+        (nzCollapsedChange)="onChange($event)" 
+        [nzCollapsible]="true"
+        [nzTrigger]="null">
+        <div class="p-2">
+            <div class="flex justify-center items-center">
+                <nz-avatar nzText="A" nzSize="large"
+                style="color: white; background-color: #2dd3b1; font-size: 18px; 
+                font-weight: bolder;"></nz-avatar>
+                <!-- <p class="text-white font-black text-lg relative top-1">Anixi Admin</p> -->
+            </div>
+            <div class="flex mt-4 justify-center items-center ">
+                <ul class="menu flex flex-col gap-2 text-gray-400">
+                    @for(menu of menuIcons; track menu.name) {
+                        <li class="cursor-pointer mt-4"
+                        [routerLink]="menu.path"
+                        [routerLinkActive]="'active-link'"
+                        [routerLinkActiveOptions]="{exact: true}"
+                        >
+                            <lucide-icon [name]="menu.icon"></lucide-icon> 
+                        </li>
+                    }
+                </ul>
+            </div>
+        </div>
+        </nz-sider>
+    }
+    <nz-layout>
+        <div class="flex flex-row justify-end bg-white h-[70px] gap-4 p-4">
+            <div class="flex flex-col">
+                <h1 class="h-[10px]">Admin User</h1>
+                <p>super Admin</p>
+            </div>
+            <nz-avatar nzText="AU" nzSize="large"
+            style="color: white; background-color: #2dd3b1; 
+            font-weight: bolder; font-size: 18px;"></nz-avatar>
+        </div>
+        <nz-content>
+            <router-outlet></router-outlet>
+        </nz-content>
+    </nz-layout>
+</nz-layout>
