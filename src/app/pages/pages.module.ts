@@ -10,8 +10,7 @@ import { NzLayoutModule } from 'ng-zorro-antd/layout';
 import {NzIconModule} from 'ng-zorro-antd/icon';
 import {LayoutDashboard, LucideAngularModule, Stethoscope} from 'lucide-angular';
 import {NzAvatarModule} from 'ng-zorro-antd/avatar';
-
-
+import { FormsModule, ReactiveFormsModule } from '@angular/forms'
 
 
 
@@ -28,6 +27,8 @@ import {NzAvatarModule} from 'ng-zorro-antd/avatar';
     NzLayoutModule,
     NzIconModule,
     NzAvatarModule,
+    FormsModule,
+    ReactiveFormsModule,
     LucideAngularModule.pick({Stethoscope, LayoutDashboard}),
   ]
 })

@@ -8,6 +8,10 @@ nz-sider {
     height: 100vh;
 }
 
+nz-content {
+    background-color: #f9fafb;
+}
+
 .active-link {
     color: #2dd3b1
 }
