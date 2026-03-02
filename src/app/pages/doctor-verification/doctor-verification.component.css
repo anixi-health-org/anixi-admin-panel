@@ -23,6 +23,9 @@
     border-radius: 12px;
     background-color: var(--color-gray-200);
     padding: 0.5rem;
+    @media (max-width:598px) {
+        width: 300px;
+    }
 }
 
 .custom-input {
@@ -46,6 +49,9 @@
     transition: all 0.3s ease;
     font-weight: 600;
     color: var(--color-gray-500);
+    @media (max-width: 598px) {
+        font-size: 8px;
+    }
 }
 
 .custom-input input[type="radio"]:checked + label {
@@ -59,4 +65,8 @@
     color: #64748b;
 }
 
+.doctor-item.active {
+    background-color: #f5faf9;
+    border: 1px solid #cfe9e2;
+}
 

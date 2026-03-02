@@ -10,9 +10,9 @@ const routes: Routes = [
   {path: '', redirectTo: 'login', pathMatch: 'full'},
   {path:'login', component: LoginComponent},
   {path: 'admin-panel', component: AdminPanelComponent,  children: [
-    {path:'', redirectTo: 'Dashboard', pathMatch: 'full'},
-    {path: 'Dashboard', component: DashboardComponent},
-    {path: 'Doctor-verification', component: DoctorVerificationComponent}
+    {path:'', redirectTo: 'dashboard', pathMatch: 'full'},
+    {path: 'dashboard', component: DashboardComponent},
+    {path: 'doctor-verification', component: DoctorVerificationComponent}
   ]}
 ];
 

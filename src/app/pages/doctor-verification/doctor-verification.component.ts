@@ -1,38 +1,23 @@
 import { Component, OnInit } from '@angular/core';
 import { FormControl } from '@angular/forms';
+import { UtilFunctions } from '../../../../const';
+import { map, Observable } from 'rxjs';
+import { FirestoreService } from '../../services/firestore.service';
 
 const statCards = [
-  {'label': 'Pending Review', 'value': '4', 'color': '#f69e23'},
-  {'label': 'Approved',  'value': '2', 'color': '#2cab6f'},
-  {'label': 'Rejected',  'value': '1', 'color': '#dc2928'},
-  {'label': 'Suspended', 'value': '1', 'color': '#66758a'}
+  {'label': 'Pending Review', 'status': 'pending', 'color': '#f69e23'},
+  {'label': 'Approved',  'status': 'approved','color': '#2cab6f'},
+  {'label': 'Rejected', 'status': 'rejected', 'color': '#dc2928'},
+  {'label': 'Suspended', 'status': 'suspended', 'color': '#66758a'}
 ]
 const customInput = [
-  {'label': 'All (8)', 'value': 'all'},
-  {'label': 'Pending (4)', 'value': 'pending'},
-  {'label': 'Approved (2)', 'value': 'approved'},
-  {'label': 'Rejected (1)', 'value': 'rejected'},
-  {'label': 'Suspended (1)', 'value': 'suspended'},
+  {'label': 'All', 'value': 'all'},
+  {'label': 'Pending', 'value': 'pending'},
+  {'label': 'Approved', 'value': 'approved'},
+  {'label': 'Rejected', 'value': 'rejected'},
+  {'label': 'Suspended', 'value': 'suspended'},
 ]
 
-const doctorsList = [
-  {'fullName': 'Sarah Molefe', 'speciality': 'General' , 'city': 'Johannesburg', 
-    'phoneNumber': '0953434344'},
-  {'fullName': 'Thabo Nkosi', 'speciality': 'Cardiology' , 'city': 'Durban', 
-    'phoneNumber': '0953434344'},
-  {'fullName': 'Amina Osei', 'speciality': 'Pediatrics' , 'city': 'Pretoria', 
-    'phoneNumber': '0953434344'},
-  {'fullName': 'James van der berg', 'speciality': 'Psychiatry' , 'city': 'Pretoria', 
-    'phoneNumber': '0953434344'},
-  {'fullName': 'Fatima Abdi', 'speciality': 'Dermatology' , 'city': 'Bloemfontein', 
-    'phoneNumber': '0953434344'},
-  {'fullName': 'Peter Mahlangu', 'speciality': 'Oncology' , 'city': 'Polokwane', 
-    'phoneNumber': '0953434344'},
-  {'fullName': 'Lindiwe Dlamini', 'speciality': 'Gynecology' , 'city': 'East London', 
-    'phoneNumber': '0953434344'},
-  {'fullName': 'Sipho Zulu', 'speciality': 'Neurology' , 'city': 'Kimberly', 
-    'phoneNumber': '0953434344'},
-]
 
 @Component({
   selector: 'app-doctor-verification',
@@ -44,11 +29,90 @@ const doctorsList = [
 export class DoctorVerificationComponent implements OnInit{
   statCards = statCards;
   customInput = customInput;
-  doctorsList = doctorsList;
+  doctorsList!: any[];
   verificationStatus! : FormControl;
+  isClicked = false;
+  selectedDoctor! : string
+  doctorId!: string;
+  doctorList$!: Observable<any[]>;
+  totalCount$!: Observable<number>;
+  approvedCount$!: Observable<number>;
+  pendingCount$!: Observable<number>;
+  rejectedCount$!:Observable<number>;
+  suspendedCount$!:Observable<number>;
+
+  constructor(public utilFunctions: UtilFunctions, 
+    private fireStoreService: FirestoreService,
+
+  ) {}
   
-  ngOnInit(): void {
+  async ngOnInit() {
     this.verificationStatus = new FormControl('all'); 
+    // this.doctorList$ = this.fireStoreService.getAllDoctors();
+    this.doctorList$ = this.fireStoreService.getDoctors();
+    // this.doctorList$.subscribe(doctors => {
+    //   this.doctorsList = doctors;
+    // })
+    this.totalCount$ = this.doctorList$.pipe(
+      map(doctors => doctors.length)
+    );
+
+    this.approvedCount$ = this.doctorList$.pipe(
+      map(doctors => 
+        doctors.filter(d => d.verificationStatus === 'approved').length
+      )
+    );
+    this.pendingCount$ = this.doctorList$.pipe(
+      map(doctors => 
+        doctors.filter(d => d.verificationStatus === 'pending').length
+      )
+    );
+    this.rejectedCount$ = this.doctorList$.pipe(
+      map(doctors => 
+        doctors.filter(d => d.verificationStatus === 'rejected').length
+      )
+    );
+    this.suspendedCount$ = this.doctorList$.pipe(
+      map(doctors => 
+        doctors.filter(d => d.verificationStatus === 'suspended').length
+      )
+    );
   }
+
+  getStatusValue() {
+    return this.verificationStatus.value;
+  }
+
+  setSelectedDoctor(doctor:any) {
+    this.selectedDoctor = doctor.fullName;
+    this.doctorId = doctor.id;
+    this.isClicked = true;
+    window.scroll({
+      behavior: 'smooth',
+      top: 0,
+      left: 0
+    });
+  }
+
+  getCount(status:string): Observable<number> {
+    let count$: Observable<number>;
+    switch(status) {
+      case 'approved':
+        count$ = this.approvedCount$;
+        break;
+      case 'rejected':
+        count$ =  this.rejectedCount$;
+        break;
+      case 'suspended':
+        count$ = this.suspendedCount$;
+        break;
+      default: 
+        count$ = this.pendingCount$;
+    }
+    return count$;
+  }
+
+ 
+
 
 }

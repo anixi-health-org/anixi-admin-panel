@@ -10,12 +10,12 @@
               border-transparent shadow-lg rounded-lg transition-all duration-300
                ease-in-out hover:scale-105 hover:border-1 hover:border-green-200">
                  <p class="text-xs font-medium uppercase tracking-wider text-gray-400">{{card.label}}</p>
-                 <p class="font-bold text-2xl" [ngStyle]="{'color': card.color}">{{card.value}}</p>
+                 <p class="font-bold text-2xl" [ngStyle]="{'color': card.color}">{{getCount(card.status) | async}}</p>
              </div>
          }
     </div>
     <form>
-        <div class="flex md:flex-row flex-col mt-6 gap-2">
+        <div class="flex min-[980px]:flex-row flex-col mt-6 gap-2">
             <div class="bg-white border-transparent shadow-lg rounded-lg p-6 w-full">
                 <div class="flex flex-row justify-between">
                     <h1 class="text-base" >Doctor Applications</h1>
@@ -28,29 +28,104 @@
                     @for(input of customInput; track input.label) {
                         <div class="custom-input">
                             <input type="radio" [id]="input.value" [value]="input.value"  [formControl]="verificationStatus" checked>
-                            <label [for]="input.value">{{input.label}}</label>
+                            <label [for]="input.value">{{input.label}} ({{input.value === 'all'  ? (totalCount$ | async) : (getCount(input.value) | async)}})</label>
                         </div>
                     }
-                    <!-- <div class="custom-input">
-                        <input type="radio" id="pending" value="pending" [formControl]="verificationStatus">
-                        <label for="pending">Pending (4)</label>
-                    </div>
-                    <div class="custom-input">
-                        <input type="radio" id="approved" value="approved" [formControl]="verificationStatus">
-                        <label for="approved">Approved (6)</label>
-                    </div>
-                    <div class="custom-input">
-                        <input type="radio" id="rejected" value="rejected" [formControl]="verificationStatus">
-                        <label for="rejected">Rejected (1)</label>
-                    </div>
-                    <div class="custom-input">
-                        <input type="radio" id="suspended" value="suspended" [formControl]="verificationStatus">
-                        <label for="suspended">Suspended (3)</label>
-                    </div> -->
+                </div>
+                <div class="m-4">
+                      @if(getStatusValue() === 'all') {
+                            @for(doctor of doctorList$ | async; track doctor.fullName) {
+                                <div class="doctor-item hover:bg-gray-100 h-[80px] w-full rounded-lg p-2 cursor-pointer mb-2"
+                                [class.active]="selectedDoctor === doctor.fullName"
+                                (click)="setSelectedDoctor(doctor)">
+                                <div class="flex flex-row justify-between mt-4">
+                                    <!-- Doctor info  -->
+                                    <div class="flex flex-row gap-2">
+                                        <p class="text-sm font-semibold tracking-wider h-[10px]">Dr. {{doctor.fullName}}</p>
+                                        <!-- status -->
+                                        <div class="flex flex-row w-auto gap-1 text-center pl-2 pr-2 rounded-lg h-[20px] border-[0.4px]" 
+                                            [ngStyle]="{'background-color': utilFunctions.getValuebyStatus(doctor.verificationStatus).background,
+                                                'border-color': utilFunctions.getValuebyStatus(doctor.verificationStatus).color
+                                            }" >
+                                            <nz-icon 
+                                                [nzType]="utilFunctions.getValuebyStatus(doctor.verificationStatus).icon" 
+                                                nzTheme="outline" 
+                                                [ngStyle]="{'color': utilFunctions.getValuebyStatus(doctor.verificationStatus).color}">
+                                            </nz-icon>
+                                            <p class="text-[10px] font-bold relative top-[0.5px]" 
+                                                [ngStyle]="{'color': utilFunctions.getValuebyStatus(doctor.verificationStatus).color}">
+                                            {{utilFunctions.upperCaseFirstLetter(doctor.verificationStatus)}}</p>
+                                        </div>
+                                    </div>
+                                    <!-- Icon right arrow -->
+                                        <div>
+                                        <nz-icon nzType="right" nzTheme="outline"></nz-icon>
+                                        </div>
+                                </div>
+                                <!-- Speciality -->
+                                <p class="font-normal text-xs text-gray-500">
+                                    {{doctor.medicalSpecialty}} &#183; {{doctor.practiceCity}} &#183; 
+                                    {{doctor.phoneNumber}}
+                                </p>
+                            </div>
+                        }
+                    }
+
+                    @for(doctor of doctorList$ | async; track doctor.fullName) {
+                        @if (doctor.verificationStatus === getStatusValue()) {
+                            <div class="doctor-item hover:bg-gray-100 h-[80px] w-full rounded-lg p-2 cursor-pointer mb-2"
+                            [class.active]="selectedDoctor === doctor.fullName"
+                            (click)="setSelectedDoctor(doctor)">
+                            <div class="flex flex-row justify-between mt-4">
+                                <!-- Doctor info  -->
+                                <div class="flex flex-row gap-2">
+                                    <p class="text-sm font-semibold tracking-wider h-[10px]">Dr. {{doctor.fullName}}</p>
+                                    <!-- status -->
+                                    <div class="flex flex-row w-auto gap-1 text-center pl-2 pr-2 rounded-lg h-[20px] border-[0.4px]" 
+                                        [ngStyle]="{'background-color': utilFunctions.getValuebyStatus(doctor.verificationStatus).background,
+                                            'border-color': utilFunctions.getValuebyStatus(doctor.verificationStatus).color
+                                        }" >
+                                        <nz-icon 
+                                            [nzType]="utilFunctions.getValuebyStatus(doctor.verificationStatus).icon" 
+                                            nzTheme="outline" 
+                                            [ngStyle]="{'color': utilFunctions.getValuebyStatus(doctor.verificationStatus).color}">
+                                        </nz-icon>
+                                        <p class="text-[10px] font-bold relative top-[0.5px]" 
+                                            [ngStyle]="{'color': utilFunctions.getValuebyStatus(doctor.verificationStatus).color}">
+                                        {{utilFunctions.upperCaseFirstLetter(doctor.verificationStatus)}}</p>
+                                    </div>
+                                </div>
+                                <!-- Icon right arrow -->
+                                    <div>
+                                    <nz-icon nzType="right" nzTheme="outline"></nz-icon>
+                                    </div>
+                            </div>
+                            <!-- Speciality -->
+                            <p class="font-normal text-xs text-gray-500">
+                                {{doctor.medicalSpecialty}} &#183; {{doctor.practiceCity}} &#183; 
+                                {{doctor.phoneNumber}}
+                            </p>
+                        </div>
+                        }
+                    }
+                  
                 </div>
             </div>
-            <div class="md:w-[500px] w-full bg-white border-transparent shadow-lg rounded-lg p-4">
-                
+            <div class="min-[980px]:w-[500px] h-[450px] w-full bg-white border-transparent shadow-lg rounded-lg p-4">
+                @if (!isClicked) {
+                    <div>
+                        <p class="text-base font-medium">Applications Details</p>
+                    </div>
+                    <div class="empty">
+                        <div class="flex flex-col items-center relative top-4">
+                            <lucide-icon name="file-text" class="w-8 h-8 text-gray-300"></lucide-icon>
+                            <p class="relative top-2 text-gray-500">Select a doctor to view details</p>
+                        </div>
+                    </div>
+                }
+                @if (doctorId) {
+                    <app-application-details [id]="doctorId"></app-application-details>
+                }
             </div>
         </div>
     </form>

@@ -1,0 +1,42 @@
+nz-button, .approved {
+    background-color: #21a086;
+    border-color: #21a086;
+    border-radius: 9px;
+    text-align: center;
+    height: 40px;
+    padding-left: 20px;
+    padding-right: 20px;
+}
+
+nz-button, .rejected {
+    background-color: #fad7d761;
+    font-weight: 600;
+    border-color: #dc2928;
+    border-radius: 9px;
+    color: #dc2928;
+    text-align: center;
+    height: 40px;
+    padding-left: 20px;
+    padding-right: 20px;
+}
+
+nz-button, .suspended {
+    background-color: #fad7d761;
+    font-weight: 600;
+    border-color: #dc2928;
+    border-radius: 9px;
+    color: #dc2928;
+    text-align: center;
+    height: 40px;
+    padding-left: 20px;
+    padding-right: 20px;
+}
+
+nz-button, .cancel-suspension {
+    background-color: var(--color-yellow-500);
+    border-color: var(--color-yellow-500);
+    height: 50px;
+    border-radius: 9px;
+    text-align: center;
+    font-weight: 600;
+}

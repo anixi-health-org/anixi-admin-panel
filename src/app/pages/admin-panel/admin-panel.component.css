@@ -5,11 +5,17 @@ nz-header {
 nz-sider {
     background-color: #101219;
     border: 1px solid transparent;
-    height: 100vh;
+    position: fixed;
+    height: 100dvh;
+    
 }
 
 nz-content {
     background-color: #f9fafb;
+    padding-left: 250px;
+    @media (max-width: 767px) {
+        padding-left: 100px;
+    }
 }
 
 .active-link {
@@ -21,3 +27,4 @@ nz-content {
         color: #2dd3b1;
     }
 }
+

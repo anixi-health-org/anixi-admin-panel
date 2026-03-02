@@ -8,9 +8,11 @@ import { DoctorVerificationComponent } from './doctor-verification/doctor-verifi
 import { DashboardComponent } from './dashboard/dashboard.component';
 import { NzLayoutModule } from 'ng-zorro-antd/layout';
 import {NzIconModule} from 'ng-zorro-antd/icon';
-import {LayoutDashboard, LucideAngularModule, Stethoscope} from 'lucide-angular';
+import {Eye, FileText, LayoutDashboard, LucideAngularModule, Stethoscope} from 'lucide-angular';
 import {NzAvatarModule} from 'ng-zorro-antd/avatar';
-import { FormsModule, ReactiveFormsModule } from '@angular/forms'
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { ApplicationDetailsComponent } from './application-details/application-details.component'
+import { NzButtonComponent } from "ng-zorro-antd/button";
 
 
 
@@ -19,7 +21,8 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms'
     AdminPanelComponent,
     LoginComponent,
     DoctorVerificationComponent,
-    DashboardComponent
+    DashboardComponent,
+    ApplicationDetailsComponent
   ],
   imports: [
     CommonModule,
@@ -29,7 +32,8 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms'
     NzAvatarModule,
     FormsModule,
     ReactiveFormsModule,
-    LucideAngularModule.pick({Stethoscope, LayoutDashboard}),
-  ]
+    LucideAngularModule.pick({ Stethoscope, LayoutDashboard, FileText, Eye }),
+    NzButtonComponent
+]
 })
 export class PagesModule { }

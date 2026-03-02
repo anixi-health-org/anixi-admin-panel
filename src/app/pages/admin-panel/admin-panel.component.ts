@@ -2,9 +2,9 @@ import { Component } from '@angular/core';
 
 const menuIcons = [
   {'name': 'Dashboard', 'icon': 'layout-dashboard', 
-    'path':'./Dashboard'},
+    'path':'./dashboard'},
   {'name': 'Doctor verification', 'icon': 'stethoscope', 
-    'path': './Doctor-verification'},
+    'path': './doctor-verification'},
 ] 
 
 @Component({

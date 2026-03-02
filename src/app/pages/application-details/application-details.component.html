@@ -1,0 +1,78 @@
+<div>
+    <p class="text-base font-medium">Applications Details</p>
+</div>
+<div class="flex flex-col">
+    <p class="text-lg font-medium h-[14px]">Dr.{{(details$ | async)?.fullName}}</p>
+    <div class="rounded-lg text-center border-1 w-20 h-[20px]" [ngStyle]="{'background-color':utilFunctions.getValuebyStatus((details$ | async)?.verificationStatus).background,
+        'border-color': utilFunctions.getValuebyStatus((details$ | async)?.verificationStatus).color
+    }">
+        <p class="text-xs font-medium" [ngStyle]="{'color': utilFunctions.getValuebyStatus((details$ | async)?.verificationStatus).color}">{{utilFunctions.upperCaseFirstLetter((details$ | async)?.verificationStatus)}}</p>
+    </div>
+    <div class="flex flex-row mt-4 justify-between">
+        <p class="text-sm text-gray-500 font-normal">Phone number</p>
+        <p class="text-sm font-semibold">{{(details$ | async)?.phoneNumber}}</p>
+    </div>
+    <div class="flex flex-row justify-between">
+        <p class="text-sm text-gray-500 font-normal">Speciality</p>
+        <p class="text-sm font-semibold">{{(details$ | async)?.medicalSpecialty}}</p>
+    </div>
+    <div class="flex flex-row justify-between">
+        <p class="text-sm text-gray-500 font-normal">Location</p>
+        <p class="text-sm font-semibold">{{(details$ | async)?.practiceCity}}</p>
+    </div>
+    <div class="flex flex-row justify-between">
+        <p class="text-sm text-gray-500 font-normal">Submitted</p>
+        <p class="text-sm font-semibold">2026-02-10</p>
+    </div>
+    <div class="text-sm text-gray-500 font-medium uppercase tracking-wider">Documents</div>
+    
+    @if ((details$ | async)?.hpscaCertificateUrl || (details$ | async)?.hpcsaCertificateUrl) {
+        <a class="bg-gray-100 rounded-lg p-2 mt-2 h-[30px]" 
+            [href]="(details$ | async)?.hpcsaCertificateUrl ? (details$ | async)?.hpcsaCertificateUrl 
+            : (details$ | async)?.hpscaCertificateUrl"
+        target="_blank" rel="noopener noreferrer">
+        <div class="flex flex-row justify-between gap-3">
+            <div class="flex flex-row gap-2">
+                <lucide-icon name="file-text" class="w-4 h-4 text-gray-400"></lucide-icon>
+                <p class="text-xs font-medium text-gray-600">HPCSA Certificate</p>
+            </div>
+            <lucide-icon name="eye" class="w-4 h-4 text-black"></lucide-icon>
+        </div>
+    </a>
+    }
+
+    @if ((details$ | async)?.verificationStatus === 'pending') {
+        <div class="flex flex-row justify-between">
+            <div class="flex flex-row p-2 mt-8">
+                <button nz-button nzType="primary" class="approved" 
+                (click)="updateDoctorStatus(id, 'approved', 'approve')">
+                <nz-icon nzType="check-circle" class="text-white"
+                    nzTheme="outline"></nz-icon> 
+                    Approved
+                </button>
+            </div>
+            <div class="flex flex-row p-2 mt-8">
+                <button nz-button nzType="primary" class="rejected"
+                (click)="updateDoctorStatus(id, 'rejected', 'reject')">
+                <nz-icon nzType="close-circle" class="text-white"
+                    nzTheme="outline"></nz-icon> 
+                    Rejected
+                </button>
+            </div>
+        </div>
+    }
+    @if ((details$ | async)?.verificationStatus === 'approved') {
+        <button nz-button nzType="primary" class="suspended relative top-8" 
+        (click)="updateDoctorStatus(id, 'suspended', 'suspend')">
+            <nz-icon nzType="warning" nzTheme="outline"></nz-icon>
+            Suspended
+        </button>
+    }
+    @if ((details$ | async)?.verificationStatus === 'suspended') {
+        <button nz-button nzType="primary" class="cancel-suspension relative top-8" 
+        (click)="updateDoctorStatus(id, 'approved', 'cancel suspension')">
+            <nz-icon nzType="warning" nzTheme="outline"></nz-icon>
+            Cancel Suspension
+        </button>
+    }
+</div>
