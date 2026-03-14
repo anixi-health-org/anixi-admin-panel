@@ -16,6 +16,10 @@ nz-content {
     @media (max-width: 767px) {
         padding-left: 100px;
     }
+
+    @media (max-width: 430px) {
+        padding-left: 82px;
+    }
 }
 
 .active-link {

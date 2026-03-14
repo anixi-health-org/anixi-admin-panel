@@ -1,4 +1,4 @@
-<div class="p-4 mt-4">
+<div class="sm:p-4 p-0 mt-4">
     <div class="flex flex-col">
         <p class="text-2xl font-semibold h-[10px]">Doctor Verification</p>
         <p class="text-gray-500">Review, verify, and manage doctors applications.</p>
@@ -6,7 +6,7 @@
     <div class="grid md:grid-cols-4 grid-cols-2 gap-4">
         <!-- card -->
          @for(card of statCards; track card.label) {
-             <div class="max-w-sm h-[90px] p-4 bg-white
+             <div class="max-w-sm sm:h-[90px] h-[80px] sm:p-4 p-2 bg-white
               border-transparent shadow-lg rounded-lg transition-all duration-300
                ease-in-out hover:scale-105 hover:border-1 hover:border-green-200">
                  <p class="text-xs font-medium uppercase tracking-wider text-gray-400">{{card.label}}</p>
@@ -16,7 +16,7 @@
     </div>
     <form>
         <div class="flex min-[980px]:flex-row flex-col mt-6 gap-2">
-            <div class="bg-white border-transparent shadow-lg rounded-lg p-6 w-full">
+            <div class="bg-white border-transparent shadow-lg rounded-lg sm:p-6 p-2 w-full">
                 <div class="flex flex-row justify-between">
                     <h1 class="text-base" >Doctor Applications</h1>
                     <span class="search">
@@ -35,15 +35,15 @@
                 <div class="m-4">
                       @if(getStatusValue() === 'all') {
                             @for(doctor of doctorList$ | async; track doctor.fullName) {
-                                <div class="doctor-item hover:bg-gray-100 h-[80px] w-full rounded-lg p-2 cursor-pointer mb-2"
+                                <div class="doctor-item hover:bg-gray-100 sm:h-[80px] h-[100px] w-full rounded-lg p-2 cursor-pointer mb-2"
                                 [class.active]="selectedDoctor === doctor.fullName"
                                 (click)="setSelectedDoctor(doctor)">
                                 <div class="flex flex-row justify-between mt-4">
                                     <!-- Doctor info  -->
                                     <div class="flex flex-row gap-2">
-                                        <p class="text-sm font-semibold tracking-wider h-[10px]">Dr. {{doctor.fullName}}</p>
+                                        <p class="text-sm font-semibold tracking-wider sm:h-[10px] h-[25px]">Dr. {{doctor.fullName}}</p>
                                         <!-- status -->
-                                        <div class="flex flex-row w-auto gap-1 text-center pl-2 pr-2 rounded-lg h-[20px] border-[0.4px]" 
+                                        <div class="flex flex-row w-auto gap-1 text-center sm:pl-2 pl-1 sm:pr-2  rounded-lg sm:h-[20px] h-[18px] border-[0.4px]" 
                                             [ngStyle]="{'background-color': utilFunctions.getValuebyStatus(doctor.verificationStatus).background,
                                                 'border-color': utilFunctions.getValuebyStatus(doctor.verificationStatus).color
                                             }" >
@@ -52,9 +52,9 @@
                                                 nzTheme="outline" 
                                                 [ngStyle]="{'color': utilFunctions.getValuebyStatus(doctor.verificationStatus).color}">
                                             </nz-icon>
-                                            <p class="text-[10px] font-bold relative top-[0.5px]" 
+                                            <p class="text-[10px]  font-bold relative top-[0.5px]" 
                                                 [ngStyle]="{'color': utilFunctions.getValuebyStatus(doctor.verificationStatus).color}">
-                                            {{utilFunctions.upperCaseFirstLetter(doctor.verificationStatus)}}</p>
+                                            {{utilFunctions.upperCaseFirstLetter(doctor?.verificationStatus)}}</p>
                                         </div>
                                     </div>
                                     <!-- Icon right arrow -->
@@ -73,7 +73,7 @@
 
                     @for(doctor of doctorList$ | async; track doctor.fullName) {
                         @if (doctor.verificationStatus === getStatusValue()) {
-                            <div class="doctor-item hover:bg-gray-100 h-[80px] w-full rounded-lg p-2 cursor-pointer mb-2"
+                            <div class="doctor-item hover:bg-gray-100 h-[80px] w-full rounded-lg cursor-pointer mb-2"
                             [class.active]="selectedDoctor === doctor.fullName"
                             (click)="setSelectedDoctor(doctor)">
                             <div class="flex flex-row justify-between mt-4">

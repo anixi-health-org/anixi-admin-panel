@@ -36,8 +36,10 @@ export class UtilFunctions {
           'background': bgColor
         };
       }
-    public upperCaseFirstLetter(str: string) {
-    return str.substring(0, 1).toUpperCase() + str.substring(1, str.length);
+    public upperCaseFirstLetter(str?: string) : string | null {
+    if (str)
+      return str.substring(0, 1).toUpperCase() + str.substring(1, str.length);
+    return null;
   }
 }
 

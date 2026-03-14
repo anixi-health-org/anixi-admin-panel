@@ -1,0 +1,9 @@
+<div class="bg-white shadow sm:h-[120px] h-[100px] border-transparent hover:border-green-200 rounded-lg 
+transition-all duration-300 ease-in-out sm:p-4 p-2">
+    <div class="flex flex-row justify-between">
+        <p class="text-gray-500 sm:text-xs text-[7.5px] font-medium tracking-widest">{{cardValue.label.toUpperCase()}}</p>
+        <lucide-icon [name]="cardValue.icon" class="w-4 h-4 text-green-600"></lucide-icon>
+    </div>
+    <p class="sm:text-2xl text-sm font-bold tracking-wider h-[20px]">{{cardValue.value}}</p>
+    <p class="text-orange-300 sm:text-[10px] text-[8px] font-semibold">{{warningMessage(cardValue.label, cardValue.value)}}</p>
+</div>

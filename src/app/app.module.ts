@@ -13,8 +13,13 @@ import { environment } from '../environments/environment.development';
 import { provideAuth, getAuth } from '@angular/fire/auth';
 import {provideStorage, getStorage} from '@angular/fire/storage';
 import {provideFirestore, getFirestore} from '@angular/fire/firestore';
+import {NgxEchartsModule} from 'ngx-echarts'
+import * as echarts from 'echarts/core';
+import {BarChart, LineChart} from 'echarts/charts';
+import {DatasetComponent, GridComponent, LegendComponent, TooltipComponent} from 'echarts/components';
+import {CanvasRenderer} from 'echarts/renderers'
 
-
+echarts.use([BarChart, GridComponent, CanvasRenderer, TooltipComponent, LegendComponent, LineChart, DatasetComponent]);
 
 registerLocaleData(en);
 
@@ -25,6 +30,8 @@ registerLocaleData(en);
   imports: [
     BrowserModule,
     AppRoutingModule,
+    NgxEchartsModule.forRoot({echarts})
+  
   ],
   providers: [
     provideFirebaseApp(() => initializeApp(environment.firebaseConfig)),

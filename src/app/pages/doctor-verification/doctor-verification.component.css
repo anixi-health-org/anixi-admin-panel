@@ -8,6 +8,10 @@
         color: var(--color-gray-600);
     }
 
+    @media (max-width:595px) {
+        
+    }
+
     input:focus {
        outline: none;
     }
@@ -24,8 +28,11 @@
     background-color: var(--color-gray-200);
     padding: 0.5rem;
     @media (max-width:598px) {
-        width: 300px;
+        width: 100%;
+        height: 55px;
     }
+
+    
 }
 
 .custom-input {
@@ -50,7 +57,10 @@
     font-weight: 600;
     color: var(--color-gray-500);
     @media (max-width: 598px) {
-        font-size: 8px;
+        font-size: 11px;
+    }
+    @media (max-width:438px) {
+        font-size: 10px;
     }
 }
 

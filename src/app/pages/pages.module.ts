@@ -8,11 +8,13 @@ import { DoctorVerificationComponent } from './doctor-verification/doctor-verifi
 import { DashboardComponent } from './dashboard/dashboard.component';
 import { NzLayoutModule } from 'ng-zorro-antd/layout';
 import {NzIconModule} from 'ng-zorro-antd/icon';
-import {Eye, FileText, LayoutDashboard, LucideAngularModule, Stethoscope} from 'lucide-angular';
+import {Activity, Bell, Eye, FileText, LayoutDashboard, LucideAngularModule, MessageSquare, Stethoscope, TriangleAlert, User, Users, UserX} from 'lucide-angular';
 import {NzAvatarModule} from 'ng-zorro-antd/avatar';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ApplicationDetailsComponent } from './application-details/application-details.component'
 import { NzButtonComponent } from "ng-zorro-antd/button";
+import { CardComponent } from '../components/card/card.component';
+import { NgxEchartsDirective } from "ngx-echarts";
 
 
 
@@ -22,7 +24,8 @@ import { NzButtonComponent } from "ng-zorro-antd/button";
     LoginComponent,
     DoctorVerificationComponent,
     DashboardComponent,
-    ApplicationDetailsComponent
+    ApplicationDetailsComponent,
+    CardComponent
   ],
   imports: [
     CommonModule,
@@ -32,8 +35,11 @@ import { NzButtonComponent } from "ng-zorro-antd/button";
     NzAvatarModule,
     FormsModule,
     ReactiveFormsModule,
-    LucideAngularModule.pick({ Stethoscope, LayoutDashboard, FileText, Eye }),
-    NzButtonComponent
+    LucideAngularModule.pick({ Stethoscope, LayoutDashboard, FileText, Eye, Users, Activity,
+        MessageSquare, Bell, UserX, TriangleAlert
+    }),
+    NzButtonComponent,
+    NgxEchartsDirective
 ]
 })
 export class PagesModule { }

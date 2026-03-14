@@ -20,10 +20,6 @@
         <p class="text-sm text-gray-500 font-normal">Location</p>
         <p class="text-sm font-semibold">{{(details$ | async)?.practiceCity}}</p>
     </div>
-    <div class="flex flex-row justify-between">
-        <p class="text-sm text-gray-500 font-normal">Submitted</p>
-        <p class="text-sm font-semibold">2026-02-10</p>
-    </div>
     <div class="text-sm text-gray-500 font-medium uppercase tracking-wider">Documents</div>
     
     @if ((details$ | async)?.hpscaCertificateUrl || (details$ | async)?.hpcsaCertificateUrl) {

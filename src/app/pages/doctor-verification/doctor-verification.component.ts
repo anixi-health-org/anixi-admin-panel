@@ -1,8 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormControl } from '@angular/forms';
 import { UtilFunctions } from '../../../../const';
-import { map, Observable } from 'rxjs';
+import { map, Observable, Subscription } from 'rxjs';
 import { FirestoreService } from '../../services/firestore.service';
+import {BreakpointObserver} from '@angular/cdk/layout';
 
 const statCards = [
   {'label': 'Pending Review', 'status': 'pending', 'color': '#f69e23'},
@@ -26,7 +27,7 @@ const customInput = [
   templateUrl: './doctor-verification.component.html',
   styleUrl: './doctor-verification.component.css'
 })
-export class DoctorVerificationComponent implements OnInit{
+export class DoctorVerificationComponent implements OnInit, OnDestroy{
   statCards = statCards;
   customInput = customInput;
   doctorsList!: any[];
@@ -40,10 +41,12 @@ export class DoctorVerificationComponent implements OnInit{
   pendingCount$!: Observable<number>;
   rejectedCount$!:Observable<number>;
   suspendedCount$!:Observable<number>;
+  private sub!: Subscription;
+  isResponsive = false;
 
   constructor(public utilFunctions: UtilFunctions, 
     private fireStoreService: FirestoreService,
-
+    private breakPoint: BreakpointObserver
   ) {}
   
   async ngOnInit() {
@@ -77,6 +80,14 @@ export class DoctorVerificationComponent implements OnInit{
         doctors.filter(d => d.verificationStatus === 'suspended').length
       )
     );
+    this.sub = this.breakPoint.observe('(max-width:980px)')
+    .subscribe(result => {
+      this.isResponsive = result.matches;
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.sub.unsubscribe();
   }
 
   getStatusValue() {
@@ -87,11 +98,20 @@ export class DoctorVerificationComponent implements OnInit{
     this.selectedDoctor = doctor.fullName;
     this.doctorId = doctor.id;
     this.isClicked = true;
-    window.scroll({
-      behavior: 'smooth',
-      top: 0,
-      left: 0
-    });
+    if (!this.isResponsive) {
+      window.scroll({
+        behavior: 'smooth',
+        top: 0,
+        left: 0
+      });
+    }
+    else {
+      window.scroll({
+        behavior: 'smooth',
+        top: document.body.scrollHeight,
+        left: 0
+      })
+    }
   }
 
   getCount(status:string): Observable<number> {

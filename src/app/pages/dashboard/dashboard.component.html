@@ -1,1 +1,24 @@
-<p class="text-center text-2xl relative top-3">Dashboard will be available soon</p>
+<div class="flex flex-col p-4">
+    <div class="flex flex-col flex-wrap">
+        <p class="sm:text-2xl text-base font-semibold h-[10px]">Dashboard</p>
+        <p class="text-gray-500 sm:text-sm text-xs">Overview of your Anixi application metrics and activity.</p>
+    </div>
+    <div class="flex flex-row flex-wrap gap-2 sm:justify-between justify-center">
+        @for(card of cards; track card.index) {
+            <app-card class="sm:w-[240px] w-[100px]" [cardValue]="card"></app-card>
+        }
+        @for(card of cards2; track card.index) {
+            <app-card class="sm:w-[240px] w-[100px]" [cardValue]="card"></app-card>
+        }
+    </div>
+    <div class="charts-container gap-3 mt-4">
+        <div class="charts-wrapper shadow bg-white rounded-lg p-4" >
+            <h1 class="text-base font-normal">User Growth</h1>
+            <div echarts [options]="options" [autoResize]="true" theme="macarons" class="demo-chart"></div>
+        </div>
+        <div class="charts-wrapper border-transparent shadow bg-white rounded-lg p-4">
+            <h1 class="text-base font-normal">Weekly Engagement</h1>
+            <div echarts [options]="option" [autoResize]="true" class="chart"></div>
+        </div>
+    </div>
+</div>

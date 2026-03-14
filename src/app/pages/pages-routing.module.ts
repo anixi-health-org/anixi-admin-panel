@@ -7,9 +7,9 @@ import { AdminPanelComponent } from './admin-panel/admin-panel.component';
 
 
 const routes: Routes = [
-  {path: '', redirectTo: 'login', pathMatch: 'full'},
-  {path:'login', component: LoginComponent},
-  {path: 'admin-panel', component: AdminPanelComponent,  children: [
+  // {path: '', redirectTo: 'login', pathMatch: 'full'},
+  // {path:'login', component: LoginComponent},
+    {path: '', component: AdminPanelComponent,  children: [
     {path:'', redirectTo: 'dashboard', pathMatch: 'full'},
     {path: 'dashboard', component: DashboardComponent},
     {path: 'doctor-verification', component: DoctorVerificationComponent}
