@@ -21,4 +21,37 @@
             <div echarts [options]="option" [autoResize]="true" class="chart"></div>
         </div>
     </div>
+    <div class="flex min-[889px]:flex-row flex-col gap-4 sm:mt-8 mt-4">
+        <div class="bg-white h-auto shadow min-[889px]:w-[70%] w-full border-gray-600 
+             rounded-xl p-4 w-full">
+            <h1 class="text-base">Recent Activity</h1>
+            @for(activity of activities; track activity.index) {
+                <div class="cursor-pointer hover:bg-gray-50 h-[60px] p-3 rounded-lg mb-4">
+                    <div class="flex flex-row justify-between gap-2">
+                        <div class="flex flex-row gap-2">
+                            <div class="rounded-lg h-[21px] text-center pl-3 pr-3" [ngStyle]="{'background-color': activity.bgColor}">
+                                <p class="text-[11px] font-semibold relative top-[2px]" [ngStyle]="{'color': activity.color}">{{activity.type}}</p>
+                            </div>
+                            <div class="flex flex-col">
+                                <h1 class="text-sm font-normal text-gray-800 h-[10px]">{{activity.title}}</h1>
+                                <p class="text-[12px] text-gray-500">{{activity.content}}</p>
+                            </div>
+                        </div>
+                        <p class="text-[12px] text-gray-500">{{activity.createdAt}}</p>
+                    </div>
+                </div>
+            }
+        </div>
+        <div class="flex flex-col bg-white shadow-lg min-[889px]:w-[30%] w-full border-gray-200 rounded-lg p-4">
+            <h1 class="text-base">Quick Actions</h1>
+            @for(action of actions; track action.index) {
+                <button nz-button nzType="primary" class="btn">
+                    <div class="flex flex-row gap-2">
+                        <lucide-icon [name]="action.icon" class="text-black w-4 h-4 relative top-[2px]"></lucide-icon>
+                        <h1 class="text-black relative top-[1px]">{{action.action}}</h1>
+                    </div>
+                </button>
+            }
+        </div>
+    </div>
 </div>

@@ -18,3 +18,17 @@
     min-height: 0;
     width: 80%;
 }
+
+nz-button, .btn {
+    background-color: var(--color-gray-100);
+    border-color: var(--color-gray-300);
+    width: 100%;
+    border-radius: 10px;
+    height: 35px;
+    margin-top: 8px;
+    margin-bottom: 8px;
+}
+nz-button, .btn:hover {
+    background-color: rgb(252, 179, 44);
+    border-color: rgb(252, 179, 44);
+}
