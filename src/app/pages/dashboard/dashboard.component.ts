@@ -30,11 +30,11 @@ const activities = [
     bgColor: '#fef6e9' , color: '#f69e23', createdAt: '5 hrs ago'},
 ];
 const quickActions = [
-  {index: '0', action: 'Create Article',  icon: 'file-text'},
-  {index: '1', action: 'Send Notification',  icon: 'bell'},
-  {index: '2', action: 'Review Doctor',  icon: 'stethoscope'},
-  {index: '3', action: 'View Reports',  icon: 'triangle-alert'},
-  {index: '3', action: 'Manage Users',  icon: 'users'},
+  {index: '0', action: 'Create Article',  icon: 'file-text', route: './'},
+  {index: '1', action: 'Send Notification',  icon: 'bell', route: './'},
+  {index: '2', action: 'Review Doctor',  icon: 'stethoscope', route: '/doctor-verification'},
+  {index: '3', action: 'View Reports',  icon: 'triangle-alert', route: './'},
+  {index: '3', action: 'Manage Users',  icon: 'users', route: './'},
 ]
 
 @Component({

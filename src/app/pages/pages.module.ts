@@ -15,6 +15,7 @@ import { ApplicationDetailsComponent } from './application-details/application-d
 import { NzButtonComponent } from "ng-zorro-antd/button";
 import { CardComponent } from '../components/card/card.component';
 import { NgxEchartsDirective } from "ngx-echarts";
+import { ContentComponent } from './content/content.component';
 
 
 
@@ -25,7 +26,8 @@ import { NgxEchartsDirective } from "ngx-echarts";
     DoctorVerificationComponent,
     DashboardComponent,
     ApplicationDetailsComponent,
-    CardComponent
+    CardComponent,
+    ContentComponent
   ],
   imports: [
     CommonModule,

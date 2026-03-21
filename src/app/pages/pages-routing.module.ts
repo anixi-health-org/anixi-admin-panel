@@ -4,6 +4,7 @@ import { LoginComponent } from './login/login.component';
 import { DashboardComponent } from './dashboard/dashboard.component';
 import { DoctorVerificationComponent } from './doctor-verification/doctor-verification.component';
 import { AdminPanelComponent } from './admin-panel/admin-panel.component';
+import { ContentComponent } from './content/content.component';
 
 
 const routes: Routes = [
@@ -12,6 +13,7 @@ const routes: Routes = [
     {path: '', component: AdminPanelComponent,  children: [
     {path:'', redirectTo: 'dashboard', pathMatch: 'full'},
     {path: 'dashboard', component: DashboardComponent},
+    {path: 'content', component: ContentComponent},
     {path: 'doctor-verification', component: DoctorVerificationComponent}
   ]}
 ];
