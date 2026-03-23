@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { FormControl } from '@angular/forms';
 
 const contentCards = [
   {index: '0' , label: 'Total Articles', value: '312' },
@@ -16,4 +17,5 @@ const contentCards = [
 })
 export class ContentComponent {
   cards = contentCards;
+  search = new FormControl('');
 }

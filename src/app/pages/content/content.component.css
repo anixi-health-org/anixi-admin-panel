@@ -6,3 +6,32 @@ nz-button , .add-article {
     border-color: #27a288;
     border-radius: 9px;
 }
+
+nz-button, .menu {
+    border-radius: 9px;
+}
+
+nz-button, .menu:hover {
+    border-color: #27a288;
+    color: #27a288;
+}
+
+input[type="search"] {
+    border: 1px solid var(--color-gray-300);
+    height: 32px;
+    width: 180px;
+    border-radius: 9px;
+    text-indent: 25px;
+}
+
+input[type="search"]:focus {
+    border: 2px solid #27a288;
+    outline: none;
+}
+input[type="search"]::placeholder {
+    text-indent: 25px;
+}
+
+li:hover {
+    background-color: var(--color-orange-400);
+}

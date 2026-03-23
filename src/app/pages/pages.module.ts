@@ -16,6 +16,7 @@ import { NzButtonComponent } from "ng-zorro-antd/button";
 import { CardComponent } from '../components/card/card.component';
 import { NgxEchartsDirective } from "ngx-echarts";
 import { ContentComponent } from './content/content.component';
+import {NzDropdownModule} from 'ng-zorro-antd/dropdown';
 
 
 
@@ -41,7 +42,8 @@ import { ContentComponent } from './content/content.component';
         MessageSquare, Bell, UserX, TriangleAlert
     }),
     NzButtonComponent,
-    NgxEchartsDirective
+    NgxEchartsDirective,
+    NzDropdownModule
 ]
 })
 export class PagesModule { }

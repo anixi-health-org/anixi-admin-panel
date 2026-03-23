@@ -16,9 +16,66 @@
     <div class="grid sm:grid-cols-4 gap-2 mt-4">
         @for (card of cards; track card.index) {
             <div class="bg-white rounded-lg shadow cursor-pointer border-1 hover:border-green-200 border-transparent p-4 sm:h-[100px] h-[80px]">
-                <p class="sm:text-[12px] text-[10px] text-gray-500">{{card.label.toUpperCase()}}</p>
+                <p class="sm:text-[12px] text-[10px] text-gray-500 font-medium tracking-widest">{{card.label.toUpperCase()}}</p>
                 <p class="sm:text-xl text-base font-bold">{{card.value}}</p>
             </div>
         }
+    </div>
+    <div class="bg-white rounded-lg shadow mt-8 p-4">
+        <div class="flex flex-row justify-between">
+            <h1 class="text-base">Articles</h1>
+            <div class="flex flex-row gap-4">
+                <form>
+                    <nz-icon nzType="search" class="absolute m-2 text-lg" style="color: var(--color-gray-400);"> </nz-icon>
+                    <input type="search" placeholder="Search Article" [formControl]="search">
+                </form>
+                <button nz-button nz-dropdown nzTrigger="click" class="menu" [nzDropdownMenu]="status">
+                   All Status
+                   <nz-icon nzType="down" nzTheme="outline"></nz-icon>
+                </button>
+                <nz-dropdown-menu #status="nzDropdownMenu">
+                   <ul nz-menu>
+                       <li nz-menu-item>Published</li>
+                       <li nz-menu-item>Draft</li>
+                       <li nz-menu-item>Schedule</li>
+                       <li nz-menu-item>Archived</li>
+                   </ul>
+                </nz-dropdown-menu>
+            </div>
+        </div>
+        <div>
+            <table class="table-auto">
+                <thead class="border-1 border-gray-300">
+                    <tr>
+                        <th class="text-start text-gray-500 font-medium text-sm p-2">Title</th>
+                        <th class="text-start text-gray-500 font-medium text-sm">Category</th>
+                        <th class="text-start text-gray-500 font-medium text-sm">Communities</th>
+                        <th class="text-start text-gray-500 font-medium text-sm">Status</th>
+                        <th class="text-start text-gray-500 font-medium text-sm">Date</th>
+                        <th class="text-start text-gray-500 font-medium text-sm">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="border-1 border-gray-300">
+                    <tr>
+                        <td class="pr-3 pt-2 text-start font-semibold">Managing Diabete in Summer</td>
+                        <td class="pr-3 pt-2 text-start font-medium text-gray-500">Diabetes</td>
+                        <td>
+                           <div class="flex flex-row">
+                             <div class="bg-green-200 rounded-lg border-transparent mt-5">
+                                <p class="text-center text-xs text-green-800 font-bold">Cancer</p>
+                            </div>
+                           </div>
+                        </td>
+                        <td>
+                            <div class="bg-green-200 rounded-lg border-transparent mt-5">
+                                <p class="text-center text-xs text-green-800 font-bold">Cancer</p>
+                            </div> 
+                        </td>
+                    </tr>
+                    <tr>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
