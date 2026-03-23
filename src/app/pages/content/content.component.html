@@ -43,9 +43,9 @@
                 </nz-dropdown-menu>
             </div>
         </div>
-        <div>
-            <table class="table-auto">
-                <thead class="border-1 border-gray-300">
+        <div class="border-1 mt-4 border-gray-300 rounded-lg">
+            <table class="table-auto w-full">
+                <thead class="border-b-1 border-gray-300">
                     <tr>
                         <th class="text-start text-gray-500 font-medium text-sm p-2">Title</th>
                         <th class="text-start text-gray-500 font-medium text-sm">Category</th>
@@ -55,27 +55,67 @@
                         <th class="text-start text-gray-500 font-medium text-sm">Action</th>
                     </tr>
                 </thead>
-                <tbody class="border-1 border-gray-300">
-                    <tr>
-                        <td class="pr-3 pt-2 text-start font-semibold">Managing Diabete in Summer</td>
-                        <td class="pr-3 pt-2 text-start font-medium text-gray-500">Diabetes</td>
+                <tbody>
+                    <tr class="border-b-1 border-gray-300">
+                        <td class="text-start font-semibold p-4">Managing Diabete in Summer</td>
+                        <td class="text-start text-gray-500">Diabetes</td>
                         <td>
                            <div class="flex flex-row">
-                             <div class="bg-green-200 rounded-lg border-transparent mt-5">
-                                <p class="text-center text-xs text-green-800 font-bold">Cancer</p>
+                             <div class="rounded-lg border-transparent" style="background-color: #ecf3f2; color: #377b6c">
+                                <p class="text-center text-[11px] font-bold h-[8px] pl-2 pr-2">Cancer</p>
                             </div>
                            </div>
                         </td>
+
                         <td>
-                            <div class="bg-green-200 rounded-lg border-transparent mt-5">
-                                <p class="text-center text-xs text-green-800 font-bold">Cancer</p>
-                            </div> 
+                           <div class="flex flex-row">
+                             <div class="rounded-lg border-1" [ngStyle]="{'background-color': getColorByStatus('Published').bgColor,
+                              'color': getColorByStatus('Published').color, 
+                               'border-color': getColorByStatus('Published').color}">
+                                <p class="text-center text-[11px] font-bold h-[8px] pl-2 pr-2">Published</p>
+                            </div>
+                           </div>
+                        </td>
+                        <td class="text-gray-500">
+                            2026-02-10
+                        </td>
+                        <td>
+                            <nz-icon nz-dropdown nzTrigger="click" [nzDropdownMenu]="action" nzType="ellipsis" nzTheme="outline"></nz-icon>
+                            <nz-dropdown-menu #action="nzDropdownMenu">
+                                <ul nz-menu>
+                                    <li nz-menu-item>
+                                        <span class="flex flex-row gap-2">
+                                            <nz-icon nzType="eye" nzTheme="outline"></nz-icon>
+                                            <p class="relative top-2">Preview</p>
+                                        </span>
+                                    </li>
+                                    <li nz-menu-item>
+                                        <span class="flex flex-row gap-2">
+                                            <nz-icon nzType="edit" nzTheme="outline"></nz-icon>
+                                            <p class="relative top-2">Edit</p>
+                                        </span>
+                                    </li>
+                                    <li nz-menu-item>
+                                        <span class="flex flex-row gap-2">
+                                            <nz-icon nzType="calendar" nzTheme="outline"></nz-icon>
+                                            <p class="relative top-2">Schedule</p>
+                                        </span>
+                                    </li>
+                                    <li nz-menu-item>
+                                        <span class="flex flex-row gap-2 text-red-600">
+                                            <nz-icon nzType="delete" nzTheme="outline"></nz-icon>
+                                            <p class="relative top-2">Delete</p>
+                                        </span>
+                                    </li>
+                                </ul>
+                            </nz-dropdown-menu>
                         </td>
                     </tr>
                     <tr>
                     </tr>
                 </tbody>
             </table>
+            
         </div>
     </div>
 </div>
