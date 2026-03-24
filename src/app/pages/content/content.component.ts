@@ -8,6 +8,16 @@ const contentCards = [
   {index: '3' , label: 'Drafts', value: '39' },
 ];
 
+const articles = [
+  {title: 'Managing Diabetes in Summer', category: 'Diabetes',  communities: 'Diabetes', status: 'Published',  date: '2026-02-10'},
+  {title: 'Understanding HIV Treatment Options', category: 'HIV/AIDS',  communities: 'HIV/AIDS', status: 'Published',  date: '2026-02-09'},
+  {title: 'Mental Health: Breaking the Stigma', category: 'Mental Health',  communities: 'Mental Health', status: 'Scheduled',  date: '2026-02-08'},
+  {title: 'Hypertension and Diet', category: 'Hypertension',  communities: 'Hypertension', status: 'Draft',  date: '2026-02-07'},
+  {title: 'Living with Asthma: Daily tips', category: 'Respiratory',  communities: 'Respiratory Health', status: 'Published',  date: '2026-02-06'},
+  {title: 'Cancer Screening Guidelines 2026', category: 'Cancer',  communities: 'Cancer', status: 'Draft',  date: '2026-02-05'},
+  {title: 'Post-Partum Depression Awareness', category: 'Mental Health',  communities: 'Mental Health', status: 'Archived',  date: '2026-02-04'},
+]
+
 
 
 
@@ -20,6 +30,7 @@ const contentCards = [
 })
 export class ContentComponent {
   cards = contentCards;
+  articles = articles;
   search = new FormControl('');
 
 
