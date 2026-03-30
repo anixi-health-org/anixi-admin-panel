@@ -17,6 +17,7 @@ import { CardComponent } from '../components/card/card.component';
 import { NgxEchartsDirective } from "ngx-echarts";
 import { ContentComponent } from './content/content.component';
 import {NzDropdownModule} from 'ng-zorro-antd/dropdown';
+import {NzModalModule} from 'ng-zorro-antd/modal';
 
 
 
@@ -43,7 +44,9 @@ import {NzDropdownModule} from 'ng-zorro-antd/dropdown';
     }),
     NzButtonComponent,
     NgxEchartsDirective,
-    NzDropdownModule
+    NzDropdownModule,
+    NzModalModule
+
 ]
 })
 export class PagesModule { }

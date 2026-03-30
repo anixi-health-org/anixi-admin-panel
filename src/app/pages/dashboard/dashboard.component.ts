@@ -34,7 +34,7 @@ const quickActions = [
   {index: '1', action: 'Send Notification',  icon: 'bell', route: './'},
   {index: '2', action: 'Review Doctor',  icon: 'stethoscope', route: '/doctor-verification'},
   {index: '3', action: 'View Reports',  icon: 'triangle-alert', route: './'},
-  {index: '3', action: 'Manage Users',  icon: 'users', route: './'},
+  {index: '4', action: 'Manage Users',  icon: 'users', route: './'},
 ]
 
 @Component({

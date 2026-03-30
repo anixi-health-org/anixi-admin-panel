@@ -1,5 +1,5 @@
-import { Component } from '@angular/core';
-import { FormControl } from '@angular/forms';
+import { Component, OnInit } from '@angular/core';
+import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 
 const contentCards = [
   {index: '0' , label: 'Total Articles', value: '312' },
@@ -18,6 +18,13 @@ const articles = [
   {title: 'Post-Partum Depression Awareness', category: 'Mental Health',  communities: 'Mental Health', status: 'Archived',  date: '2026-02-04'},
 ]
 
+const categories = [
+  {name:'Diabetes'}, {name:'HIV/AIDS'}, 
+  {name:'Mental Heath'}, {name: 'Hypertension'}, 
+  {name:'Respiratory'}, {name:'Cancer'}
+];
+
+
 
 
 
@@ -28,12 +35,24 @@ const articles = [
   templateUrl: './content.component.html',
   styleUrl: './content.component.css'
 })
-export class ContentComponent {
+export class ContentComponent implements OnInit{
   cards = contentCards;
   articles = articles;
   search = new FormControl('');
+  menuItemStatus = new FormControl('All Status');
+  isVisible = false;
+  categories = categories;
+  articleElement!: FormGroup;
 
+  constructor(private fb: FormBuilder) {}
 
+  ngOnInit(): void {
+    this.articleElement = this.fb.group({
+      title: ['', Validators.required],
+      categories: [this.categories[1], Validators.required],
+      date: ['', Validators.required]
+    })
+  }
   getColorByStatus(status: string) {
     switch(status) {
       case 'Published':
@@ -41,9 +60,9 @@ export class ContentComponent {
           bgColor: '#ebf6f0',
           color: '#2cab6f'
         }
-      case 'Schedule':
+      case 'Scheduled':
         return {
-          bgColor:  '#2cab6f',
+          bgColor:  '#eaf5fb',
           color: '#269ed9',
         }
       case 'Draft':
@@ -58,4 +77,14 @@ export class ContentComponent {
         }
     }
   }
+   setMenuItemValue(value:string) {
+      this.menuItemStatus.setValue(value);
+    }
+
+    showModal() {
+      this.isVisible = true
+    }
+    handleCancel() {
+      this.isVisible = false;
+    }
 }
