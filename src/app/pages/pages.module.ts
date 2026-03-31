@@ -18,6 +18,7 @@ import { NgxEchartsDirective } from "ngx-echarts";
 import { ContentComponent } from './content/content.component';
 import {NzDropdownModule} from 'ng-zorro-antd/dropdown';
 import {NzModalModule} from 'ng-zorro-antd/modal';
+import {NzUploadModule} from 'ng-zorro-antd/upload'
 
 
 
@@ -45,7 +46,8 @@ import {NzModalModule} from 'ng-zorro-antd/modal';
     NzButtonComponent,
     NgxEchartsDirective,
     NzDropdownModule,
-    NzModalModule
+    NzModalModule,
+    NzUploadModule
 
 ]
 })

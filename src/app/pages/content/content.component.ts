@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
+import { Form, FormArray, FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 
 const contentCards = [
   {index: '0' , label: 'Total Articles', value: '312' },
@@ -24,6 +24,12 @@ const categories = [
   {name:'Respiratory'}, {name:'Cancer'}
 ];
 
+const communities = [
+  {name:'Diabetes'}, {name:'HIV/AIDS'}, 
+  {name:'Mental Heath'}, {name: 'Hypertension'}, 
+  {name:'Respiratory'}, {name:'Cancer'}
+];
+
 
 
 
@@ -43,6 +49,8 @@ export class ContentComponent implements OnInit{
   isVisible = false;
   categories = categories;
   articleElement!: FormGroup;
+  selectedFile!: File;
+  communities = communities;
 
   constructor(private fb: FormBuilder) {}
 
@@ -50,7 +58,8 @@ export class ContentComponent implements OnInit{
     this.articleElement = this.fb.group({
       title: ['', Validators.required],
       categories: [this.categories[1], Validators.required],
-      date: ['', Validators.required]
+      date: ['', Validators.required],
+      communities: this.fb.array([], Validators.required)
     })
   }
   getColorByStatus(status: string) {
@@ -86,5 +95,29 @@ export class ContentComponent implements OnInit{
     }
     handleCancel() {
       this.isVisible = false;
+    }
+
+    beforeUpload = (file:File): boolean => {
+      this.selectedFile = file;
+      return false;
+    }
+
+    get communitiesFormArray() {
+      return this.articleElement.controls['communities'] as FormArray;
+    }
+
+    onCheckBoxChange(event: Event) {
+      const checkbox = event.target as HTMLInputElement;
+      const value = checkbox.value;
+      const checked = checkbox.checked;
+
+      if (checked) {
+        this.communitiesFormArray.push(new FormControl(value));
+      } else {
+        const index = this.communitiesFormArray.controls.findIndex(ctrl => ctrl.value === value);
+        if (index > -1) {
+          this.communitiesFormArray.removeAt(index);
+        }
+      }
     }
 }

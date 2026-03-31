@@ -36,6 +36,42 @@
                             </div>
                         </div>
                     </div>
+                    <div class="flex flex-col mt-4">
+                        <p class="h-[10px] font-medium">Cover Image*</p>
+                        <div class="flex flex-col border-2 border-dashed border-gray-300 items-center text-center p-10 cursor-pointer h-[150px]">
+                            <nz-upload [nzBeforeUpload]="$any(beforeUpload)"
+                            [nzShowUploadList]="false">
+                                <nz-icon nzType="file-image" nzTheme="outline" class="sm:text-3xl text-xl" 
+                                    style="color: var(--color-gray-500);"></nz-icon>
+                                <p class="relative top-2 text-gray-500">Click to upload image file</p>
+                            </nz-upload>
+                        </div>
+                    </div>
+                    <div class="flex flex-col mt-4">
+                       <label for="content" class="font-medium">Content*</label>
+                       <textarea id="content" placeholder="Write your article content here...."></textarea>
+                    </div>
+                    <div class="flex flex-col">
+                        <p class="font-medium relative top-4">Assign to communities*</p>
+                        @for(community of communities; track community.name) {
+                            <div class="flex flex-row gap-2 mt-2">
+                                <input type="checkbox" 
+                                [value]="community.name"
+                                (change)="onCheckBoxChange($event)"
+                                >
+                                <label [for]="community.name"> {{community.name}}</label>
+                            </div>
+                        }
+                    </div>
+                    <div class="flex flex-row gap-4 justify-end">
+                        <button nz-button nzType="primary" class="btn-draft">
+                            Save as Draft
+                        </button>
+                        <button type="submit" nz-button nzType="primary" 
+                            style="background-color:  #27a288; border-color:  #27a288; border-radius: 9px; height: 40px;">
+                            Published Now
+                        </button>
+                    </div>
                 </form>
             </ng-container>
     </nz-modal>
