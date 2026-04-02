@@ -50,6 +50,7 @@ export class ContentComponent implements OnInit{
   categories = categories;
   articleElement!: FormGroup;
   selectedFile!: File;
+  previewUrl!: string | ArrayBuffer | null;
   communities = communities;
 
   constructor(private fb: FormBuilder) {}
@@ -99,11 +100,20 @@ export class ContentComponent implements OnInit{
 
     beforeUpload = (file:File): boolean => {
       this.selectedFile = file;
+      this.previewFile(file);
       return false;
     }
 
     get communitiesFormArray() {
       return this.articleElement.controls['communities'] as FormArray;
+    }
+
+    previewFile(file:File) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        this.previewUrl = reader.result;
+      };
+      reader.readAsDataURL(file);
     }
 
     onCheckBoxChange(event: Event) {

@@ -5,6 +5,7 @@ import { DashboardComponent } from './dashboard/dashboard.component';
 import { DoctorVerificationComponent } from './doctor-verification/doctor-verification.component';
 import { AdminPanelComponent } from './admin-panel/admin-panel.component';
 import { ContentComponent } from './content/content.component';
+import { PdfViewerComponent } from './pdf-viewer/pdf-viewer.component';
 
 
 const routes: Routes = [
@@ -14,7 +15,8 @@ const routes: Routes = [
     {path:'', redirectTo: 'dashboard', pathMatch: 'full'},
     {path: 'dashboard', component: DashboardComponent},
     {path: 'content', component: ContentComponent},
-    {path: 'doctor-verification', component: DoctorVerificationComponent}
+    {path: 'doctor-verification', component: DoctorVerificationComponent},
+    {path: 'certificat-viewer', component: PdfViewerComponent}
   ]}
 ];
 

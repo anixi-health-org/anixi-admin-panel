@@ -18,7 +18,8 @@ import { NgxEchartsDirective } from "ngx-echarts";
 import { ContentComponent } from './content/content.component';
 import {NzDropdownModule} from 'ng-zorro-antd/dropdown';
 import {NzModalModule} from 'ng-zorro-antd/modal';
-import {NzUploadModule} from 'ng-zorro-antd/upload'
+import {NzUploadModule} from 'ng-zorro-antd/upload';
+import { PdfViewerComponent } from './pdf-viewer/pdf-viewer.component'
 
 
 
@@ -30,7 +31,8 @@ import {NzUploadModule} from 'ng-zorro-antd/upload'
     DashboardComponent,
     ApplicationDetailsComponent,
     CardComponent,
-    ContentComponent
+    ContentComponent,
+    PdfViewerComponent
   ],
   imports: [
     CommonModule,

@@ -38,14 +38,21 @@
                     </div>
                     <div class="flex flex-col mt-4">
                         <p class="h-[10px] font-medium">Cover Image*</p>
-                        <div class="flex flex-col border-2 border-dashed border-gray-300 items-center text-center p-10 cursor-pointer h-[150px]">
-                            <nz-upload [nzBeforeUpload]="$any(beforeUpload)"
-                            [nzShowUploadList]="false">
-                                <nz-icon nzType="file-image" nzTheme="outline" class="sm:text-3xl text-xl" 
-                                    style="color: var(--color-gray-500);"></nz-icon>
-                                <p class="relative top-2 text-gray-500">Click to upload image file</p>
-                            </nz-upload>
+                        @if(!previewUrl) {
+                            <div class="flex flex-col border-2 border-dashed border-gray-300 items-center text-center p-10 cursor-pointer max-h-[250px]">
+                                <nz-upload [nzBeforeUpload]="$any(beforeUpload)"
+                                [nzShowUploadList]="false">
+                                    <nz-icon nzType="file-image" nzTheme="outline" class="sm:text-3xl text-xl" 
+                                        style="color: var(--color-gray-500);"></nz-icon>
+                                    <p class="relative top-2 text-gray-500">Click to upload image file</p>
+                                </nz-upload>
+                            </div>
+                        }
+                        @else {
+                        <div class="flex flex-col border-2 border-dashed border-gray-300 items-center text-center p-0 cursor-pointer">
+                            <img [src]="previewUrl" class="w-full h-full object-contain">
                         </div>
+                        }
                     </div>
                     <div class="flex flex-col mt-4">
                        <label for="content" class="font-medium">Content*</label>
@@ -53,15 +60,17 @@
                     </div>
                     <div class="flex flex-col">
                         <p class="font-medium relative top-4">Assign to communities*</p>
-                        @for(community of communities; track community.name) {
-                            <div class="flex flex-row gap-2 mt-2">
-                                <input type="checkbox" 
-                                [value]="community.name"
-                                (change)="onCheckBoxChange($event)"
-                                >
-                                <label [for]="community.name"> {{community.name}}</label>
-                            </div>
-                        }
+                        <div class="grid grid-cols-2 mb-4">
+                            @for(community of communities; track community.name) {
+                                <div class="flex flex-row gap-2 mt-2">
+                                    <input type="checkbox" 
+                                    [value]="community.name"
+                                    (change)="onCheckBoxChange($event)"
+                                    >
+                                    <label [for]="community.name"> {{community.name}}</label>
+                                </div>
+                            }
+                        </div>
                     </div>
                     <div class="flex flex-row gap-4 justify-end">
                         <button nz-button nzType="primary" class="btn-draft">

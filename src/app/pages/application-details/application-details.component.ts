@@ -3,6 +3,7 @@ import { displayNotificationMessage, ERROR_NOTIFICATION_BOX_POSITION, SUCCESS_NO
 import { FirestoreService } from '../../services/firestore.service';
 import { NzNotificationService } from 'ng-zorro-antd/notification';
 import { BehaviorSubject, filter, Observable, switchMap } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
 
 @Component({
   selector: 'app-application-details',
@@ -32,7 +33,7 @@ export class ApplicationDetailsComponent {
   
   constructor(public utilFunctions: UtilFunctions,
     private fireStoreService: FirestoreService,
-    private notification: NzNotificationService
+    private notification: NzNotificationService,
   ) {}
 
   get id(): string {
@@ -54,5 +55,7 @@ export class ApplicationDetailsComponent {
       ERROR_NOTIFICATION_BOX_POSITION
     ))
   }
+
+  
 
 }
