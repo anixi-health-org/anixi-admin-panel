@@ -17,27 +17,35 @@
     <nz-modal [(nzVisible)]="isVisible" [nzTitle]="createArticle" [nzFooter]="null" 
     (nzOnCancel)="handleCancel()">
             <ng-container *nzModalContent>
-                <form [formGroup]="articleElement">
+                <form [formGroup]="articleElement" (ngSubmit)="onSubmit()">
                     <div class="flex flex-col">
                         <label for="title" class="font-medium">Title*</label>
-                        <input type="text" placeholder="Enter Article Title" name="title" id="title">
+                        <input type="text" placeholder="Enter Article Title" 
+                            name="title" id="title" formControlName="title">
+                        @if(articleElement.get('title')?.invalid && (articleElement.get('title')?.touched || submitted) ) {
+                            @if(articleElement.get('title')?.errors?.['required']) {
+                                <div class="text-red-500">title is required</div>
+                            }
+                        }
                         <div class="flex flex-row mt-4 gap-4">
-                            <div class="flex flex-col">
+                            <!-- category (for AWS DB) -->
+                            <!-- <div class="flex flex-col">
                                 <label for="category" class="font-medium">Category*</label>
                                 <select formControlName="categories" id="category">
                                     @for(category of categories; track category.name) {
                                         <option [ngValue]="category">{{category.name}}</option>
                                     }
                                 </select>
-                            </div>
-                            <div class="flex flex-col w-full">
+                            </div> -->
+                            <!-- Shedule date (for aws DB) -->
+                            <!-- <div class="flex flex-col w-full">
                                 <label for="date" class="font-medium">Schedule date*</label>
                                 <input type="date" formControlName="date">
-                            </div>
+                            </div> -->
                         </div>
                     </div>
                     <div class="flex flex-col mt-4">
-                        <p class="h-[10px] font-medium">Cover Image*</p>
+                        <p class="h-[10px] font-medium">Image (optional)</p>
                         @if(!previewUrl) {
                             <div class="flex flex-col border-2 border-dashed border-gray-300 items-center text-center p-10 cursor-pointer max-h-[250px]">
                                 <nz-upload [nzBeforeUpload]="$any(beforeUpload)"
@@ -56,21 +64,32 @@
                     </div>
                     <div class="flex flex-col mt-4">
                        <label for="content" class="font-medium">Content*</label>
-                       <textarea id="content" placeholder="Write your article content here...."></textarea>
+                       <textarea id="content" formControlName="content" placeholder="Write your article content here...."></textarea>
+                       @if(articleElement.get('content')?.invalid && (articleElement.get('content')?.touched || submitted) ) {
+                            @if(articleElement.get('content')?.errors?.['required']) {
+                                <div class="text-red-500">content is required</div>
+                            }
+                        }
                     </div>
                     <div class="flex flex-col">
                         <p class="font-medium relative top-4">Assign to communities*</p>
                         <div class="grid grid-cols-2 mb-4">
-                            @for(community of communities; track community.name) {
+                            @for(community of communities; track community.label) {
                                 <div class="flex flex-row gap-2 mt-2">
                                     <input type="checkbox" 
-                                    [value]="community.name"
+                                    [id]="community.id"
+                                    [value]="community.id"
                                     (change)="onCheckBoxChange($event)"
-                                    >
-                                    <label [for]="community.name"> {{community.name}}</label>
+                                    [formArrayName]="'communities'">
+                                    <label [for]="community.id"> {{community.label}}</label>
                                 </div>
                             }
                         </div>
+                        @if(articleElement.get('communities')?.invalid && (articleElement.get('communities')?.touched || submitted) ) {
+                            @if(articleElement.get('communities')?.errors?.['required']) {
+                                <div class="text-red-500">choose one or more communities</div>
+                            }
+                        }
                     </div>
                     <div class="flex flex-row gap-4 justify-end">
                         <button nz-button nzType="primary" class="btn-draft">
@@ -96,9 +115,9 @@
     </div>
     <div class="bg-white rounded-lg shadow mt-8 p-4">
         <div class="flex flex-row justify-between">
-            <h1 class="text-base">Articles</h1>
+            <h1 class="text-base">Posts</h1>
             <div class="flex flex-row gap-4">
-                <form>
+                <form >
                     <nz-icon nzType="search" class="absolute m-2 text-lg" style="color: var(--color-gray-400);"> </nz-icon>
                     <input type="search" placeholder="Search Article" [formControl]="search">
                 </form>
@@ -169,12 +188,6 @@
                                                 <span class="flex flex-row gap-2">
                                                     <nz-icon nzType="edit" nzTheme="outline"></nz-icon>
                                                     <p class="relative top-2">Edit</p>
-                                                </span>
-                                            </li>
-                                            <li nz-menu-item>
-                                                <span class="flex flex-row gap-2">
-                                                    <nz-icon nzType="calendar" nzTheme="outline"></nz-icon>
-                                                    <p class="relative top-2">Schedule</p>
                                                 </span>
                                             </li>
                                             <li nz-menu-item>

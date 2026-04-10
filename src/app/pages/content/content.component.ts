@@ -1,8 +1,14 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, EnvironmentInjector, OnInit, runInInjectionContext } from '@angular/core';
 import { Form, FormArray, FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
+import { COMMUNITIES, displayNotificationMessage, ERROR_NOTIFICATION_BOX_POSITION, markAllFormControlsAsTouched } from '../../../../const';
+import { NzNotificationService } from 'ng-zorro-antd/notification';
+import { ref } from 'firebase/storage';
+import { getDownloadURL, Storage, uploadBytes } from '@angular/fire/storage';
+import { PostService } from '../../services/post.service';
+import { IGroupPost } from '../../../interfaces/IgroupPost';
 
 const contentCards = [
-  {index: '0' , label: 'Total Articles', value: '312' },
+  {index: '0' , label: 'Total Posts', value: '312' },
   {index: '1' , label: 'Published', value: '245' },
   {index: '2' , label: 'Scheduled', value: '28' },
   {index: '3' , label: 'Drafts', value: '39' },
@@ -24,11 +30,6 @@ const categories = [
   {name:'Respiratory'}, {name:'Cancer'}
 ];
 
-const communities = [
-  {name:'Diabetes'}, {name:'HIV/AIDS'}, 
-  {name:'Mental Heath'}, {name: 'Hypertension'}, 
-  {name:'Respiratory'}, {name:'Cancer'}
-];
 
 
 
@@ -50,16 +51,25 @@ export class ContentComponent implements OnInit{
   categories = categories;
   articleElement!: FormGroup;
   selectedFile!: File;
+  imageUrl!: string;
   previewUrl!: string | ArrayBuffer | null;
-  communities = communities;
+  communities = COMMUNITIES;
+  submitted = false;
+  isLoading = false;
 
-  constructor(private fb: FormBuilder) {}
+  constructor(private fb: FormBuilder, 
+    private envInjector: EnvironmentInjector,
+  private notif: NzNotificationService,
+  private storage: Storage,
+  private postService: PostService
+) {}
 
   ngOnInit(): void {
     this.articleElement = this.fb.group({
       title: ['', Validators.required],
-      categories: [this.categories[1], Validators.required],
-      date: ['', Validators.required],
+      content: ['', Validators.required],
+      // categories: [this.categories[1], Validators.required],
+      // date: ['', Validators.required],
       communities: this.fb.array([], Validators.required)
     })
   }
@@ -130,4 +140,51 @@ export class ContentComponent implements OnInit{
         }
       }
     }
+    async onSubmit() {
+      try {
+        this.isLoading = true;
+        this.submitted = true;
+        if (this.articleElement.invalid) {
+         markAllFormControlsAsTouched(this.articleElement);
+         return;
+        }
+        if (this.selectedFile) {
+            this.imageUrl = await this.uploadFile(this.selectedFile, 
+              this.communitiesFormArray.value[0]);
+        }
+        const communities = this.communitiesFormArray.controls;
+        for (let community of communities) {
+          const postData: Partial<IGroupPost> = {
+            firstName: "anixi health",
+            groupName: community.value,
+            lastName: ,
+            userId: ,
+            postType: ,
+            mediaType: ,
+            mediaUrl: ,
+            visibility: 
+          }
+          await this.postService.saveGroupPost(community.value, )
+        }
+        
+      } catch (error) {
+        this.isLoading = false;
+        this.notif.create(
+          'error',
+          'Error',
+          displayNotificationMessage('success', 'Failed to published the post'),
+          ERROR_NOTIFICATION_BOX_POSITION
+        )
+      }
+    }
+
+    async uploadFile(file:File, groupId: string): Promise<string> {
+      const filePath = `community-posts/${groupId}/${Date.now()}_${file.name}`;
+      return await runInInjectionContext(this.envInjector, async () => {
+        const fileRef = ref(this.storage, filePath);
+        await uploadBytes(fileRef, file);
+        return await getDownloadURL(fileRef);
+      })
+    }
+
 }

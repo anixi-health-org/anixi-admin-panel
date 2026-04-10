@@ -1,4 +1,5 @@
 import { Injectable } from "@angular/core";
+import { FormGroup } from "@angular/forms";
 import { NzNotificationPlacement } from 'ng-zorro-antd/notification';
 
 @Injectable({
@@ -56,4 +57,75 @@ export const SUCCESS_NOTIFICATION_BOX_POSITION = {
 
 export const ERROR_NOTIFICATION_BOX_POSITION = {
   nzPlacement: <NzNotificationPlacement> 'bottomLeft'
+}
+
+
+export type CommunityDefinition = {
+  id: string;
+  label: string;
+};
+
+export const COMMUNITIES: CommunityDefinition[] = [
+  {
+    id: 'Motor',
+    label: 'Motor Neuron Disease (MND)',
+  },
+  {
+    id: 'HIV',
+    label: 'HIV / AIDS',
+  },
+  {
+    id: 'Heart Disease',
+    label: 'Heart & CVD',
+
+  },
+  {
+    id: 'Diabetes',
+    label: 'Diabetes',
+
+  },
+  {
+    id: 'GBV',
+    label: 'Gender-Based Violence Recovery',
+  },
+  {
+    id: 'Cancer',
+    label: 'Cancer',
+  },
+  {
+    id: 'Arthritis',
+    label: 'Rheumatoid Arthritis',
+  },
+  {
+    id: 'Kidney Failure',
+    label: 'Kidney Disease',
+  },
+  {
+    id: 'Lung Disease',
+    label: 'Lung Disease',
+  },
+  {
+    id: 'Lupus',
+    label: 'Lupus',
+  },
+  {
+    id: 'Tuberculosis',
+    label: 'Tuberculosis',
+  },
+  {
+    id: 'Mental Health',
+    label: 'Mental Health Conditions',
+  },
+];
+
+export function markAllFormControlsAsTouched(formGroup: FormGroup) {
+    Object.keys(formGroup.controls).forEach((field) => {
+        const control= formGroup.get(field);
+        if (control instanceof FormGroup) {
+        markAllFormControlsAsTouched(control);
+        }
+        else {
+        control?.markAsTouched({onlySelf:true})
+        }
+    })
 }
