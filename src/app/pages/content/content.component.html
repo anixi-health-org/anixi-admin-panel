@@ -45,23 +45,34 @@
                         </div>
                     </div>
                     <div class="flex flex-col mt-4">
-                        <p class="h-[10px] font-medium">Image (optional)</p>
+                        <p class="h-[10px] font-medium">Image or video (optional)</p>
+                        <div class="flex flex-col border-2 border-dashed border-gray-300 items-center text-center cursor-pointer"
+                        [ngStyle]="{'padding': !previewUrl ? '40px' : '5px'}">
+                        <nz-upload [nzBeforeUpload]="$any(beforeUpload)"
+                        [nzShowUploadList]="false">
                         @if(!previewUrl) {
-                            <div class="flex flex-col border-2 border-dashed border-gray-300 items-center text-center p-10 cursor-pointer max-h-[250px]">
-                                <nz-upload [nzBeforeUpload]="$any(beforeUpload)"
-                                [nzShowUploadList]="false">
-                                    <nz-icon nzType="file-image" nzTheme="outline" class="sm:text-3xl text-xl" 
-                                        style="color: var(--color-gray-500);"></nz-icon>
-                                    <p class="relative top-2 text-gray-500">Click to upload image file</p>
-                                </nz-upload>
+                            <nz-icon nzType="file" nzTheme="outline" class="sm:text-3xl text-xl" 
+                                style="color: var(--color-gray-500);"></nz-icon>
+                            <p class="relative top-2 text-gray-500">Click to upload file</p>
+                                }
+                        @if (previewUrl) {
+                            <div class="w-full h-full flex items-center justify-center overflow-hidden">
+                                @if (fileType === 'image') {
+                                    <img [src]="previewUrl" class="w-full h-full object-contain">
+                                }
+                                @if (fileType === 'video') {
+                                    <video [src]="previewUrl"
+                                        controls class="w-full max-width-[400px]">
+                                    </video>
+                                }
                             </div>
                         }
-                        @else {
-                        <div class="flex flex-col border-2 border-dashed border-gray-300 items-center text-center p-0 cursor-pointer">
-                            <img [src]="previewUrl" class="w-full h-full object-contain">
-                        </div>
-                        }
+                        </nz-upload>
                     </div>
+                    </div>
+                    @if (previewUrl) {
+                        <p>Click to upload another file</p>
+                    }
                     <div class="flex flex-col mt-4">
                        <label for="content" class="font-medium">Content*</label>
                        <textarea id="content" formControlName="content" placeholder="Write your article content here...."></textarea>
@@ -92,24 +103,49 @@
                         }
                     </div>
                     <div class="flex flex-row gap-4 justify-end">
-                        <button nz-button nzType="primary" class="btn-draft">
+                        <!-- <button nz-button nzType="primary" class="btn-draft">
                             Save as Draft
-                        </button>
-                        <button type="submit" nz-button nzType="primary" 
-                            style="background-color:  #27a288; border-color:  #27a288; border-radius: 9px; height: 40px;">
-                            Published Now
-                        </button>
+                        </button> -->
+                        @if (!isLoading) {
+                            <button type="submit" nz-button nzType="primary" 
+                                style="background-color:  #27a288; border-color:  #27a288; border-radius: 9px; height: 40px;">
+                                Published Now
+                            </button>
+                        }
+                        @else {
+                            <button type="submit" nz-button nzType="primary" 
+                                style="background-color:  #27a288; border-color:  #27a288; border-radius: 9px; height: 40px; width: 130px;">
+                                <nz-icon nzType="loading" nzTheme="outline" ></nz-icon>
+                            </button>
+                        }
                     </div>
                 </form>
             </ng-container>
     </nz-modal>
 
+    <nz-modal [(nzVisible)]="isDeleteModalVisible" [nzFooter]="null"
+    (nzOnCancel)="handleCancel()">
+        <ng-container *nzModalContent>
+            @if (!isDeleted) {
+                <p class="text-xl font-normal text-center" >The post is being deleted</p>
+                <div class="flex items-center justify-center">
+                    <nz-spin nzSimple ></nz-spin>
+                </div>
+            }
+            @else {
+            <p class="text-xl font-normal text-center">The post is successfully deleted</p>
+            <nz-result 
+            [nzStatus]="'success'"
+            [nzTitle]=""></nz-result>
+            }
+        </ng-container>
+    </nz-modal>
 
     <div class="grid sm:grid-cols-4 gap-2 mt-4">
         @for (card of cards; track card.index) {
             <div class="bg-white rounded-lg shadow cursor-pointer border-1 hover:border-green-200 border-transparent p-4 sm:h-[100px] h-[80px]">
                 <p class="sm:text-[12px] text-[10px] text-gray-500 font-medium tracking-widest">{{card.label.toUpperCase()}}</p>
-                <p class="sm:text-xl text-base font-bold">{{card.value}}</p>
+                <p class="sm:text-xl text-base font-bold">{{getCardValue(card.label)}}</p>
             </div>
         }
     </div>
@@ -136,133 +172,141 @@
                 </nz-dropdown-menu>
             </div>
         </div>
-        <div class="border-1 mt-4 border-gray-300 rounded-lg">
-            <table class="table-auto w-full">
-                <thead class="border-b-1 border-gray-300 bg-gray-100">
-                    <tr>
-                        <th class="text-start text-gray-500 font-medium text-sm p-2">Title</th>
-                        <th class="text-start text-gray-500 font-medium text-sm">Category</th>
-                        <th class="text-start text-gray-500 font-medium text-sm">Communities</th>
-                        <th class="text-start text-gray-500 font-medium text-sm">Status</th>
-                        <th class="text-start text-gray-500 font-medium text-sm">Date</th>
-                        <th class="text-start text-gray-500 font-medium text-sm">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @for(article of articles; track article.title) {
-                        @if (menuItemStatus.value === 'All Status') {
-                             <tr class="border-b-1 border-gray-300">
-                                <td class="text-start font-semibold p-4">{{article.title}}</td>
-                                <td class="text-start text-gray-500">{{article.category}}</td>
-                                <td>
-                                   <div class="flex flex-row">
-                                     <div class="rounded-lg border-transparent" style="background-color: #ecf3f2; color: #377b6c">
-                                        <p class="text-center text-[11px] font-semibold h-[8px] pl-2 pr-2">{{article.communities}}</p>
-                                    </div>
-                                   </div>
-                                </td>
-        
-                                <td>
-                                   <div class="flex flex-row">
-                                     <div class="rounded-lg border-1" [ngStyle]="{'background-color': getColorByStatus(article.status).bgColor,
-                                      'color': getColorByStatus(article.status).color, 
-                                       'border-color': getColorByStatus(article.status).color}">
-                                        <p class="text-center text-[11px] font-medium h-[8px] pl-2 pr-2">{{article.status}}</p>
-                                    </div>
-                                   </div>
-                                </td>
-                                <td class="text-gray-500">
-                                  {{article.date}}
-                                </td>
-                                <td>
-                                    <nz-icon class="cursor-pointer" nz-dropdown nzTrigger="click" [nzDropdownMenu]="action" nzType="ellipsis" nzTheme="outline"></nz-icon>
-                                    <nz-dropdown-menu #action="nzDropdownMenu">
-                                        <ul nz-menu>
-                                            <li nz-menu-item>
-                                                <span class="flex flex-row gap-2">
-                                                    <nz-icon nzType="eye" nzTheme="outline"></nz-icon>
-                                                    <p class="relative top-2">Preview</p>
-                                                </span>
-                                            </li>
-                                            <li nz-menu-item>
-                                                <span class="flex flex-row gap-2">
-                                                    <nz-icon nzType="edit" nzTheme="outline"></nz-icon>
-                                                    <p class="relative top-2">Edit</p>
-                                                </span>
-                                            </li>
-                                            <li nz-menu-item>
-                                                <span class="flex flex-row gap-2 text-red-600">
-                                                    <nz-icon nzType="delete" nzTheme="outline"></nz-icon>
-                                                    <p class="relative top-2">Delete</p>
-                                                </span>
-                                            </li>
-                                        </ul>
-                                    </nz-dropdown-menu>
-                                </td>
-                            </tr>  
-                        }
-                        @if (menuItemStatus.value === article.status) {
-                            <tr class="border-b-1 border-gray-300">
-                                <td class="text-start font-semibold p-4">{{article.title}}</td>
-                                <td class="text-start text-gray-500">{{article.category}}</td>
-                                <td>
-                                   <div class="flex flex-row">
-                                     <div class="rounded-lg border-transparent" style="background-color: #ecf3f2; color: #377b6c">
-                                        <p class="text-center text-[11px] font-semibold h-[8px] pl-2 pr-2">{{article.communities}}</p>
-                                    </div>
-                                   </div>
-                                </td>
-        
-                                <td>
-                                   <div class="flex flex-row">
-                                     <div class="rounded-lg border-1" [ngStyle]="{'background-color': getColorByStatus(article.status).bgColor,
-                                      'color': getColorByStatus(article.status).color, 
-                                       'border-color': getColorByStatus(article.status).color}">
-                                        <p class="text-center text-[11px] font-medium h-[8px] pl-2 pr-2">{{article.status}}</p>
-                                    </div>
-                                   </div>
-                                </td>
-                                <td class="text-gray-500">
-                                  {{article.date}}
-                                </td>
-                                <td>
-                                    <nz-icon class="cursor-pointer" nz-dropdown nzTrigger="click" [nzDropdownMenu]="action" nzType="ellipsis" nzTheme="outline"></nz-icon>
-                                    <nz-dropdown-menu #action="nzDropdownMenu">
-                                        <ul nz-menu>
-                                            <li nz-menu-item>
-                                                <span class="flex flex-row gap-2">
-                                                    <nz-icon nzType="eye" nzTheme="outline"></nz-icon>
-                                                    <p class="relative top-2">Preview</p>
-                                                </span>
-                                            </li>
-                                            <li nz-menu-item>
-                                                <span class="flex flex-row gap-2">
-                                                    <nz-icon nzType="edit" nzTheme="outline"></nz-icon>
-                                                    <p class="relative top-2">Edit</p>
-                                                </span>
-                                            </li>
-                                            <li nz-menu-item>
-                                                <span class="flex flex-row gap-2">
-                                                    <nz-icon nzType="calendar" nzTheme="outline"></nz-icon>
-                                                    <p class="relative top-2">Schedule</p>
-                                                </span>
-                                            </li>
-                                            <li nz-menu-item>
-                                                <span class="flex flex-row gap-2 text-red-600">
-                                                    <nz-icon nzType="delete" nzTheme="outline"></nz-icon>
-                                                    <p class="relative top-2">Delete</p>
-                                                </span>
-                                            </li>
-                                        </ul>
-                                    </nz-dropdown-menu>
-                                </td>
-                            </tr>
-                        }
-                    }
-                </tbody>
-            </table>
+        @if (!isLoadingSkeleton) {
+            <div class="border-1 mt-4 border-gray-300 rounded-lg">
+                <table class="table-auto w-full">
+                    <thead class="border-b-1 border-gray-300 bg-gray-100">
+                        <tr>
+                            <th class="text-start text-gray-500 font-medium text-sm p-2">Title</th>
+                            <th class="text-start text-gray-500 font-medium text-sm">Category</th>
+                            <th class="text-start text-gray-500 font-medium text-sm">Communities</th>
+                            <th class="text-start text-gray-500 font-medium text-sm">Status</th>
+                            <th class="text-start text-gray-500 font-medium text-sm">Date</th>
+                            <th class="text-start text-gray-500 font-medium text-sm">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for(post of posts; track post.id) {
+                            @if (menuItemStatus.value === 'All Status') {
+                                 <tr class="border-b-1 border-gray-300">
+                                    <td class="text-start font-semibold p-4">{{getPostTitle(post.title, post.text)}}</td>
+                                    <td class="text-start text-gray-500">{{post.groupName}}</td>
+                                    <td>
+                                       <div class="flex flex-row">
+                                         <div class="rounded-lg border-transparent" style="background-color: #ecf3f2; color: #377b6c">
+                                            <p class="text-center text-[11px] font-semibold h-[8px] pl-2 pr-2">{{post.groupName}}</p>
+                                        </div>
+                                       </div>
+                                    </td>
             
-        </div>
+                                    <td>
+                                       <div class="flex flex-row">
+                                         <div class="rounded-lg border-1" [ngStyle]="{'background-color': getColorByStatus(post.status ?? 'Published').bgColor,
+                                          'color': getColorByStatus(post.status ?? 'Published').color, 
+                                           'border-color': getColorByStatus(post.status ?? 'Published').color}">
+                                            <p class="text-center text-[11px] font-medium h-[8px] pl-2 pr-2">{{post.status ?? 'Published'}}</p>
+                                        </div>
+                                       </div>
+                                    </td>
+                                    <td class="text-gray-500">
+                                      {{post.timeStamp.toDate() | date: 'longDate'}}
+                                    </td>
+                                    <td>
+                                        <nz-icon class="cursor-pointer" nz-dropdown nzTrigger="click" [nzDropdownMenu]="action" nzType="ellipsis" nzTheme="outline"></nz-icon>
+                                        <nz-dropdown-menu #action="nzDropdownMenu">
+                                            <ul nz-menu>
+                                                <li nz-menu-item>
+                                                    <span class="flex flex-row gap-2">
+                                                        <nz-icon nzType="eye" nzTheme="outline"></nz-icon>
+                                                        <p class="relative top-2">Preview</p>
+                                                    </span>
+                                                </li>
+                                                <li nz-menu-item>
+                                                    <span class="flex flex-row gap-2">
+                                                        <nz-icon nzType="edit" nzTheme="outline"></nz-icon>
+                                                        <p class="relative top-2">Edit</p>
+                                                    </span>
+                                                </li>
+                                                <li nz-menu-item>
+                                                    <span class="flex flex-row gap-2 text-red-600">
+                                                        <nz-icon nzType="delete" nzTheme="outline"></nz-icon>
+                                                        <p class="relative top-2" (click)="deletePost(post.id)">Delete</p>
+                                                    </span>
+                                                </li>
+                                            </ul>
+                                        </nz-dropdown-menu>
+                                    </td>
+                                </tr>  
+                            }
+                            @if (menuItemStatus.value === (post?.status || 'Published')) {
+                                <tr class="border-b-1 border-gray-300">
+                                    <td class="text-start font-semibold p-4">{{post.title ?? post.text.substring(0, 20)}}</td>
+                                    <td class="text-start text-gray-500">{{post.groupName}}</td>
+                                    <td>
+                                       <div class="flex flex-row">
+                                         <div class="rounded-lg border-transparent" style="background-color: #ecf3f2; color: #377b6c">
+                                            <p class="text-center text-[11px] font-semibold h-[8px] pl-2 pr-2">{{post.groupName}}</p>
+                                        </div>
+                                       </div>
+                                    </td>
+            
+                                    <td>
+                                       <div class="flex flex-row">
+                                         <div class="rounded-lg border-1" [ngStyle]="{'background-color': getColorByStatus(post.status ?? 'Published').bgColor,
+                                          'color': getColorByStatus(post.status ?? 'Published').color, 
+                                           'border-color': getColorByStatus(post.status ?? 'Published').color}">
+                                            <p class="text-center text-[11px] font-medium h-[8px] pl-2 pr-2">{{post.status ?? 'Published'}}</p>
+                                        </div>
+                                       </div>
+                                    </td>
+                                    <td class="text-gray-500">
+                                      {{post.timeStamp.toDate() | date: 'longDate'}}
+                                    </td>
+                                    <td>
+                                        <nz-icon class="cursor-pointer" nz-dropdown nzTrigger="click" [nzDropdownMenu]="action" nzType="ellipsis" nzTheme="outline"></nz-icon>
+                                        <nz-dropdown-menu #action="nzDropdownMenu">
+                                            <ul nz-menu>
+                                                <li nz-menu-item>
+                                                    <span class="flex flex-row gap-2">
+                                                        <nz-icon nzType="eye" nzTheme="outline"></nz-icon>
+                                                        <p class="relative top-2">Preview</p>
+                                                    </span>
+                                                </li>
+                                                <li nz-menu-item>
+                                                    <span class="flex flex-row gap-2">
+                                                        <nz-icon nzType="edit" nzTheme="outline"></nz-icon>
+                                                        <p class="relative top-2">Edit</p>
+                                                    </span>
+                                                </li>
+                                                <li nz-menu-item>
+                                                    <span class="flex flex-row gap-2">
+                                                        <nz-icon nzType="calendar" nzTheme="outline"></nz-icon>
+                                                        <p class="relative top-2">Schedule</p>
+                                                    </span>
+                                                </li>
+                                                <li nz-menu-item>
+                                                    <span class="flex flex-row gap-2 text-red-600">
+                                                        <nz-icon nzType="delete" nzTheme="outline"></nz-icon>
+                                                        <p class="relative top-2">Delete</p>
+                                                    </span>
+                                                </li>
+                                            </ul>
+                                        </nz-dropdown-menu>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+                
+            </div>
+        }
+        <!-- Skeleton -->
+        @else {
+            <div class="mt-4">
+                <nz-skeleton [nzTitle]="false" [nzParagraph]="{rows: 20}" [nzActive]="isLoadingSkeleton"></nz-skeleton>
+            </div>
+        }
     </div>
 </div>
 
@@ -270,3 +314,4 @@
     <h1>Create Article</h1>
     <p class="text-gray-500 font-normal text-sm">Fill in the details to create a new health article.</p>
 </ng-template>
+

@@ -1,7 +1,7 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormControl } from '@angular/forms';
 import { UtilFunctions } from '../../../../const';
-import { map, Observable, Subscription } from 'rxjs';
+import { map, Observable, shareReplay, Subscription, tap } from 'rxjs';
 import { FirestoreService } from '../../services/firestore.service';
 import {BreakpointObserver} from '@angular/cdk/layout';
 
@@ -41,6 +41,7 @@ export class DoctorVerificationComponent implements OnInit, OnDestroy{
   pendingCount$!: Observable<number>;
   rejectedCount$!:Observable<number>;
   suspendedCount$!:Observable<number>;
+  isLoadingSkeleton!: boolean;
   private sub!: Subscription;
   isResponsive = false;
 
@@ -50,16 +51,19 @@ export class DoctorVerificationComponent implements OnInit, OnDestroy{
   ) {}
   
   async ngOnInit() {
+    this.isLoadingSkeleton = true;
     this.verificationStatus = new FormControl('all'); 
-    // this.doctorList$ = this.fireStoreService.getAllDoctors();
-    this.doctorList$ = this.fireStoreService.getDoctors();
-    // this.doctorList$.subscribe(doctors => {
-    //   this.doctorsList = doctors;
-    // })
+    this.doctorList$ = this.fireStoreService.getDoctors().pipe(
+      tap({
+        next: () => this.isLoadingSkeleton = false,
+      error: () => this.isLoadingSkeleton = false
+    }),
+      shareReplay(1)
+    );
+    console.log(this.isLoadingSkeleton);
     this.totalCount$ = this.doctorList$.pipe(
       map(doctors => doctors.length)
     );
-
     this.approvedCount$ = this.doctorList$.pipe(
       map(doctors => 
         doctors.filter(d => d.verificationStatus === 'approved').length
@@ -131,8 +135,5 @@ export class DoctorVerificationComponent implements OnInit, OnDestroy{
     }
     return count$;
   }
-
- 
-
 
 }

@@ -1,11 +1,13 @@
-import { Component, EnvironmentInjector, OnInit, runInInjectionContext } from '@angular/core';
+import { Component, EnvironmentInjector, OnDestroy, OnInit, runInInjectionContext } from '@angular/core';
 import { Form, FormArray, FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
-import { COMMUNITIES, displayNotificationMessage, ERROR_NOTIFICATION_BOX_POSITION, markAllFormControlsAsTouched } from '../../../../const';
+import { COMMUNITIES, displayNotificationMessage, ERROR_NOTIFICATION_BOX_POSITION, markAllFormControlsAsTouched, SUCCESS_NOTIFICATION_BOX_POSITION } from '../../../../const';
 import { NzNotificationService } from 'ng-zorro-antd/notification';
-import { ref } from 'firebase/storage';
-import { getDownloadURL, Storage, uploadBytes } from '@angular/fire/storage';
+import { getDownloadURL, ref, Storage, uploadBytes } from '@angular/fire/storage';
 import { PostService } from '../../services/post.service';
 import { IGroupPost } from '../../../interfaces/IgroupPost';
+import { environment } from '../../../environments/environment';
+import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
+import { Observable } from 'rxjs';
 
 const contentCards = [
   {index: '0' , label: 'Total Posts', value: '312' },
@@ -42,7 +44,7 @@ const categories = [
   templateUrl: './content.component.html',
   styleUrl: './content.component.css'
 })
-export class ContentComponent implements OnInit{
+export class ContentComponent implements OnInit, OnDestroy{
   cards = contentCards;
   articles = articles;
   search = new FormControl('');
@@ -51,17 +53,27 @@ export class ContentComponent implements OnInit{
   categories = categories;
   articleElement!: FormGroup;
   selectedFile!: File;
-  imageUrl!: string;
-  previewUrl!: string | ArrayBuffer | null;
+  mediaUrl!: string;
+  previewUrl!: SafeUrl | null;
+  fileType!: string | null;
+  private rawUrl!: string | null;
   communities = COMMUNITIES;
   submitted = false;
   isLoading = false;
+  isLoadingSkeleton = false;
+  totalPost!: number;
+  mediaType!: string;
+  isDeleteModalVisible = false;
+  // posts$!: Observable<any[]>;
+  posts!: IGroupPost[];
+  isDeleted = false;
 
   constructor(private fb: FormBuilder, 
     private envInjector: EnvironmentInjector,
   private notif: NzNotificationService,
   private storage: Storage,
-  private postService: PostService
+  private postService: PostService,
+  private sanitizer: DomSanitizer
 ) {}
 
   ngOnInit(): void {
@@ -71,7 +83,20 @@ export class ContentComponent implements OnInit{
       // categories: [this.categories[1], Validators.required],
       // date: ['', Validators.required],
       communities: this.fb.array([], Validators.required)
-    })
+    });
+    this.isLoadingSkeleton = true;
+     this.postService.fetchAdminPost(environment.ADMIN_USER_ID).subscribe(res => {
+      const data = res.data;
+      this.totalPost = data.length;
+      this.posts = data.sort((a, b) => {
+        return b.timeStamp.toDate() - a.timeStamp.toDate();
+      })
+      this.isLoadingSkeleton = res.loading;
+     });
+  }
+  ngOnDestroy(): void {
+    if (this.rawUrl) 
+      URL.revokeObjectURL(this.rawUrl);
   }
   getColorByStatus(status: string) {
     switch(status) {
@@ -106,6 +131,7 @@ export class ContentComponent implements OnInit{
     }
     handleCancel() {
       this.isVisible = false;
+      this.isDeleteModalVisible = false;
     }
 
     beforeUpload = (file:File): boolean => {
@@ -119,11 +145,12 @@ export class ContentComponent implements OnInit{
     }
 
     previewFile(file:File) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        this.previewUrl = reader.result;
-      };
-      reader.readAsDataURL(file);
+      // remove the old url to avoid leaks
+      if (this.rawUrl) URL.revokeObjectURL(this.rawUrl);
+      this.fileType = file.type.split('/')[0];
+
+      this.rawUrl = URL.createObjectURL(file);
+      this.previewUrl = this.sanitizer.bypassSecurityTrustUrl(this.rawUrl);
     }
 
     onCheckBoxChange(event: Event) {
@@ -140,39 +167,63 @@ export class ContentComponent implements OnInit{
         }
       }
     }
+
     async onSubmit() {
+      this.isLoading = true;
       try {
-        this.isLoading = true;
         this.submitted = true;
         if (this.articleElement.invalid) {
          markAllFormControlsAsTouched(this.articleElement);
+         this.isLoading = false;
          return;
         }
         if (this.selectedFile) {
-            this.imageUrl = await this.uploadFile(this.selectedFile, 
+            this.mediaUrl = await this.uploadFile(this.selectedFile, 
               this.communitiesFormArray.value[0]);
         }
         const communities = this.communitiesFormArray.controls;
-        for (let community of communities) {
-          const postData: Partial<IGroupPost> = {
-            firstName: "anixi health",
-            groupName: community.value,
-            lastName: ,
-            userId: ,
-            postType: ,
-            mediaType: ,
-            mediaUrl: ,
-            visibility: 
-          }
-          await this.postService.saveGroupPost(community.value, )
+        if (this.fileType) {
+          this.mediaType = this.getMediaType(this.fileType);
         }
+        const title = this.articleElement.get('title')?.value;
+        const text = this.articleElement.get('content')?.value;
+        for (let community of communities) {
+          const postId = Date.now().toString();
+          const postData: Partial<IGroupPost> = {
+            id: postId,
+            title: title,
+            firstName: "admin",
+            userName: 'anixi health',
+            text: text,
+            groupName: community.value,
+            lastName: "anixihealth",
+            postType: "Post",
+            mediaType: this.mediaType || '',
+            mediaUrl: this.mediaUrl || '',
+            status: "Published"
+          }
+          await this.postService.saveGroupPost(postId, postData);
+        }
+        this.isLoading = false;
+        this.isVisible = false;
+        this.notif.create(
+          'success',
+          'Success',
+          displayNotificationMessage('success', 'Post published'),
+          SUCCESS_NOTIFICATION_BOX_POSITION
+        );
+        this.previewUrl = null;
+        this.submitted = false;
+        const com = this.communitiesFormArray;
+        com.clear();
+        this.articleElement.reset();
         
       } catch (error) {
         this.isLoading = false;
         this.notif.create(
           'error',
           'Error',
-          displayNotificationMessage('success', 'Failed to published the post'),
+          displayNotificationMessage('Error', 'Failed to published the post'),
           ERROR_NOTIFICATION_BOX_POSITION
         )
       }
@@ -180,6 +231,7 @@ export class ContentComponent implements OnInit{
 
     async uploadFile(file:File, groupId: string): Promise<string> {
       const filePath = `community-posts/${groupId}/${Date.now()}_${file.name}`;
+      console.log(filePath);
       return await runInInjectionContext(this.envInjector, async () => {
         const fileRef = ref(this.storage, filePath);
         await uploadBytes(fileRef, file);
@@ -187,4 +239,53 @@ export class ContentComponent implements OnInit{
       })
     }
 
+    async deletePost(postId: string) {
+      try {
+        this.isDeleteModalVisible = true;
+        this.isDeleted = false;
+        await this.postService.deleteGroupPost(postId);
+        this.isDeleted = true;
+      } catch(error) {
+        this.notif.create(
+          'error',
+          'Failed',
+          displayNotificationMessage('Error', 'Failed to delete post'),
+          ERROR_NOTIFICATION_BOX_POSITION
+        );
+        this.isDeleteModalVisible = false;
+      }
+    }
+
+    getMediaType(filetype: string | null) {
+      switch(filetype) {
+        case 'image' :
+          return 'Picture';
+        case 'video':
+          return 'Video'
+        default:
+          return '';
+      }  
+    }
+
+    getPostTitle(title?:string, text?: string) {
+      if (!title && text?.length == 0)
+        return 'No title';
+      if (title) 
+        return title
+      if (!title && text)
+        return `${text.substring(0, 60)}....`;
+      return  'No title';
+    }
+
+    getCardValue(label:string): number {
+      switch(label) {
+        case 'Total Posts':
+          return this.totalPost;
+        case 'Published':
+        return this.totalPost;
+        default:
+          return 0;
+      }
+    }
+    
 }

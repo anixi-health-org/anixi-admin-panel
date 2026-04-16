@@ -19,9 +19,10 @@ import { ContentComponent } from './content/content.component';
 import {NzDropdownModule} from 'ng-zorro-antd/dropdown';
 import {NzModalModule} from 'ng-zorro-antd/modal';
 import {NzUploadModule} from 'ng-zorro-antd/upload';
-import { PdfViewerComponent } from './pdf-viewer/pdf-viewer.component'
-
-
+import { PdfViewerComponent } from './pdf-viewer/pdf-viewer.component';
+import {NzSkeletonModule} from 'ng-zorro-antd/skeleton';
+import {NzResultModule} from 'ng-zorro-antd/result';
+import {NzSpinModule} from 'ng-zorro-antd/spin';
 
 @NgModule({
   declarations: [
@@ -49,7 +50,10 @@ import { PdfViewerComponent } from './pdf-viewer/pdf-viewer.component'
     NgxEchartsDirective,
     NzDropdownModule,
     NzModalModule,
-    NzUploadModule
+    NzUploadModule,
+    NzSkeletonModule,
+    NzResultModule,
+    NzSpinModule
 
 ]
 })

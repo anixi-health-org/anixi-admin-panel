@@ -109,3 +109,10 @@ nz-button, .btn-draft:hover {
    
 }
 
+::ng-deep .ant-spin-dot-item{
+    background-color:#27a288;
+}
+::ng-deep .ant-spin-dot{
+    font-size: 40px;
+}
+

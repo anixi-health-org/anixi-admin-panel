@@ -1,7 +1,7 @@
   export interface IGroupPost {
   id: string;
   title?: string;
-  comment: string[];
+  comments: string[];
   userId: string;
   userName: string;
   firstName: string;
