@@ -123,22 +123,44 @@
             </ng-container>
     </nz-modal>
 
-    <nz-modal [(nzVisible)]="isDeleteModalVisible" [nzFooter]="null"
-    (nzOnCancel)="handleCancel()">
-        <ng-container *nzModalContent>
-            @if (!isDeleted) {
-                <p class="text-xl font-normal text-center" >The post is being deleted</p>
-                <div class="flex items-center justify-center">
-                    <nz-spin nzSimple ></nz-spin>
+
+    <nz-modal [(nzVisible)]="previewModalVisible" 
+    (nzOnCancel)="handleCancel()"
+    [nzFooter]="null"
+    nzTitle="Post Preview">
+    <ng-container *nzModalContent>
+        <div>
+            @if (post.title || post.text) {
+                <p class="font-bold">{{post.title}}</p>
+                <div class="mb-2" [innerHTML]="post.text | linkify"></div>
+            }
+            @if (post) {
+                @if (post.mediaType == 'Picture') {
+                    <img [src]="post.mediaUrl">
+                }
+                @if (post.mediaType == 'Video') {
+                    <video [src]="post.mediaUrl"
+                    controls class="w-full max-width-[400px]"> 
+                    </video>
+                }
+            }
+            <div class="flex flex-row mt-8 gap-2">
+                <div class="rounded-lg border-transparent" style="background-color: #ecf3f2; color: #377b6c">
+                    <p class="text-center text-[11px] font-semibold h-[8px] pl-2 pr-2">{{post.groupName}}</p>
                 </div>
-            }
-            @else {
-            <p class="text-xl font-normal text-center">The post is successfully deleted</p>
-            <nz-result 
-            [nzStatus]="'success'"
-            [nzTitle]=""></nz-result>
-            }
-        </ng-container>
+                <div class="rounded-lg border-1" [ngStyle]="{'background-color': getColorByStatus(post.status ?? 'Published').bgColor,
+                        'color': getColorByStatus(post.status ?? 'Published').color, 
+                        'border-color': getColorByStatus(post.status ?? 'Published').color}">
+                        <p class="text-center text-[11px] font-medium h-[8px] pl-2 pr-2">{{post.status ?? 'Published'}}</p>
+                </div>
+            </div>
+            <div class="flex flex-col mt-4">
+                <p class="text-gray-500">Author: Admin</p>
+                <p class="text-gray-500">Date: {{post.timeStamp.toDate() | date: 'longDate'}}</p>
+            </div>
+        </div>
+    </ng-container>
+
     </nz-modal>
 
     <div class="grid sm:grid-cols-4 gap-2 mt-4">
@@ -212,13 +234,13 @@
                                       {{post.timeStamp.toDate() | date: 'longDate'}}
                                     </td>
                                     <td>
-                                        <nz-icon class="cursor-pointer" nz-dropdown nzTrigger="click" [nzDropdownMenu]="action" nzType="ellipsis" nzTheme="outline"></nz-icon>
+                                        <nz-icon class="cursor-pointer hover:bg-orange-400 h-8 w-8 rounded-lg flex justify-center items-center" nz-dropdown nzTrigger="click" [nzDropdownMenu]="action" nzType="ellipsis" nzTheme="outline"></nz-icon>
                                         <nz-dropdown-menu #action="nzDropdownMenu">
                                             <ul nz-menu>
                                                 <li nz-menu-item>
                                                     <span class="flex flex-row gap-2">
                                                         <nz-icon nzType="eye" nzTheme="outline"></nz-icon>
-                                                        <p class="relative top-2">Preview</p>
+                                                        <p class="relative top-2" (click)="openPreview(post)">Preview</p>
                                                     </span>
                                                 </li>
                                                 <li nz-menu-item>
@@ -230,7 +252,13 @@
                                                 <li nz-menu-item>
                                                     <span class="flex flex-row gap-2 text-red-600">
                                                         <nz-icon nzType="delete" nzTheme="outline"></nz-icon>
-                                                        <p class="relative top-2" (click)="deletePost(post.id)">Delete</p>
+                                                        <p class="relative top-2"
+                                                        nz-popconfirm
+                                                        nzPopconfirmTitle="Are you sure you want to delete this post ?"
+                                                        (nzOnConfirm)="deletePost(post.id)"
+                                                        (nzOnCancel)="cancel()"
+                                                        >
+                                                            Delete</p>
                                                     </span>
                                                 </li>
                                             </ul>
@@ -269,7 +297,7 @@
                                                 <li nz-menu-item>
                                                     <span class="flex flex-row gap-2">
                                                         <nz-icon nzType="eye" nzTheme="outline"></nz-icon>
-                                                        <p class="relative top-2">Preview</p>
+                                                        <p class="relative top-2"(click)="openPreview(post)">Preview</p>
                                                     </span>
                                                 </li>
                                                 <li nz-menu-item>
@@ -287,7 +315,12 @@
                                                 <li nz-menu-item>
                                                     <span class="flex flex-row gap-2 text-red-600">
                                                         <nz-icon nzType="delete" nzTheme="outline"></nz-icon>
-                                                        <p class="relative top-2">Delete</p>
+                                                        <p class="relative top-2"
+                                                            nz-popconfirm
+                                                            nzPopconfirmTitle="Are you sure you want to delete this post ?"
+                                                            (nzOnConfirm)="deletePost(post.id)"
+                                                            (nzOnCancel)="cancel()" >
+                                                            Delete</p>
                                                     </span>
                                                 </li>
                                             </ul>

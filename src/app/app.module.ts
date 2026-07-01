@@ -17,7 +17,9 @@ import {NgxEchartsModule} from 'ngx-echarts'
 import * as echarts from 'echarts/core';
 import {BarChart, LineChart} from 'echarts/charts';
 import {DatasetComponent, GridComponent, LegendComponent, TooltipComponent} from 'echarts/components';
-import {CanvasRenderer} from 'echarts/renderers'
+import {CanvasRenderer} from 'echarts/renderers';
+import { PostTitlePipe } from './pipes/post-title.pipe';
+import { LinkifyPipe } from './pipes/linkify-pipe'
 
 echarts.use([BarChart, GridComponent, CanvasRenderer, TooltipComponent, LegendComponent, LineChart, DatasetComponent]);
 

@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { collection, deleteDoc, doc, Firestore, onSnapshot, orderBy, query, serverTimestamp, setDoc, where } from '@angular/fire/firestore';
+import { collection, deleteDoc, doc, Firestore, onSnapshot, orderBy, query, serverTimestamp, setDoc, updateDoc, where } from '@angular/fire/firestore';
 import { IGroupPost } from '../../interfaces/IgroupPost';
 import { environment } from '../../environments/environment';
 import { Observable } from 'rxjs';
@@ -32,6 +32,14 @@ export class PostService {
     }, {merge: true}) // true to avoid to erase field that non-mentionned
   }
 
+  async editPost(postId:string, data: Partial<IGroupPost>) {
+    const docRef = doc(this.db, 'group_posts', postId);
+    const updateData = {
+      ...data,
+      lastEditAt: new Date()
+    }
+    await updateDoc(docRef, updateData);
+  }
   async deleteGroupPost(postId:string) {
     const docRef = doc(this.db, 'group_posts', postId);
     await deleteDoc(docRef);

@@ -60,7 +60,6 @@ export class DoctorVerificationComponent implements OnInit, OnDestroy{
     }),
       shareReplay(1)
     );
-    console.log(this.isLoadingSkeleton);
     this.totalCount$ = this.doctorList$.pipe(
       map(doctors => doctors.length)
     );

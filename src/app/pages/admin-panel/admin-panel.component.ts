@@ -5,9 +5,11 @@ const menuIcons = [
     'path':'./dashboard'},
   {'name': 'Content', 'icon': 'file-text', 
     'path': './content'},
-  {'name': 'Doctor verification', 'icon': 'stethoscope', 
-    'path': './doctor-verification'},
-] 
+    {'name': 'Doctor verification', 'icon': 'stethoscope', 
+      'path': './doctor-verification'},
+    {'name': 'Users', 'icon': 'users', 
+      'path': './users'},
+  ];
 
 @Component({
   selector: 'app-admin-panel',

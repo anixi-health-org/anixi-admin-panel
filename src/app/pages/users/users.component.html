@@ -1,0 +1,109 @@
+<div class="sm:p-4 p-0 mt-4">
+    <div class="flex flex-col">
+        <p class="text-2xl font-semibold h-[10px]">Doctor Verification</p>
+        <p class="text-gray-500">Review, verify, and manage doctors applications.</p>
+    </div>
+    <div class="grid md:grid-cols-4 grid-cols-2 gap-4">
+        <!-- card -->
+         @for(card of cards; track card.label) {
+             <div class="max-w-sm sm:h-[90px] h-[80px] sm:p-4 p-2 bg-white
+              border-transparent shadow-lg rounded-lg transition-all duration-300
+               ease-in-out hover:scale-105 hover:border-1 hover:border-green-200">
+               @if (!isLoadingSkeleton) {
+                   <p class="text-xs font-medium uppercase tracking-wider text-gray-400">{{card.label}}</p>
+                   <p class="font-bold text-2xl">{{getCount(card.value) | async}}</p>
+               }
+               @else {
+                <nz-skeleton [nzTitle]="false" [nzParagraph]="{rows: 1}" [nzActive]="isLoadingSkeleton"></nz-skeleton>
+                <div class="mt-2">
+                    <nz-skeleton [nzTitle]="false" [nzParagraph]="{rows: 1}" [nzActive]="isLoadingSkeleton"></nz-skeleton>
+                </div>
+               }
+             </div>
+         }
+    </div>
+    <form>
+        <div class="flex min-[980px]:flex-row flex-col mt-6 gap-2">
+            <div class="bg-white border-transparent shadow-lg rounded-lg sm:p-6 p-2 w-full">
+                <div class="flex flex-row justify-between">
+                    <h1 class="text-base" >Users</h1>
+                    <span class="search">
+                        <nz-icon class="relative left-6 text-lg" nzType="search" nzTheme="outline"></nz-icon>
+                        <input class="border-1 border-gray-200 rounded-lg p-1 sm:w-[220px] w-[140px]" type="search" placeholder="Search users...">
+                    </span>
+                </div>
+                <div class="flex flex-row wrapper mt-4">
+                    @for(input of input; track input.label) {
+                        <div class="custom-input">
+                            <input type="radio" [id]="input.value" [value]="input.value"  [formControl]="userType" checked>
+                            <label [for]="input.value">{{input.label}} ({{input.value === 'all'  ? (totalUser$ | async) : (getCount(input.value) | async)}})</label>
+                        </div>
+                    }
+                </div>
+                @if (!isLoadingSkeleton) {
+                    <div class="m-4">
+                          @if(getUserTypeValue() === 'all') {
+                                @for(user of userList$ | async; track user.id) {
+                                    <div class="doctor-item hover:bg-gray-100 h-[80px] w-full rounded-lg p-2 cursor-pointer mb-2"
+                                    [class.active]="selectedUser === user.id"
+                                    (click)="setSelectedUser(user)">
+                                    <div class="flex flex-row justify-between mt-4">
+                                       
+                                        <div class="flex flex-row gap-2">
+                                            @if (!user.displayName || user.displayName?.length === 0) {
+                                                <p class="text-sm font-semibold tracking-wider sm:h-[10px] h-[25px]">Empty name</p>
+                                            }
+                                            @else {
+                                                <p class="text-sm font-semibold tracking-wider sm:h-[10px] h-[25px]">{{user.displayName}}</p>
+                                            }
+                                        </div>
+                                        <!-- Icon right arrow -->
+                                            <div>
+                                            <nz-icon nzType="right" nzTheme="outline"></nz-icon>
+                                            </div>
+                                    </div>
+                                    <!-- Speciality -->
+                                </div>
+                            }
+                        }
+    
+                        @for(user of userList$ | async; track user.id) {
+                            @if (user.accountType === getUserTypeValue()) {
+                                <div class="doctor-item hover:bg-gray-100 h-[80px] w-full rounded-lg p-2 cursor-pointer mb-2"
+                                [class.active]="selectedUser === user.id"
+                                (click)="setSelectedUser(user)">
+                                <div class="flex flex-row justify-between mt-4">
+                                    
+                                     <div class="flex flex-row gap-2">
+                                            @if (!user.displayName || user.displayName?.length === 0) {
+                                                <p class="text-sm font-semibold tracking-wider sm:h-[10px] h-[25px]">Empty name</p>
+                                            }
+                                            @else {
+                                                <p class="text-sm font-semibold tracking-wider sm:h-[10px] h-[25px]">{{user.displayName}}</p>
+                                            }
+                                        </div>
+                                    <!-- Icon right arrow -->
+                                        <div>
+                                        <nz-icon nzType="right" nzTheme="outline"></nz-icon>
+                                        </div>
+                                </div>
+                                <!-- Speciality -->
+                                <p class="font-normal text-xs text-gray-500">
+                               
+                            </div>
+                            }
+                        }
+                      
+                    </div>
+                }
+                @else {
+                    <div class="mt-4">
+                        <nz-skeleton [nzParagraph]="{rows: 15}" [nzTitle]="false" [nzActive]="isLoadingSkeleton"></nz-skeleton>
+                    </div>
+                }
+                    
+            </div>
+        </div>
+    </form>
+</div>
+

@@ -23,6 +23,10 @@ import { PdfViewerComponent } from './pdf-viewer/pdf-viewer.component';
 import {NzSkeletonModule} from 'ng-zorro-antd/skeleton';
 import {NzResultModule} from 'ng-zorro-antd/result';
 import {NzSpinModule} from 'ng-zorro-antd/spin';
+import { PostTitlePipe } from '../pipes/post-title.pipe';
+import {NzPopconfirmModule} from 'ng-zorro-antd/popconfirm';
+import { LinkifyPipe } from '../pipes/linkify-pipe';
+import { UsersComponent } from './users/users.component';
 
 @NgModule({
   declarations: [
@@ -33,7 +37,10 @@ import {NzSpinModule} from 'ng-zorro-antd/spin';
     ApplicationDetailsComponent,
     CardComponent,
     ContentComponent,
-    PdfViewerComponent
+    PdfViewerComponent,
+    PostTitlePipe,
+    LinkifyPipe,
+    UsersComponent
   ],
   imports: [
     CommonModule,
@@ -53,7 +60,8 @@ import {NzSpinModule} from 'ng-zorro-antd/spin';
     NzUploadModule,
     NzSkeletonModule,
     NzResultModule,
-    NzSpinModule
+    NzSpinModule,
+    NzPopconfirmModule,
 
 ]
 })

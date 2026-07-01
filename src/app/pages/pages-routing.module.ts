@@ -6,6 +6,7 @@ import { DoctorVerificationComponent } from './doctor-verification/doctor-verifi
 import { AdminPanelComponent } from './admin-panel/admin-panel.component';
 import { ContentComponent } from './content/content.component';
 import { PdfViewerComponent } from './pdf-viewer/pdf-viewer.component';
+import { UsersComponent } from './users/users.component';
 
 
 const routes: Routes = [
@@ -16,7 +17,8 @@ const routes: Routes = [
     {path: 'dashboard', component: DashboardComponent},
     {path: 'content', component: ContentComponent},
     {path: 'doctor-verification', component: DoctorVerificationComponent},
-    {path: 'certificat-viewer', component: PdfViewerComponent}
+    {path: 'certificat-viewer', component: PdfViewerComponent},
+    {path: 'users', component: UsersComponent},
   ]}
 ];
 

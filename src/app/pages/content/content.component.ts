@@ -7,7 +7,7 @@ import { PostService } from '../../services/post.service';
 import { IGroupPost } from '../../../interfaces/IgroupPost';
 import { environment } from '../../../environments/environment';
 import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
-import { Observable } from 'rxjs';
+import { NzMessageService } from 'ng-zorro-antd/message';
 
 const contentCards = [
   {index: '0' , label: 'Total Posts', value: '312' },
@@ -40,7 +40,6 @@ const categories = [
 @Component({
   selector: 'app-content',
   standalone: false,
-  
   templateUrl: './content.component.html',
   styleUrl: './content.component.css'
 })
@@ -63,17 +62,18 @@ export class ContentComponent implements OnInit, OnDestroy{
   isLoadingSkeleton = false;
   totalPost!: number;
   mediaType!: string;
-  isDeleteModalVisible = false;
+  previewModalVisible = false;
   // posts$!: Observable<any[]>;
   posts!: IGroupPost[];
-  isDeleted = false;
+  post!: IGroupPost
 
   constructor(private fb: FormBuilder, 
     private envInjector: EnvironmentInjector,
   private notif: NzNotificationService,
   private storage: Storage,
   private postService: PostService,
-  private sanitizer: DomSanitizer
+  private sanitizer: DomSanitizer,
+  private messageService: NzMessageService
 ) {}
 
   ngOnInit(): void {
@@ -131,7 +131,8 @@ export class ContentComponent implements OnInit, OnDestroy{
     }
     handleCancel() {
       this.isVisible = false;
-      this.isDeleteModalVisible = false;
+    
+      this.previewModalVisible = false;
     }
 
     beforeUpload = (file:File): boolean => {
@@ -239,12 +240,13 @@ export class ContentComponent implements OnInit, OnDestroy{
       })
     }
 
+    cancel() {
+      this.messageService.info('Delete post canceled');
+    }
     async deletePost(postId: string) {
       try {
-        this.isDeleteModalVisible = true;
-        this.isDeleted = false;
         await this.postService.deleteGroupPost(postId);
-        this.isDeleted = true;
+        this.messageService.success('Post deleted successfully');
       } catch(error) {
         this.notif.create(
           'error',
@@ -252,7 +254,6 @@ export class ContentComponent implements OnInit, OnDestroy{
           displayNotificationMessage('Error', 'Failed to delete post'),
           ERROR_NOTIFICATION_BOX_POSITION
         );
-        this.isDeleteModalVisible = false;
       }
     }
 
@@ -265,6 +266,10 @@ export class ContentComponent implements OnInit, OnDestroy{
         default:
           return '';
       }  
+    }
+
+    async editPost(postId:string) {
+
     }
 
     getPostTitle(title?:string, text?: string) {
@@ -286,6 +291,13 @@ export class ContentComponent implements OnInit, OnDestroy{
         default:
           return 0;
       }
+    }
+
+
+
+    openPreview(post: IGroupPost) {
+      this.post = post;
+      this.previewModalVisible = true;
     }
     
 }

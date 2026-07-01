@@ -22,6 +22,20 @@ export class FirestoreService {
     );
   }
 
+  getUsers(): Observable<any[]> {
+    return new Observable(observer => {
+      const ref = collection(this.db, 'Users');
+      const unsubscribe = onSnapshot(ref, snapshot => {
+        const users = snapshot.docs.map(doc => ({
+          ...(doc.data() as Omit<any, 'id'>),
+          id: doc.id
+        }));
+        observer.next(users);
+      });
+      return () => unsubscribe()
+    });
+  }
+
   updateDoctorStatus(doctorId:string, status:string) {
     const ref = doc(this.db, `doctors/${doctorId}`); 
     return updateDoc(ref, {

@@ -22,6 +22,8 @@
     "@tailwindcss/postcss": "^4.2.0",
     "echarts": "^6.0.0",
     "firebase": "^12.9.0",
+    "linkify-html": "^4.3.2",
+    "linkifyjs": "^4.3.2",
     "lucide-angular": "^0.574.0",
     "ng-zorro-antd": "^21.1.0",
     "ngx-echarts": "^21.0.0",
