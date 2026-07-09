@@ -8,7 +8,7 @@ import { DoctorVerificationComponent } from './doctor-verification/doctor-verifi
 import { DashboardComponent } from './dashboard/dashboard.component';
 import { NzLayoutModule } from 'ng-zorro-antd/layout';
 import {NzIconModule} from 'ng-zorro-antd/icon';
-import {Activity, Bell, Eye, FileText, LayoutDashboard, LucideAngularModule, MessageSquare, Stethoscope, TriangleAlert, User, Users, UserX} from 'lucide-angular';
+import {Activity, Bell, ChevronDown, Eye, FileText, LayoutDashboard, LogOut, LucideAngularModule, MessageSquare, Stethoscope, TriangleAlert, Users, UserX} from 'lucide-angular';
 import {NzAvatarModule} from 'ng-zorro-antd/avatar';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ApplicationDetailsComponent } from './application-details/application-details.component'
@@ -20,6 +20,8 @@ import {NzDropdownModule} from 'ng-zorro-antd/dropdown';
 import {NzModalModule} from 'ng-zorro-antd/modal';
 import {NzUploadModule} from 'ng-zorro-antd/upload';
 import { PdfViewerComponent } from './pdf-viewer/pdf-viewer.component';
+import { AnixiLogoComponent } from '../components/brand/anixi-logo.component';
+import { AdminProfileMenuComponent } from '../components/admin-profile-menu/admin-profile-menu.component';
 import {NzSkeletonModule} from 'ng-zorro-antd/skeleton';
 import {NzResultModule} from 'ng-zorro-antd/result';
 import {NzSpinModule} from 'ng-zorro-antd/spin';
@@ -40,7 +42,9 @@ import { UsersComponent } from './users/users.component';
     PdfViewerComponent,
     PostTitlePipe,
     LinkifyPipe,
-    UsersComponent
+    UsersComponent,
+    AnixiLogoComponent,
+    AdminProfileMenuComponent
   ],
   imports: [
     CommonModule,
@@ -51,7 +55,7 @@ import { UsersComponent } from './users/users.component';
     FormsModule,
     ReactiveFormsModule,
     LucideAngularModule.pick({ Stethoscope, LayoutDashboard, FileText, Eye, Users, Activity,
-        MessageSquare, Bell, UserX, TriangleAlert
+        MessageSquare, Bell, UserX, TriangleAlert, ChevronDown, LogOut
     }),
     NzButtonComponent,
     NgxEchartsDirective,

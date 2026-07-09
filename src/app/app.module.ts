@@ -1,5 +1,6 @@
 import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
+import { provideAnimations } from '@angular/platform-browser/animations';
 
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
@@ -9,7 +10,7 @@ import { en_US } from 'ng-zorro-antd/i18n';
 import { registerLocaleData } from '@angular/common';
 import en from '@angular/common/locales/en';
 import { initializeApp, provideFirebaseApp } from '@angular/fire/app'
-import { environment } from '../environments/environment.development';
+import { environment } from '../environments/environment';
 import { provideAuth, getAuth } from '@angular/fire/auth';
 import {provideStorage, getStorage} from '@angular/fire/storage';
 import {provideFirestore, getFirestore} from '@angular/fire/firestore';
@@ -40,6 +41,7 @@ registerLocaleData(en);
     provideAuth(() => getAuth()),
     provideFirestore(() => getFirestore()),
     provideStorage(() => getStorage()),
+    provideAnimations(),
     provideNzI18n(en_US)
   ],
   bootstrap: [AppComponent]

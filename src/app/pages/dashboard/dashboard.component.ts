@@ -1,19 +1,18 @@
-import { Component } from '@angular/core';
-import { color, EChartsCoreOption } from 'echarts/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
+import { EChartsCoreOption } from 'echarts/core';
+import { Subscription } from 'rxjs';
+import { COMMUNITIES } from '../../../../const';
+import { FirestoreService } from '../../services/firestore.service';
+import { PostService } from '../../services/post.service';
 
-
-const StaticCards1 = [
-  {label: 'Total Users', icon: 'users', value: '423', index: '0'},
-  {label: 'Active Users', icon: 'activity', value: '244', index: '1'},
-  {label: 'Communities', icon: 'message-square', value: '42', index: '2'},
-  {label: 'Articles', icon: 'file-text', value: '45', index: '3'},
-];
-const staticCards2 = [
-  {label: 'Notifications Sent', icon: 'bell', value: '26', index: '4'},
-  {label: 'Report Pending', icon: 'triangle-alert', value: '23', index: '5'},
-  {label: 'Doctors Pending', icon: 'stethoscope', value: '0', index: '6'},
-  {label: 'Suspended Users', icon: 'user-x', value: '0', index: '7'},
-];
+interface QuickAction {
+  index: string;
+  action: string;
+  icon: string;
+  route: string[];
+  queryParams?: Record<string, string>;
+}
 
 const activities = [
   { index: '0',type: 'doctor', title: 'New doctor application', content: 'Dr. Sarah Molefe submitted verification', 
@@ -29,13 +28,13 @@ const activities = [
   { index: '5',type: 'moderation', title: 'User suspended', content: 'Account @toxic_user22 suspended for violations', 
     bgColor: '#fef6e9' , color: '#f69e23', createdAt: '5 hrs ago'},
 ];
-const quickActions = [
-  {index: '0', action: 'Create Article',  icon: 'file-text', route: './'},
-  {index: '1', action: 'Send Notification',  icon: 'bell', route: './'},
-  {index: '2', action: 'Review Doctor',  icon: 'stethoscope', route: '/doctor-verification'},
-  {index: '3', action: 'View Reports',  icon: 'triangle-alert', route: './'},
-  {index: '4', action: 'Manage Users',  icon: 'users', route: './'},
-]
+const quickActions: QuickAction[] = [
+  { index: '0', action: 'Create Article', icon: 'file-text', route: ['/content'], queryParams: { action: 'create' } },
+  { index: '1', action: 'Send Notification', icon: 'bell', route: ['/content'], queryParams: { action: 'notify' } },
+  { index: '2', action: 'Review Doctor', icon: 'stethoscope', route: ['/doctor-verification'], queryParams: { status: 'pending' } },
+  { index: '3', action: 'View Reports', icon: 'triangle-alert', route: ['/content'], queryParams: { filter: 'reported' } },
+  { index: '4', action: 'Manage Users', icon: 'users', route: ['/doctor-verification'] },
+];
 
 @Component({
   selector: 'app-dashboard',
@@ -44,11 +43,59 @@ const quickActions = [
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css'
 })
-export class DashboardComponent {
-  cards = StaticCards1;
-  cards2 = staticCards2;
+export class DashboardComponent implements OnInit, OnDestroy {
+  cards = [
+    {label: 'Total Doctors', icon: 'users', value: '—', index: '0'},
+    {label: 'Approved Doctors', icon: 'activity', value: '—', index: '1'},
+    {label: 'Communities', icon: 'message-square', value: String(COMMUNITIES.length), index: '2'},
+    {label: 'Admin Posts', icon: 'file-text', value: '—', index: '3'},
+  ];
+  cards2 = [
+    {label: 'Published Posts', icon: 'bell', value: '—', index: '4'},
+    {label: 'Rejected Doctors', icon: 'triangle-alert', value: '—', index: '5'},
+    {label: 'Doctors Pending', icon: 'stethoscope', value: '—', index: '6'},
+    {label: 'Suspended Doctors', icon: 'user-x', value: '—', index: '7'},
+  ];
   activities = activities;
   actions = quickActions;
+  isLoading = true;
+  private sub = new Subscription();
+
+  constructor(
+    private firestoreService: FirestoreService,
+    private postService: PostService,
+    private router: Router
+  ) {}
+
+  runQuickAction(action: QuickAction): void {
+    this.router.navigate(action.route, { queryParams: action.queryParams });
+  }
+
+  ngOnInit(): void {
+    this.sub.add(
+      this.firestoreService.getDashboardStats().subscribe((stats) => {
+        this.cards[0].value = String(stats.totalDoctors);
+        this.cards[1].value = String(stats.approvedDoctors);
+        this.cards2[1].value = String(stats.rejectedDoctors);
+        this.cards2[2].value = String(stats.pendingDoctors);
+        this.cards2[3].value = String(stats.suspendedDoctors);
+        this.isLoading = false;
+      })
+    );
+
+    this.sub.add(
+      this.postService.fetchAdminPost().subscribe((res) => {
+        const published = res.data.filter((post) => post['status'] === 'Published').length;
+        this.cards[3].value = String(res.data.length);
+        this.cards2[0].value = String(published);
+      })
+    );
+  }
+
+  ngOnDestroy(): void {
+    this.sub.unsubscribe();
+  }
+
   options: EChartsCoreOption = {
     color: ['#21a086'],
     tooltip : {

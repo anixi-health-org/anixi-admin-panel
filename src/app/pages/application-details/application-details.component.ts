@@ -1,61 +1,141 @@
-import { Component, Input, OnInit} from '@angular/core';
-import { displayNotificationMessage, ERROR_NOTIFICATION_BOX_POSITION, SUCCESS_NOTIFICATION_BOX_POSITION, UtilFunctions } from '../../../../const';
+import { Component, Input } from '@angular/core';
+import {
+  displayNotificationMessage,
+  ERROR_NOTIFICATION_BOX_POSITION,
+  SUCCESS_NOTIFICATION_BOX_POSITION,
+  UtilFunctions,
+} from '../../../../const';
 import { FirestoreService } from '../../services/firestore.service';
 import { NzNotificationService } from 'ng-zorro-antd/notification';
-import { BehaviorSubject, filter, Observable, switchMap } from 'rxjs';
-import { HttpClient } from '@angular/common/http';
+import { BehaviorSubject, filter, switchMap } from 'rxjs';
+import {
+  DoctorRecord,
+  formatDoctorField,
+  formatTimestamp,
+  getCertificateUrl,
+  getDoctorDisplayName,
+  getPracticeLicenseUrl,
+  normalizeVerificationStatus,
+  VerificationStatus,
+} from '../../utils/doctor-record.utils';
 
 @Component({
   selector: 'app-application-details',
   standalone: false,
-  
   templateUrl: './application-details.component.html',
-  styleUrl: './application-details.component.css'
+  styleUrl: './application-details.component.css',
 })
 export class ApplicationDetailsComponent {
-
   private doctorId$ = new BehaviorSubject<string | null>(null);
-  detailList!: any;
-  private _id!: string;
+  private _id = '';
+  isUpdating = false;
+  isLoadingDetail = false;
+  doctor: DoctorRecord | null = null;
+
+  details$ = this.doctorId$.pipe(
+    filter((id): id is string => !!id),
+    switchMap((id) => this.fireStoreService.getDoctorsById(id))
+  );
 
   @Input()
   set id(value: string | null) {
-    if(value !== null) {
-      this._id = value
+    if (value) {
+      this._id = value;
+      this.isLoadingDetail = true;
+      this.doctor = null;
     }
     this.doctorId$.next(value);
   }
 
-  details$ = this.doctorId$.pipe(
-    filter((id): id is string => !!id),
-    switchMap(id =>this.fireStoreService.getDoctorsById(id))
-  );
-  
-  constructor(public utilFunctions: UtilFunctions,
+  constructor(
+    public utilFunctions: UtilFunctions,
     private fireStoreService: FirestoreService,
-    private notification: NzNotificationService,
-  ) {}
+    private notification: NzNotificationService
+  ) {
+    this.details$.subscribe((doctor) => {
+      this.doctor = doctor;
+      this.isLoadingDetail = false;
+    });
+  }
 
   get id(): string {
     return this._id;
   }
 
-   updateDoctorStatus(id:string, status:string, errorMessage:string) {
-    this.fireStoreService.updateDoctorStatus(id, status).
-    then(() => this.notification.create(
-      'success',
-      'Success',
-      displayNotificationMessage('success', `Doctor ${status}`),
-      SUCCESS_NOTIFICATION_BOX_POSITION,
-    ))
-    .catch(() => this.notification.create(
-      'error',
-      'Error',
-      displayNotificationMessage('error', `you try ${errorMessage} to  a doctor`),
-      ERROR_NOTIFICATION_BOX_POSITION
-    ))
+  displayName(doctor: DoctorRecord): string {
+    return getDoctorDisplayName(doctor);
   }
 
-  
+  statusOf(doctor: DoctorRecord): VerificationStatus {
+    return normalizeVerificationStatus(doctor.verificationStatus as string);
+  }
 
+  field(value: unknown): string {
+    return formatDoctorField(value);
+  }
+
+  timestamp(value: unknown): string {
+    return formatTimestamp(value);
+  }
+
+  certificateUrl(doctor: DoctorRecord): string | null {
+    return getCertificateUrl(doctor);
+  }
+
+  licenseUrl(doctor: DoctorRecord): string | null {
+    return getPracticeLicenseUrl(doctor);
+  }
+
+  profileImage(doctor: DoctorRecord): string | null {
+    const url =
+      (doctor.profileImageUrl as string) || (doctor.logoUrl as string) || null;
+    return url && url.trim() ? url : null;
+  }
+
+  specialty(doctor: DoctorRecord): string {
+    return formatDoctorField(doctor.medicalSpecialty || doctor.specialty);
+  }
+
+  registrationNumber(doctor: DoctorRecord): string {
+    return formatDoctorField(
+      doctor.hpcsaRegistrationNumber || doctor.licenseNumber
+    );
+  }
+
+  practiceAddress(doctor: DoctorRecord): string {
+    return formatDoctorField(doctor.practiceAddress || doctor.officeAddress);
+  }
+
+  contactMethods(doctor: DoctorRecord): string {
+    const methods = doctor.preferredContactMethods;
+    if (!Array.isArray(methods) || !methods.length) return '—';
+    return methods.map((m) => formatDoctorField(m)).join(', ');
+  }
+
+  async updateDoctorStatus(
+    doctorId: string,
+    status: VerificationStatus,
+    actionLabel: string
+  ): Promise<void> {
+    if (this.isUpdating) return;
+    this.isUpdating = true;
+    try {
+      await this.fireStoreService.updateDoctorStatus(doctorId, status);
+      this.notification.create(
+        'success',
+        'Success',
+        displayNotificationMessage('success', `Doctor ${status}`),
+        SUCCESS_NOTIFICATION_BOX_POSITION
+      );
+    } catch {
+      this.notification.create(
+        'error',
+        'Error',
+        displayNotificationMessage('error', `you try ${actionLabel} to a doctor`),
+        ERROR_NOTIFICATION_BOX_POSITION
+      );
+    } finally {
+      this.isUpdating = false;
+    }
+  }
 }

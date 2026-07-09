@@ -7,23 +7,33 @@ import { AdminPanelComponent } from './admin-panel/admin-panel.component';
 import { ContentComponent } from './content/content.component';
 import { PdfViewerComponent } from './pdf-viewer/pdf-viewer.component';
 import { UsersComponent } from './users/users.component';
-
+import { authGuard } from '../guards/auth.guard';
+import { guestGuard } from '../guards/guest.guard';
 
 const routes: Routes = [
-  // {path: '', redirectTo: 'login', pathMatch: 'full'},
-  // {path:'login', component: LoginComponent},
-    {path: '', component: AdminPanelComponent,  children: [
-    {path:'', redirectTo: 'dashboard', pathMatch: 'full'},
-    {path: 'dashboard', component: DashboardComponent},
-    {path: 'content', component: ContentComponent},
-    {path: 'doctor-verification', component: DoctorVerificationComponent},
-    {path: 'certificat-viewer', component: PdfViewerComponent},
-    {path: 'users', component: UsersComponent},
-  ]}
+  {
+    path: 'login',
+    component: LoginComponent,
+    canActivate: [guestGuard],
+  },
+  {
+    path: '',
+    component: AdminPanelComponent,
+    canActivate: [authGuard],
+    children: [
+      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+      { path: 'dashboard', component: DashboardComponent },
+      { path: 'content', component: ContentComponent },
+      { path: 'doctor-verification', component: DoctorVerificationComponent },
+      { path: 'certificat-viewer', component: PdfViewerComponent },
+      { path: 'users', component: UsersComponent },
+    ],
+  },
+  { path: '**', redirectTo: 'dashboard' },
 ];
 
 @NgModule({
   imports: [RouterModule.forChild(routes)],
-  exports: [RouterModule]
+  exports: [RouterModule],
 })
-export class PagesRoutingModule { }
+export class PagesRoutingModule {}

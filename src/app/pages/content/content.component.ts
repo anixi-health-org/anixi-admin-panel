@@ -1,19 +1,20 @@
 import { Component, EnvironmentInjector, OnDestroy, OnInit, runInInjectionContext } from '@angular/core';
 import { Form, FormArray, FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
 import { COMMUNITIES, displayNotificationMessage, ERROR_NOTIFICATION_BOX_POSITION, markAllFormControlsAsTouched, SUCCESS_NOTIFICATION_BOX_POSITION } from '../../../../const';
 import { NzNotificationService } from 'ng-zorro-antd/notification';
 import { getDownloadURL, ref, Storage, uploadBytes } from '@angular/fire/storage';
 import { PostService } from '../../services/post.service';
 import { IGroupPost } from '../../../interfaces/IgroupPost';
-import { environment } from '../../../environments/environment';
 import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { AuthService } from '../../services/auth.service';
 
 const contentCards = [
-  {index: '0' , label: 'Total Posts', value: '312' },
-  {index: '1' , label: 'Published', value: '245' },
-  {index: '2' , label: 'Scheduled', value: '28' },
-  {index: '3' , label: 'Drafts', value: '39' },
+  { index: '0', label: 'Total Posts', value: 0 },
+  { index: '1', label: 'Published', value: 0 },
+  { index: '2', label: 'Scheduled', value: 0 },
+  { index: '3', label: 'Drafts', value: 0 },
 ];
 
 const articles = [
@@ -45,27 +46,32 @@ const categories = [
 })
 export class ContentComponent implements OnInit, OnDestroy{
   cards = contentCards;
-  articles = articles;
   search = new FormControl('');
   menuItemStatus = new FormControl('All Status');
   isVisible = false;
   categories = categories;
   articleElement!: FormGroup;
-  selectedFile!: File;
+  selectedFile?: File;
   mediaUrl!: string;
   previewUrl!: SafeUrl | null;
   fileType!: string | null;
-  private rawUrl!: string | null;
+  private rawUrl: string | null = null;
   communities = COMMUNITIES;
   submitted = false;
   isLoading = false;
-  isLoadingSkeleton = false;
-  totalPost!: number;
+  isLoadingSkeleton = true;
+  totalPost = 0;
+  publishedCount = 0;
+  scheduledCount = 0;
+  draftCount = 0;
   mediaType!: string;
   previewModalVisible = false;
+  isDeleteModalVisible = false;
+  contentMode: 'article' | 'notification' = 'article';
   // posts$!: Observable<any[]>;
-  posts!: IGroupPost[];
-  post!: IGroupPost
+  posts: IGroupPost[] = [];
+  post!: IGroupPost;
+  isDeleted = false;
 
   constructor(private fb: FormBuilder, 
     private envInjector: EnvironmentInjector,
@@ -73,7 +79,10 @@ export class ContentComponent implements OnInit, OnDestroy{
   private storage: Storage,
   private postService: PostService,
   private sanitizer: DomSanitizer,
-  private messageService: NzMessageService
+  private messageService: NzMessageService,
+  private authService: AuthService,
+  private route: ActivatedRoute,
+  private router: Router
 ) {}
 
   ngOnInit(): void {
@@ -85,18 +94,38 @@ export class ContentComponent implements OnInit, OnDestroy{
       communities: this.fb.array([], Validators.required)
     });
     this.isLoadingSkeleton = true;
-     this.postService.fetchAdminPost(environment.ADMIN_USER_ID).subscribe(res => {
+     this.postService.fetchAdminPost(this.authService.getAdminUserId() ?? undefined).subscribe(res => {
       const data = res.data;
       this.totalPost = data.length;
+      this.publishedCount = data.filter((post) => (post.status ?? 'Published') === 'Published').length;
+      this.scheduledCount = data.filter((post) => post.status === 'Scheduled').length;
+      this.draftCount = data.filter((post) => post.status === 'Draft').length;
       this.posts = data.sort((a, b) => {
         return b.timeStamp.toDate() - a.timeStamp.toDate();
-      })
+      });
       this.isLoadingSkeleton = res.loading;
      });
+
+    this.route.queryParamMap.subscribe((params) => {
+      const action = params.get('action');
+      if (action === 'create') {
+        setTimeout(() => this.openCreateModal('article'));
+      } else if (action === 'notify') {
+        setTimeout(() => this.openCreateModal('notification'));
+      }
+
+      const filter = params.get('filter');
+      if (filter === 'reported') {
+        this.setMenuItemValue('Reported');
+      }
+    });
   }
+
   ngOnDestroy(): void {
-    if (this.rawUrl) 
+    if (this.rawUrl) {
       URL.revokeObjectURL(this.rawUrl);
+    }
+    this.setModalBodyLock(false);
   }
   getColorByStatus(status: string) {
     switch(status) {
@@ -126,19 +155,100 @@ export class ContentComponent implements OnInit, OnDestroy{
       this.menuItemStatus.setValue(value);
     }
 
-    showModal() {
-      this.isVisible = true
-    }
-    handleCancel() {
-      this.isVisible = false;
-    
-      this.previewModalVisible = false;
+    postMatchesFilter(post: IGroupPost): boolean {
+      const filter = this.menuItemStatus.value;
+      if (filter === 'All Status') {
+        return true;
+      }
+      if (filter === 'Reported') {
+        return post.reported === true;
+      }
+      return (post?.status || 'Published') === filter;
     }
 
-    beforeUpload = (file:File): boolean => {
+    postMatchesSearch(post: IGroupPost): boolean {
+      const query = (this.search.value || '').trim().toLowerCase();
+      if (!query) {
+        return true;
+      }
+      const title = (post.title || '').toLowerCase();
+      const text = (post.text || '').toLowerCase();
+      const group = (post.groupName || '').toLowerCase();
+      return title.includes(query) || text.includes(query) || group.includes(query);
+    }
+
+    postIsVisible(post: IGroupPost): boolean {
+      return this.postMatchesFilter(post) && this.postMatchesSearch(post);
+    }
+
+    showModal() {
+      this.openCreateModal('article');
+    }
+
+    openCreateModal(mode: 'article' | 'notification') {
+      if (!this.articleElement) {
+        return;
+      }
+      this.resetComposeForm();
+      this.contentMode = mode;
+      this.isVisible = true;
+      this.setModalBodyLock(true);
+    }
+
+    private resetComposeForm(): void {
+      this.submitted = false;
+      this.isLoading = false;
+      this.previewUrl = null;
+      this.fileType = null;
+      this.selectedFile = undefined;
+      if (this.rawUrl) {
+        URL.revokeObjectURL(this.rawUrl);
+        this.rawUrl = null;
+      }
+      this.communitiesFormArray.clear();
+      this.articleElement.reset({
+        title: '',
+        content: '',
+      });
+    }
+
+    handleCancel() {
+      this.isVisible = false;
+      this.previewModalVisible = false;
+      this.isDeleteModalVisible = false;
+      this.submitted = false;
+      this.isLoading = false;
+      this.setModalBodyLock(false);
+      this.clearComposeQueryParams();
+      this.resetComposeForm();
+    }
+
+    private setModalBodyLock(locked: boolean): void {
+      document.body.classList.toggle('content-modal-open', locked);
+    }
+
+    private clearComposeQueryParams(): void {
+      const action = this.route.snapshot.queryParamMap.get('action');
+      if (action !== 'create' && action !== 'notify') {
+        return;
+      }
+
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { action: null },
+        queryParamsHandling: 'merge',
+        replaceUrl: true,
+      });
+    }
+
+    onFileSelected(event: Event): void {
+      const input = event.target as HTMLInputElement;
+      const file = input.files?.[0];
+      if (!file) {
+        return;
+      }
       this.selectedFile = file;
       this.previewFile(file);
-      return false;
     }
 
     get communitiesFormArray() {
@@ -207,17 +317,15 @@ export class ContentComponent implements OnInit, OnDestroy{
         }
         this.isLoading = false;
         this.isVisible = false;
+        this.setModalBodyLock(false);
+        this.clearComposeQueryParams();
         this.notif.create(
           'success',
           'Success',
           displayNotificationMessage('success', 'Post published'),
           SUCCESS_NOTIFICATION_BOX_POSITION
         );
-        this.previewUrl = null;
-        this.submitted = false;
-        const com = this.communitiesFormArray;
-        com.clear();
-        this.articleElement.reset();
+        this.resetComposeForm();
         
       } catch (error) {
         this.isLoading = false;
@@ -246,6 +354,7 @@ export class ContentComponent implements OnInit, OnDestroy{
     async deletePost(postId: string) {
       try {
         await this.postService.deleteGroupPost(postId);
+        this.isDeleted = true;
         this.messageService.success('Post deleted successfully');
       } catch(error) {
         this.notif.create(
@@ -282,12 +391,16 @@ export class ContentComponent implements OnInit, OnDestroy{
       return  'No title';
     }
 
-    getCardValue(label:string): number {
-      switch(label) {
+    getCardValue(label: string): number {
+      switch (label) {
         case 'Total Posts':
           return this.totalPost;
         case 'Published':
-        return this.totalPost;
+          return this.publishedCount;
+        case 'Scheduled':
+          return this.scheduledCount;
+        case 'Drafts':
+          return this.draftCount;
         default:
           return 0;
       }

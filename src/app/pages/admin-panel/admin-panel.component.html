@@ -1,78 +1,72 @@
-<nz-layout>
+<nz-layout class="admin-layout">
     @if(!isCollapsed) {
-        <nz-sider [nzWidth]="250" 
+        <nz-sider [nzWidth]="260"
         nzBreakpoint="md"
-        (nzCollapsedChange)="onChange($event)" 
+        (nzCollapsedChange)="onChange($event)"
         [nzCollapsible]="true"
-        [nzTrigger]="null">
-        <div class="p-2">
-            <div class="flex flex-row gap-4">
-                <nz-avatar nzText="A" nzSize="large"
-                style="color: white; background-color: #2dd3b1; font-size: 18px; 
-                font-weight: bolder;"></nz-avatar>
-                <p class="text-white font-black text-lg relative top-1">Anixi</p>
+        [nzTrigger]="null"
+        class="admin-sider">
+        <div class="sider-inner">
+            <div class="sider-brand">
+                <app-anixi-logo variant="sidebar" tagline="Admin Portal"></app-anixi-logo>
             </div>
-            <div class="border-t-1 border-gray-600 w-full mt-2"></div>
-            <div class="mt-4">
-                <ul class="menu text-gray-400 pl-2">
+            <div class="sider-divider"></div>
+            <nav class="sider-nav">
+                <p class="nav-section-label">Operations</p>
+                <ul class="nav-list">
                     @for(menu of menuIcons; track menu.name) {
-                        <li class="hover:text-green-300 cursor-pointer mt-2"
-                        [routerLink]="menu.path"
-                        [routerLinkActive]="'active-link'"
-                        [routerLinkActiveOptions]="{exact: true}"
+                        <li
+                            class="nav-item"
+                            [routerLink]="menu.path"
+                            routerLinkActive="nav-item--active"
+                            [routerLinkActiveOptions]="{exact: true}"
                         >
-                        <span class="flex flex-row gap-4">
-                            <lucide-icon [name]="menu.icon"></lucide-icon>
-                            <p class="text-sm font-medium">{{menu.name}}</p>
-                        </span>
+                            <lucide-icon [name]="menu.icon" class="nav-icon"></lucide-icon>
+                            <span class="nav-label">{{ menu.name }}</span>
                         </li>
                     }
                 </ul>
-            </div>
+            </nav>
         </div>
         </nz-sider>
     }
     @else {
-         <nz-sider [nzWidth]="250" 
+         <nz-sider [nzWidth]="260"
         nzBreakpoint="md"
-        (nzCollapsedChange)="onChange($event)" 
+        (nzCollapsedChange)="onChange($event)"
         [nzCollapsible]="true"
-        [nzTrigger]="null">
-        <div class="p-2">
-            <div class="flex justify-center items-center">
-                <nz-avatar nzText="A" nzSize="large"
-                style="color: white; background-color: #2dd3b1; font-size: 18px; 
-                font-weight: bolder;"></nz-avatar>
-                <!-- <p class="text-white font-black text-lg relative top-1">Anixi Admin</p> -->
+        [nzTrigger]="null"
+        class="admin-sider">
+        <div class="sider-inner sider-inner--collapsed">
+            <div class="sider-brand sider-brand--collapsed">
+                <img src="/anixi.png" alt="Anixi Health" class="sider-logo-icon" />
             </div>
-            <div class="flex mt-4 justify-center items-center ">
-                <ul class="menu flex flex-col gap-2 text-gray-400">
-                    @for(menu of menuIcons; track menu.name) {
-                        <li class="cursor-pointer mt-4"
+            <ul class="nav-list nav-list--collapsed">
+                @for(menu of menuIcons; track menu.name) {
+                    <li
+                        class="nav-item nav-item--icon-only"
                         [routerLink]="menu.path"
-                        [routerLinkActive]="'active-link'"
+                        routerLinkActive="nav-item--active"
                         [routerLinkActiveOptions]="{exact: true}"
-                        >
-                            <lucide-icon [name]="menu.icon"></lucide-icon> 
-                        </li>
-                    }
-                </ul>
-            </div>
+                    >
+                        <lucide-icon [name]="menu.icon" class="nav-icon"></lucide-icon>
+                    </li>
+                }
+            </ul>
         </div>
         </nz-sider>
     }
-    <nz-layout>
-        <!-- header -->
-        <div class="flex flex-row justify-end bg-white h-[70px] gap-4 p-4">
-            <div class="flex flex-col">
-                <h1 class="h-[10px]">Admin User</h1>
-                <p>super Admin</p>
+    <nz-layout class="admin-main">
+        <header class="admin-header">
+            <div class="admin-header-greeting">
+                <p class="greeting-label">Welcome back</p>
+                <p class="greeting-name">{{ adminUser?.displayName || 'Admin' }}</p>
             </div>
-            <nz-avatar nzText="AU" nzSize="large"
-            style="color: #2dd3b1; background-color: #d7ece7; 
-            font-weight: bolder; font-size: 18px;"></nz-avatar>
-        </div>
-        <nz-content>
+            <div class="admin-header-actions">
+                <app-admin-profile-menu [adminUser]="adminUser"></app-admin-profile-menu>
+            </div>
+        </header>
+        <nz-content class="admin-content">
             <router-outlet></router-outlet>
         </nz-content>
     </nz-layout>

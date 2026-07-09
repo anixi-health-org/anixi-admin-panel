@@ -1,1 +1,61 @@
-<p>login works!</p>
+<div class="auth-page">
+  <div class="auth-container">
+    <div class="auth-header">
+      <app-anixi-logo variant="auth" [showWordmark]="false"></app-anixi-logo>
+      <h1 class="auth-title">Sign in to your account</h1>
+      <p class="auth-subtitle">Anixi Health Admin Portal</p>
+    </div>
+
+    <div class="auth-card">
+      <h2 class="auth-card-title">Login</h2>
+
+      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="auth-form">
+        <div class="form-field">
+          <label for="email">Email address</label>
+          <input
+            id="email"
+            type="email"
+            formControlName="email"
+            placeholder="Enter your email"
+            autocomplete="email"
+          />
+          @if (loginForm.get('email')?.invalid && loginForm.get('email')?.touched) {
+            <span class="field-error">Enter a valid email address.</span>
+          }
+        </div>
+
+        <div class="form-field">
+          <label for="password">Password</label>
+          <div class="password-wrap">
+            <input
+              id="password"
+              [type]="showPassword ? 'text' : 'password'"
+              formControlName="password"
+              placeholder="Enter your password"
+              autocomplete="current-password"
+            />
+            <button
+              type="button"
+              class="password-toggle"
+              (click)="showPassword = !showPassword"
+              [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'"
+            >
+              {{ showPassword ? 'Hide' : 'Show' }}
+            </button>
+          </div>
+          @if (loginForm.get('password')?.invalid && loginForm.get('password')?.touched) {
+            <span class="field-error">Password must be at least 6 characters.</span>
+          }
+        </div>
+
+        @if (errorMessage) {
+          <div class="auth-error" role="alert">{{ errorMessage }}</div>
+        }
+
+        <button type="submit" class="auth-button" [disabled]="isLoading">
+          {{ isLoading ? 'Signing in…' : 'Sign in' }}
+        </button>
+      </form>
+    </div>
+  </div>
+</div>

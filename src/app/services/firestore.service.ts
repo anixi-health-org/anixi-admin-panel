@@ -1,13 +1,17 @@
 import { Injectable } from '@angular/core';
-import { collection, collectionData, doc, Firestore, getCountFromServer, getDocs, onSnapshot, query, Query, updateDoc, where } from '@angular/fire/firestore';
+import { collection, doc, Firestore, getDocs, onSnapshot, serverTimestamp, setDoc } from '@angular/fire/firestore';
 import { from, map, Observable } from 'rxjs';
+import { AuthService } from './auth.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class FirestoreService {
 
-  constructor(private db: Firestore) { }
+  constructor(
+    private db: Firestore,
+    private authService: AuthService
+  ) { }
 
   getAllDoctors(): Observable<any[]> {
     const ref = collection(this.db, 'doctors');
@@ -36,26 +40,55 @@ export class FirestoreService {
     });
   }
 
-  updateDoctorStatus(doctorId:string, status:string) {
-    const ref = doc(this.db, `doctors/${doctorId}`); 
-    return updateDoc(ref, {
-      verificationStatus: status
-    });
+  async updateDoctorStatus(doctorId: string, status: string): Promise<void> {
+    const ref = doc(this.db, `doctors/${doctorId}`);
+    const adminId = this.authService.getAdminUserId();
+    await setDoc(
+      ref,
+      {
+        verificationStatus: status,
+        verifiedAt: serverTimestamp(),
+        verifiedBy: adminId,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
   }
 
   getDoctors(): Observable<any[]> {
     return new Observable(observer => {
       const ref = collection(this.db, 'doctors');
-      const unsubscribe =  onSnapshot(ref, snapshot => {
+      const unsubscribe = onSnapshot(ref, snapshot => {
         const doctors = snapshot.docs.map(doc => ({
           ...(doc.data() as Omit<any, 'id'>),
           id: doc.id
         }));
         observer.next(doctors);
-      });
-      return () => unsubscribe()
+      }, error => observer.error(error));
+      return () => unsubscribe();
     });
   }
+
+  getDashboardStats(): Observable<{
+    totalDoctors: number;
+    pendingDoctors: number;
+    approvedDoctors: number;
+    rejectedDoctors: number;
+    suspendedDoctors: number;
+  }> {
+    return this.getDoctors().pipe(
+      map((doctors) => ({
+        totalDoctors: doctors.length,
+        pendingDoctors: doctors.filter(
+          (d) => !d.verificationStatus || d.verificationStatus === 'pending'
+        ).length,
+        approvedDoctors: doctors.filter((d) => d.verificationStatus === 'approved').length,
+        rejectedDoctors: doctors.filter((d) => d.verificationStatus === 'rejected').length,
+        suspendedDoctors: doctors.filter((d) => d.verificationStatus === 'suspended').length,
+      }))
+    );
+  }
+
   getDoctorsById(id:string): Observable<any | null> {
     return new Observable(observer => {
       const ref = doc(this.db, `doctors/${id}`);

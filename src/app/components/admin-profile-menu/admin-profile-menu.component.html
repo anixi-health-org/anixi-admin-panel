@@ -1,0 +1,44 @@
+<div class="profile-menu">
+  <button
+    type="button"
+    class="profile-trigger"
+    (click)="toggleMenu()"
+    [attr.aria-expanded]="isOpen"
+    aria-haspopup="menu"
+    aria-label="Open account menu"
+  >
+    <span class="profile-avatar">{{ initials }}</span>
+    <span class="profile-trigger-name">{{ firstName }}</span>
+    <lucide-icon
+      name="chevron-down"
+      class="profile-chevron"
+      [class.profile-chevron--open]="isOpen"
+    ></lucide-icon>
+  </button>
+
+  @if (isOpen) {
+    <div class="profile-dropdown" role="menu">
+      <div class="profile-dropdown-header">
+        <span class="profile-dropdown-avatar">{{ initials }}</span>
+        <div class="profile-dropdown-meta">
+          <p class="profile-dropdown-name">{{ adminUser?.displayName || 'Admin' }}</p>
+          <p class="profile-dropdown-email">{{ adminUser?.email || '' }}</p>
+          <p class="profile-dropdown-role">{{ roleLabel }}</p>
+        </div>
+      </div>
+
+      <div class="profile-dropdown-actions">
+        <button
+          type="button"
+          role="menuitem"
+          class="profile-menu-item profile-menu-item--signout"
+          (click)="signOut()"
+          [disabled]="isSigningOut"
+        >
+          <lucide-icon name="log-out" class="profile-menu-icon"></lucide-icon>
+          {{ isSigningOut ? 'Signing out…' : 'Sign out' }}
+        </button>
+      </div>
+    </div>
+  }
+</div>

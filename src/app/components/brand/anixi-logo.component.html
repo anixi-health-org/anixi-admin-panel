@@ -1,0 +1,15 @@
+@if (variant === 'auth' && !showWordmark) {
+  <img src="/anixi.png" alt="Anixi Health" class="anixi-logo-auth-image" />
+} @else {
+  <div class="anixi-logo" [class.anixi-logo--sidebar]="variant === 'sidebar'" [class.anixi-logo--auth]="variant === 'auth'">
+    <img src="/anixi.png" alt="" class="anixi-logo-image" aria-hidden="true" />
+  @if (showWordmark) {
+    <div class="anixi-logo-text">
+      <p class="anixi-logo-name">Anixi Health</p>
+      @if (showTagline) {
+        <p class="anixi-logo-tagline">{{ tagline }}</p>
+      }
+    </div>
+  }
+  </div>
+}

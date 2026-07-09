@@ -1,8 +1,9 @@
 import { Injectable } from '@angular/core';
-import { collection, deleteDoc, doc, Firestore, onSnapshot, orderBy, query, serverTimestamp, setDoc, updateDoc, where } from '@angular/fire/firestore';
+import { collection, deleteDoc, doc, Firestore, onSnapshot, orderBy, query, setDoc, updateDoc, where } from '@angular/fire/firestore';
 import { IGroupPost } from '../../interfaces/IgroupPost';
 import { environment } from '../../environments/environment';
 import { Observable } from 'rxjs';
+import { AuthService } from './auth.service';
 
 
 @Injectable({
@@ -10,10 +11,18 @@ import { Observable } from 'rxjs';
 })
 export class PostService {
 
-  constructor(private db: Firestore) { }
+  constructor(
+    private db: Firestore,
+    private authService: AuthService
+  ) { }
+
+  private resolveAdminUserId(): string {
+    return this.authService.getAdminUserId() || environment.ADMIN_USER_ID;
+  }
 
   async saveGroupPost(postId: string, data: Partial<IGroupPost>) {
     const docRef = doc(this.db, 'group_posts', postId);
+    const adminUserId = this.resolveAdminUserId();
     
     return setDoc(docRef, {
       ...data,
@@ -27,9 +36,9 @@ export class PostService {
       repostUserId: data.repostUserId || '',
       repostText: data.repostText || '',
       visibility: "Visible to public",
-      userId: environment.ADMIN_USER_ID,
+      userId: adminUserId,
       hyperlink: data.hyperlink || '',
-    }, {merge: true}) // true to avoid to erase field that non-mentionned
+    }, {merge: true})
   }
 
   async editPost(postId:string, data: Partial<IGroupPost>) {
@@ -44,12 +53,13 @@ export class PostService {
     const docRef = doc(this.db, 'group_posts', postId);
     await deleteDoc(docRef);
   }
-  fetchAdminPost(adminId:string): Observable<{data:any[], loading: boolean}> {
+  fetchAdminPost(adminId?: string): Observable<{data:any[], loading: boolean}> {
+    const resolvedAdminId = adminId || this.resolveAdminUserId();
     return new Observable(observer => {
       const ref = collection(this.db, 'group_posts');
       const q = query(
         ref,
-        where('userId', '==', adminId),
+        where('userId', '==', resolvedAdminId),
         where('groupName', '!=', 'main'),
         orderBy('groupName'),
         orderBy('timeStamp', 'desc')

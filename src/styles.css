@@ -1,6 +1,59 @@
-/* You can add global styles to this file, and also import other style files */
 @import "tailwindcss";
 
+@theme {
+  --color-anixi-beige: #f3f6ea;
+  --color-anixi-green: #425950;
+  --color-anixi-surface: #f4f6ef;
+  --font-heading: "Lora", Georgia, "Times New Roman", serif;
+  --font-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+:root {
+  --anixi-green: #425950;
+  --anixi-beige: #f3f6ea;
+  --anixi-surface: #f4f6ef;
+  --font-heading: "Lora", Georgia, "Times New Roman", serif;
+  --font-body: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+html {
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 body {
-    font-family: 'Plus Jakarta Sans', sans-serif;
+  margin: 0;
+  background: var(--anixi-surface);
+  color: #111827;
+  font-family: var(--font-body);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-heading);
+}
+
+button,
+input,
+select,
+textarea,
+label {
+  font-family: var(--font-body);
+}
+
+.font-heading {
+  font-family: var(--font-heading);
+}
+
+.font-sans {
+  font-family: var(--font-body);
+}
+
+body.content-modal-open {
+  overflow: hidden;
 }

@@ -1,75 +1,210 @@
-<div>
-    <p class="text-base font-medium">Applications Details</p>
-</div>
-<div class="flex flex-col">
-    <p class="text-lg font-medium h-[14px]">Dr.{{(details$ | async)?.fullName}}</p>
-    <div class="rounded-lg text-center border-1 w-20 h-[20px]" [ngStyle]="{'background-color':utilFunctions.getValuebyStatus((details$ | async)?.verificationStatus).background,
-        'border-color': utilFunctions.getValuebyStatus((details$ | async)?.verificationStatus).color
-    }">
-        <p class="text-xs font-medium" [ngStyle]="{'color': utilFunctions.getValuebyStatus((details$ | async)?.verificationStatus).color}">{{utilFunctions.upperCaseFirstLetter((details$ | async)?.verificationStatus)}}</p>
-    </div>
-    <div class="flex flex-row mt-4 justify-between">
-        <p class="text-sm text-gray-500 font-normal">Phone number</p>
-        <p class="text-sm font-semibold">{{(details$ | async)?.phoneNumber}}</p>
-    </div>
-    <div class="flex flex-row justify-between">
-        <p class="text-sm text-gray-500 font-normal">Speciality</p>
-        <p class="text-sm font-semibold">{{(details$ | async)?.medicalSpecialty}}</p>
-    </div>
-    <div class="flex flex-row justify-between">
-        <p class="text-sm text-gray-500 font-normal">Location</p>
-        <p class="text-sm font-semibold">{{(details$ | async)?.practiceCity}}</p>
-    </div>
-    <div class="text-sm text-gray-500 font-medium uppercase tracking-wider">Documents</div>
-    
-    @if ((details$ | async)?.hpscaCertificateUrl || (details$ | async)?.hpcsaCertificateUrl) {
-        <a class="bg-gray-100 rounded-lg p-2 mt-2 h-[30px]"
-        [routerLink]="'/certificat-viewer'"
-        [queryParams]="{file: (details$ | async)?.hpcsaCertificateUrl ? (details$ | async)?.hpcsaCertificateUrl 
-            : (details$ | async)?.hpscaCertificateUrl}"
-        target="_blank" rel="noopener noreferrer">
-        <div class="flex flex-row justify-between gap-3">
-            <div class="flex flex-row gap-2">
-                <lucide-icon name="file-text" class="w-4 h-4 text-gray-400"></lucide-icon>
-                <p class="text-xs font-medium text-gray-600">HPCSA Certificate</p>
-            </div>
-            <lucide-icon name="eye" class="w-4 h-4 text-black"></lucide-icon>
+@if (isLoadingDetail) {
+  <div class="detail-panel detail-panel--loading">
+    <nz-skeleton [nzActive]="true" [nzAvatar]="{ size: 80 }" [nzParagraph]="{ rows: 12 }"></nz-skeleton>
+  </div>
+} @else if (doctor) {
+  <div class="detail-panel">
+    <div class="detail-header">
+      <div class="detail-header-main">
+        @if (profileImage(doctor)) {
+          <img [src]="profileImage(doctor)!" alt="" class="detail-avatar" />
+        } @else {
+          <div class="detail-avatar detail-avatar--placeholder">
+            {{ displayName(doctor).charAt(0) }}
+          </div>
+        }
+        <div class="detail-header-text">
+          <h2 class="detail-name">{{ displayName(doctor) }}</h2>
+          <p class="detail-subtitle">
+            {{ specialty(doctor) }} · {{ field(doctor.practiceCity) }}
+          </p>
+          <div
+            class="detail-status"
+            [ngStyle]="{
+              background: utilFunctions.getValuebyStatus(statusOf(doctor)).background,
+              borderColor: utilFunctions.getValuebyStatus(statusOf(doctor)).color,
+              color: utilFunctions.getValuebyStatus(statusOf(doctor)).color
+            }"
+          >
+            <nz-icon
+              [nzType]="utilFunctions.getValuebyStatus(statusOf(doctor)).icon"
+              nzTheme="outline"
+            ></nz-icon>
+            {{ utilFunctions.upperCaseFirstLetter(statusOf(doctor)) }}
+          </div>
         </div>
-    </a>
-    }
+      </div>
+    </div>
 
-    @if ((details$ | async)?.verificationStatus === 'pending') {
-        <div class="flex flex-row justify-between">
-            <div class="flex flex-row p-2 mt-8">
-                <button nz-button nzType="primary" class="approved" 
-                (click)="updateDoctorStatus(id, 'approved', 'approve')">
-                <nz-icon nzType="check-circle" class="text-white"
-                    nzTheme="outline"></nz-icon> 
-                    Approved
-                </button>
-            </div>
-            <div class="flex flex-row p-2 mt-8">
-                <button nz-button nzType="primary" class="rejected"
-                (click)="updateDoctorStatus(id, 'rejected', 'reject')">
-                <nz-icon nzType="close-circle" class="text-white"
-                    nzTheme="outline"></nz-icon> 
-                    Rejected
-                </button>
-            </div>
+    <div class="detail-sections">
+      <section class="detail-section">
+        <h3 class="detail-section-title">Personal information</h3>
+        <dl class="detail-grid">
+          <div class="detail-row"><dt>Gender</dt><dd>{{ field(doctor.gender) }}</dd></div>
+          <div class="detail-row"><dt>ID / Passport</dt><dd>{{ field(doctor.idOrPassportNumber) }}</dd></div>
+          <div class="detail-row"><dt>Nationality</dt><dd>{{ field(doctor.nationality) }}</dd></div>
+          <div class="detail-row"><dt>Country</dt><dd>{{ field(doctor.country) }}</dd></div>
+        </dl>
+      </section>
+
+      <section class="detail-section">
+        <h3 class="detail-section-title">Professional credentials</h3>
+        <dl class="detail-grid">
+          <div class="detail-row"><dt>Registration no.</dt><dd>{{ registrationNumber(doctor) }}</dd></div>
+          <div class="detail-row"><dt>Specialty</dt><dd>{{ specialty(doctor) }}</dd></div>
+          <div class="detail-row"><dt>Years in practice</dt><dd>{{ field(doctor.yearsInPractice) }}</dd></div>
+          <div class="detail-row"><dt>Medical aid affiliation</dt><dd>{{ field(doctor.hasMedicalAidAffiliation) }}</dd></div>
+          @if (doctor.hasMedicalAidAffiliation) {
+            <div class="detail-row"><dt>Affiliation type</dt><dd>{{ field(doctor.medicalAidAffiliationType) }}</dd></div>
+          }
+        </dl>
+      </section>
+
+      <section class="detail-section">
+        <h3 class="detail-section-title">Practice information</h3>
+        <dl class="detail-grid">
+          <div class="detail-row"><dt>Practice name</dt><dd>{{ field(doctor.practiceName) }}</dd></div>
+          <div class="detail-row"><dt>Practice type</dt><dd>{{ field(doctor.practiceType) }}</dd></div>
+          <div class="detail-row"><dt>Facility</dt><dd>{{ field(doctor.practiceFacility) }}</dd></div>
+          <div class="detail-row"><dt>Practice no. (BHF)</dt><dd>{{ field(doctor.practiceNumberBhf) }}</dd></div>
+          <div class="detail-row"><dt>Province</dt><dd>{{ field(doctor.practiceProvince) }}</dd></div>
+          <div class="detail-row"><dt>City</dt><dd>{{ field(doctor.practiceCity) }}</dd></div>
+          <div class="detail-row detail-row--full"><dt>Address</dt><dd>{{ practiceAddress(doctor) }}</dd></div>
+        </dl>
+      </section>
+
+      <section class="detail-section">
+        <h3 class="detail-section-title">Contact</h3>
+        <dl class="detail-grid">
+          <div class="detail-row"><dt>Phone</dt><dd>{{ field(doctor.phoneNumber) }}</dd></div>
+          <div class="detail-row"><dt>Email</dt><dd>{{ field(doctor.email) }}</dd></div>
+          <div class="detail-row"><dt>Preferred contact</dt><dd>{{ contactMethods(doctor) }}</dd></div>
+          <div class="detail-row detail-row--full"><dt>Website / social</dt><dd>{{ field(doctor.websiteOrSocialLink) }}</dd></div>
+        </dl>
+      </section>
+
+      <section class="detail-section">
+        <h3 class="detail-section-title">Documents</h3>
+        <div class="detail-documents">
+          @if (certificateUrl(doctor)) {
+            <a
+              class="detail-doc-link"
+              [routerLink]="'/certificat-viewer'"
+              [queryParams]="{ file: certificateUrl(doctor) }"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <lucide-icon name="file-text" class="detail-doc-icon"></lucide-icon>
+              <span>HPCSA certificate</span>
+              <lucide-icon name="eye" class="detail-doc-action"></lucide-icon>
+            </a>
+          }
+          @if (licenseUrl(doctor)) {
+            <a
+              class="detail-doc-link"
+              [routerLink]="'/certificat-viewer'"
+              [queryParams]="{ file: licenseUrl(doctor) }"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <lucide-icon name="file-text" class="detail-doc-icon"></lucide-icon>
+              <span>Practice licence</span>
+              <lucide-icon name="eye" class="detail-doc-action"></lucide-icon>
+            </a>
+          }
+          @if (doctor.medicalAidContractUrl) {
+            <a
+              class="detail-doc-link"
+              [routerLink]="'/certificat-viewer'"
+              [queryParams]="{ file: doctor.medicalAidContractUrl }"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <lucide-icon name="file-text" class="detail-doc-icon"></lucide-icon>
+              <span>Medical aid contract</span>
+              <lucide-icon name="eye" class="detail-doc-action"></lucide-icon>
+            </a>
+          }
+          @if (!certificateUrl(doctor) && !licenseUrl(doctor) && !doctor.medicalAidContractUrl) {
+            <p class="detail-empty-docs">No documents uploaded yet.</p>
+          }
         </div>
-    }
-    @if ((details$ | async)?.verificationStatus === 'approved') {
-        <button nz-button nzType="primary" class="suspended relative top-8" 
-        (click)="updateDoctorStatus(id, 'suspended', 'suspend')">
-            <nz-icon nzType="warning" nzTheme="outline"></nz-icon>
-            Suspended
+      </section>
+
+      <section class="detail-section">
+        <h3 class="detail-section-title">Verification history</h3>
+        <dl class="detail-grid">
+          <div class="detail-row"><dt>Submitted</dt><dd>{{ timestamp(doctor.createdAt) }}</dd></div>
+          <div class="detail-row"><dt>Last verified</dt><dd>{{ timestamp(doctor.verifiedAt) }}</dd></div>
+          <div class="detail-row"><dt>Verified by</dt><dd>{{ field(doctor.verifiedBy) }}</dd></div>
+        </dl>
+      </section>
+    </div>
+
+    <div class="detail-actions">
+      <p class="detail-actions-label">Verification decision</p>
+      @if (statusOf(doctor) === 'pending') {
+        <div class="detail-actions-row">
+          <button
+            type="button"
+            class="action-btn action-btn--approve"
+            [disabled]="isUpdating"
+            (click)="updateDoctorStatus(id, 'approved', 'approve')"
+          >
+            <nz-icon nzType="check-circle" nzTheme="outline"></nz-icon>
+            Approve
+          </button>
+          <button
+            type="button"
+            class="action-btn action-btn--reject"
+            [disabled]="isUpdating"
+            (click)="updateDoctorStatus(id, 'rejected', 'reject')"
+          >
+            <nz-icon nzType="close-circle" nzTheme="outline"></nz-icon>
+            Reject
+          </button>
+        </div>
+      }
+      @if (statusOf(doctor) === 'approved') {
+        <button
+          type="button"
+          class="action-btn action-btn--suspend"
+          [disabled]="isUpdating"
+          (click)="updateDoctorStatus(id, 'suspended', 'suspend')"
+        >
+          <nz-icon nzType="warning" nzTheme="outline"></nz-icon>
+          Suspend doctor
         </button>
-    }
-    @if ((details$ | async)?.verificationStatus === 'suspended') {
-        <button nz-button nzType="primary" class="cancel-suspension relative top-8" 
-        (click)="updateDoctorStatus(id, 'approved', 'cancel suspension')">
-            <nz-icon nzType="warning" nzTheme="outline"></nz-icon>
-            Cancel Suspension
+      }
+      @if (statusOf(doctor) === 'rejected') {
+        <div class="detail-actions-row">
+          <button
+            type="button"
+            class="action-btn action-btn--approve"
+            [disabled]="isUpdating"
+            (click)="updateDoctorStatus(id, 'approved', 'approve')"
+          >
+            <nz-icon nzType="check-circle" nzTheme="outline"></nz-icon>
+            Approve
+          </button>
+        </div>
+      }
+      @if (statusOf(doctor) === 'suspended') {
+        <button
+          type="button"
+          class="action-btn action-btn--approve"
+          [disabled]="isUpdating"
+          (click)="updateDoctorStatus(id, 'approved', 'reinstate')"
+        >
+          <nz-icon nzType="check-circle" nzTheme="outline"></nz-icon>
+          Reinstate doctor
         </button>
-    }
-</div>
+      }
+    </div>
+  </div>
+} @else if (id) {
+  <div class="details-empty">
+    <lucide-icon name="file-text" class="details-empty-icon"></lucide-icon>
+    <p class="details-empty-text">Doctor record not found.</p>
+  </div>
+}

@@ -1,148 +1,111 @@
-<div class="sm:p-4 p-0 mt-4">
-    <div class="flex flex-col">
-        <p class="text-2xl font-semibold h-[10px]">Doctor Verification</p>
-        <p class="text-gray-500">Review, verify, and manage doctors applications.</p>
+<div class="verification-page">
+    <div class="verification-header">
+        <h1 class="verification-title">Doctor Verification</h1>
+        <p class="verification-subtitle">Review, verify, and manage doctor applications.</p>
     </div>
-    <div class="grid md:grid-cols-4 grid-cols-2 gap-4">
-        <!-- card -->
-         @for(card of statCards; track card.label) {
-             <div class="max-w-sm sm:h-[90px] h-[80px] sm:p-4 p-2 bg-white
-              border-transparent shadow-lg rounded-lg transition-all duration-300
-               ease-in-out hover:scale-105 hover:border-1 hover:border-green-200">
-               @if (!isLoadingSkeleton) {
-                   <p class="text-xs font-medium uppercase tracking-wider text-gray-400">{{card.label}}</p>
-                   <p class="font-bold text-2xl" [ngStyle]="{'color': card.color}">{{getCount(card.status) | async}}</p>
-               }
-               @else {
-                <nz-skeleton [nzTitle]="false" [nzParagraph]="{rows: 1}" [nzActive]="isLoadingSkeleton"></nz-skeleton>
-                <div class="mt-2">
-                    <nz-skeleton [nzTitle]="false" [nzParagraph]="{rows: 1}" [nzActive]="isLoadingSkeleton"></nz-skeleton>
-                </div>
-               }
-             </div>
-         }
+
+    <div class="stat-grid">
+        @for (card of statCards; track card.label) {
+            <div class="stat-card">
+                @if (!isLoadingSkeleton) {
+                    <p class="stat-label">{{ card.label }}</p>
+                    <p class="stat-value" [style.color]="card.color">{{ getCount(card.status) | async }}</p>
+                } @else {
+                    <nz-skeleton [nzTitle]="false" [nzParagraph]="{ rows: 1 }" [nzActive]="true"></nz-skeleton>
+                    <div class="mt-2">
+                        <nz-skeleton [nzTitle]="false" [nzParagraph]="{ rows: 1 }" [nzActive]="true"></nz-skeleton>
+                    </div>
+                }
+            </div>
+        }
     </div>
-    <form>
-        <div class="flex min-[980px]:flex-row flex-col mt-6 gap-2">
-            <div class="bg-white border-transparent shadow-lg rounded-lg sm:p-6 p-2 w-full">
-                <div class="flex flex-row justify-between">
-                    <h1 class="text-base" >Doctor Applications</h1>
-                    <span class="search">
-                        <nz-icon class="relative left-6 text-lg" nzType="search" nzTheme="outline"></nz-icon>
-                        <input class="border-1 border-gray-200 rounded-lg p-1 sm:w-[220px] w-[140px]" type="search" placeholder="Search doctors...">
-                    </span>
-                </div>
-                <div class="flex flex-row wrapper mt-4">
-                    @for(input of customInput; track input.label) {
-                        <div class="custom-input">
-                            <input type="radio" [id]="input.value" [value]="input.value"  [formControl]="verificationStatus" checked>
-                            <label [for]="input.value">{{input.label}} ({{input.value === 'all'  ? (totalCount$ | async) : (getCount(input.value) | async)}})</label>
-                        </div>
+
+    <div class="verification-layout">
+        <div class="applications-list-card">
+            <div class="applications-list-header">
+                <h2 class="applications-list-title">Doctor applications</h2>
+                <span class="search">
+                    <nz-icon class="search-icon" nzType="search" nzTheme="outline"></nz-icon>
+                    <input
+                        class="search-input"
+                        type="search"
+                        placeholder="Search doctors..."
+                        [formControl]="searchQuery"
+                    />
+                </span>
+            </div>
+
+            <div class="filter-tabs">
+                @for (input of customInput; track input.label) {
+                    <div class="custom-input">
+                        <input
+                            type="radio"
+                            [id]="input.value"
+                            [value]="input.value"
+                            [formControl]="verificationStatus"
+                        />
+                        <label [for]="input.value">
+                            {{ input.label }} ({{ getCount(input.value) | async }})
+                        </label>
+                    </div>
+                }
+            </div>
+
+            @if (!isLoadingSkeleton) {
+                <div class="doctor-list">
+                    @for (doctor of filteredDoctors$ | async; track doctor.id) {
+                        <button
+                            type="button"
+                            class="doctor-item"
+                            [class.doctor-item--active]="selectedDoctorId === doctor.id"
+                            (click)="setSelectedDoctor(doctor)"
+                        >
+                            <div class="doctor-item-top">
+                                <div class="doctor-item-main">
+                                    <p class="doctor-item-name">{{ doctorName(doctor) }}</p>
+                                    <div
+                                        class="doctor-item-status"
+                                        [ngStyle]="{
+                                            background: utilFunctions.getValuebyStatus(doctorStatus(doctor)).background,
+                                            borderColor: utilFunctions.getValuebyStatus(doctorStatus(doctor)).color,
+                                            color: utilFunctions.getValuebyStatus(doctorStatus(doctor)).color
+                                        }"
+                                    >
+                                        <nz-icon
+                                            [nzType]="utilFunctions.getValuebyStatus(doctorStatus(doctor)).icon"
+                                            nzTheme="outline"
+                                        ></nz-icon>
+                                        {{ utilFunctions.upperCaseFirstLetter(doctorStatus(doctor)) }}
+                                    </div>
+                                </div>
+                                <nz-icon nzType="right" nzTheme="outline"></nz-icon>
+                            </div>
+                            <p class="doctor-item-meta">
+                                {{ doctor.medicalSpecialty || doctor.specialty || '—' }} ·
+                                {{ doctor.practiceCity || '—' }} ·
+                                {{ doctor.phoneNumber || '—' }}
+                            </p>
+                        </button>
+                    } @empty {
+                        <p class="doctor-list-empty">No doctors match your filters.</p>
                     }
                 </div>
-                @if (!isLoadingSkeleton) {
-                    <div class="m-4">
-                          @if(getStatusValue() === 'all') {
-                                @for(doctor of doctorList$ | async; track doctor.fullName) {
-                                    <div class="doctor-item hover:bg-gray-100 sm:h-[80px] h-[100px] w-full rounded-lg p-2 cursor-pointer mb-2"
-                                    [class.active]="selectedDoctor === doctor.fullName"
-                                    (click)="setSelectedDoctor(doctor)">
-                                    <div class="flex flex-row justify-between mt-4">
-                                        <!-- Doctor info  -->
-                                        <div class="flex flex-row gap-2">
-                                            <p class="text-sm font-semibold tracking-wider sm:h-[10px] h-[25px]">Dr. {{doctor.fullName}}</p>
-                                            <!-- status -->
-                                            <div class="flex flex-row w-auto gap-1 text-center sm:pl-2 pl-1 sm:pr-2  rounded-lg sm:h-[20px] h-[18px] border-[0.4px]" 
-                                                [ngStyle]="{'background-color': utilFunctions.getValuebyStatus(doctor.verificationStatus).background,
-                                                    'border-color': utilFunctions.getValuebyStatus(doctor.verificationStatus).color
-                                                }" >
-                                                <nz-icon 
-                                                    [nzType]="utilFunctions.getValuebyStatus(doctor.verificationStatus).icon" 
-                                                    nzTheme="outline" 
-                                                    [ngStyle]="{'color': utilFunctions.getValuebyStatus(doctor.verificationStatus).color}">
-                                                </nz-icon>
-                                                <p class="text-[10px]  font-bold relative top-[0.5px]" 
-                                                    [ngStyle]="{'color': utilFunctions.getValuebyStatus(doctor.verificationStatus).color}">
-                                                {{utilFunctions.upperCaseFirstLetter(doctor?.verificationStatus)}}</p>
-                                            </div>
-                                        </div>
-                                        <!-- Icon right arrow -->
-                                            <div>
-                                            <nz-icon nzType="right" nzTheme="outline"></nz-icon>
-                                            </div>
-                                    </div>
-                                    <!-- Speciality -->
-                                    <p class="font-normal text-xs text-gray-500">
-                                        {{doctor.medicalSpecialty}} &#183; {{doctor.practiceCity}} &#183; 
-                                        {{doctor.phoneNumber}}
-                                    </p>
-                                </div>
-                            }
-                        }
-    
-                        @for(doctor of doctorList$ | async; track doctor.fullName) {
-                            @if (doctor.verificationStatus === getStatusValue()) {
-                                <div class="doctor-item hover:bg-gray-100 h-[80px] w-full rounded-lg cursor-pointer mb-2"
-                                [class.active]="selectedDoctor === doctor.fullName"
-                                (click)="setSelectedDoctor(doctor)">
-                                <div class="flex flex-row justify-between mt-4">
-                                    <!-- Doctor info  -->
-                                    <div class="flex flex-row gap-2">
-                                        <p class="text-sm font-semibold tracking-wider sm:h-[10px] h-[25px]">Dr. {{doctor.fullName}}</p>
-                                        <!-- status -->
-                                        <div class="flex flex-row w-auto gap-1 text-center pl-2 pr-2 rounded-lg h-[20px] border-[0.4px]" 
-                                            [ngStyle]="{'background-color': utilFunctions.getValuebyStatus(doctor.verificationStatus).background,
-                                                'border-color': utilFunctions.getValuebyStatus(doctor.verificationStatus).color
-                                            }" >
-                                            <nz-icon 
-                                                [nzType]="utilFunctions.getValuebyStatus(doctor.verificationStatus).icon" 
-                                                nzTheme="outline" 
-                                                [ngStyle]="{'color': utilFunctions.getValuebyStatus(doctor.verificationStatus).color}">
-                                            </nz-icon>
-                                            <p class="text-[10px] font-bold relative top-[0.5px]" 
-                                                [ngStyle]="{'color': utilFunctions.getValuebyStatus(doctor.verificationStatus).color}">
-                                            {{utilFunctions.upperCaseFirstLetter(doctor.verificationStatus)}}</p>
-                                        </div>
-                                    </div>
-                                    <!-- Icon right arrow -->
-                                        <div>
-                                        <nz-icon nzType="right" nzTheme="outline"></nz-icon>
-                                        </div>
-                                </div>
-                                <!-- Speciality -->
-                                <p class="font-normal text-xs text-gray-500">
-                                    {{doctor.medicalSpecialty}} &#183; {{doctor.practiceCity}} &#183; 
-                                    {{doctor.phoneNumber}}
-                                </p>
-                            </div>
-                            }
-                        }
-                      
-                    </div>
-                }
-                @else {
-                    <div class="mt-4">
-                        <nz-skeleton [nzParagraph]="{rows: 15}" [nzTitle]="false" [nzActive]="isLoadingSkeleton"></nz-skeleton>
-                    </div>
-                }
-                    
-            </div>
-            <div class="min-[980px]:w-[500px] h-[450px] w-full bg-white border-transparent shadow-lg rounded-lg p-4">
-                @if (!isClicked) {
-                    <div>
-                        <p class="text-base font-medium">Applications Details</p>
-                    </div>
-                    <div class="empty">
-                        <div class="flex flex-col items-center relative top-4">
-                            <lucide-icon name="file-text" class="w-8 h-8 text-gray-300"></lucide-icon>
-                            <p class="relative top-2 text-gray-500">Select a doctor to view details</p>
-                        </div>
-                    </div>
-                }
-                @if (doctorId) {
-                    <app-application-details [id]="doctorId"></app-application-details>
-                }
-            </div>
+            } @else {
+                <div class="mt-4">
+                    <nz-skeleton [nzParagraph]="{ rows: 12 }" [nzTitle]="false" [nzActive]="true"></nz-skeleton>
+                </div>
+            }
         </div>
-    </form>
+
+        <div class="application-details-card">
+            @if (!selectedDoctorId) {
+                <div class="details-empty">
+                    <lucide-icon name="file-text" class="details-empty-icon"></lucide-icon>
+                    <p class="details-empty-text">Select a doctor to review their full application</p>
+                </div>
+            } @else {
+                <app-application-details [id]="selectedDoctorId"></app-application-details>
+            }
+        </div>
+    </div>
 </div>
