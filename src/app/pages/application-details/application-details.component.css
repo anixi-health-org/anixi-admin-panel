@@ -128,34 +128,62 @@
   gap: 0.5rem;
 }
 
-.detail-doc-link {
+.detail-doc-item {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.625rem 0.75rem;
+  padding: 0.5rem 0.5rem 0.5rem 0.75rem;
   border-radius: 0.625rem;
   background: #f9fafb;
   color: #374151;
-  text-decoration: none;
   font-family: var(--font-body);
   font-size: 0.8125rem;
   font-weight: 500;
-  transition: background-color 0.15s ease;
 }
 
-.detail-doc-link:hover {
-  background: #f3f4f6;
-}
-
-.detail-doc-link span {
+.detail-doc-name {
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.detail-doc-icon,
-.detail-doc-action {
+.detail-doc-icon {
   width: 1rem;
   height: 1rem;
   color: #9ca3af;
+  flex-shrink: 0;
+}
+
+.detail-doc-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 0.375rem;
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.detail-doc-btn:hover:not(:disabled) {
+  background: #e5e7eb;
+  color: var(--anixi-green, #21a086);
+}
+
+.detail-doc-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.detail-doc-action {
+  width: 1rem;
+  height: 1rem;
 }
 
 .detail-empty-docs {

@@ -87,43 +87,79 @@
         <h3 class="detail-section-title">Documents</h3>
         <div class="detail-documents">
           @if (certificateUrl(doctor)) {
-            <a
-              class="detail-doc-link"
-              [routerLink]="'/certificat-viewer'"
-              [queryParams]="{ file: certificateUrl(doctor) }"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
+            <div class="detail-doc-item">
               <lucide-icon name="file-text" class="detail-doc-icon"></lucide-icon>
-              <span>HPCSA certificate</span>
-              <lucide-icon name="eye" class="detail-doc-action"></lucide-icon>
-            </a>
+              <span class="detail-doc-name">HPCSA certificate</span>
+              <a
+                class="detail-doc-btn"
+                [routerLink]="'/certificat-viewer'"
+                [queryParams]="{ file: certificateUrl(doctor), name: 'HPCSA-certificate' }"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="View"
+              >
+                <lucide-icon name="eye" class="detail-doc-action"></lucide-icon>
+              </a>
+              <button
+                type="button"
+                class="detail-doc-btn"
+                (click)="downloadDocument(certificateUrl(doctor)!, 'HPCSA-certificate')"
+                [disabled]="downloadingUrl === certificateUrl(doctor)"
+                title="Download"
+              >
+                <lucide-icon name="download" class="detail-doc-action"></lucide-icon>
+              </button>
+            </div>
           }
           @if (licenseUrl(doctor)) {
-            <a
-              class="detail-doc-link"
-              [routerLink]="'/certificat-viewer'"
-              [queryParams]="{ file: licenseUrl(doctor) }"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
+            <div class="detail-doc-item">
               <lucide-icon name="file-text" class="detail-doc-icon"></lucide-icon>
-              <span>Practice licence</span>
-              <lucide-icon name="eye" class="detail-doc-action"></lucide-icon>
-            </a>
+              <span class="detail-doc-name">Practice licence</span>
+              <a
+                class="detail-doc-btn"
+                [routerLink]="'/certificat-viewer'"
+                [queryParams]="{ file: licenseUrl(doctor), name: 'practice-licence' }"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="View"
+              >
+                <lucide-icon name="eye" class="detail-doc-action"></lucide-icon>
+              </a>
+              <button
+                type="button"
+                class="detail-doc-btn"
+                (click)="downloadDocument(licenseUrl(doctor)!, 'practice-licence')"
+                [disabled]="downloadingUrl === licenseUrl(doctor)"
+                title="Download"
+              >
+                <lucide-icon name="download" class="detail-doc-action"></lucide-icon>
+              </button>
+            </div>
           }
           @if (doctor.medicalAidContractUrl) {
-            <a
-              class="detail-doc-link"
-              [routerLink]="'/certificat-viewer'"
-              [queryParams]="{ file: doctor.medicalAidContractUrl }"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
+            <div class="detail-doc-item">
               <lucide-icon name="file-text" class="detail-doc-icon"></lucide-icon>
-              <span>Medical aid contract</span>
-              <lucide-icon name="eye" class="detail-doc-action"></lucide-icon>
-            </a>
+              <span class="detail-doc-name">Medical aid contract</span>
+              <a
+                class="detail-doc-btn"
+                [routerLink]="'/certificat-viewer'"
+                [queryParams]="{ file: doctor.medicalAidContractUrl, name: 'medical-aid-contract' }"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="View"
+              >
+                <lucide-icon name="eye" class="detail-doc-action"></lucide-icon>
+              </a>
+              <button
+                type="button"
+                class="detail-doc-btn"
+                (click)="downloadDocument($any(doctor.medicalAidContractUrl), 'medical-aid-contract')"
+                [disabled]="downloadingUrl === doctor.medicalAidContractUrl"
+                title="Download"
+              >
+                <lucide-icon name="download" class="detail-doc-action"></lucide-icon>
+              </button>
+            </div>
           }
           @if (!certificateUrl(doctor) && !licenseUrl(doctor) && !doctor.medicalAidContractUrl) {
             <p class="detail-empty-docs">No documents uploaded yet.</p>
