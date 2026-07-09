@@ -1,0 +1,134 @@
+.doc-viewer {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: calc(100dvh - 2rem);
+  background: #f3f4f6;
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+.doc-viewer__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+
+.doc-viewer__title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.doc-viewer__title-icon {
+  width: 1.125rem;
+  height: 1.125rem;
+  color: var(--anixi-green, #21a086);
+  flex-shrink: 0;
+}
+
+.doc-viewer__name {
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.doc-viewer__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.doc-viewer__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.85rem;
+  border-radius: 0.5rem;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #374151;
+  font-family: var(--font-body);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.doc-viewer__btn:hover:not(:disabled) {
+  background: #f3f4f6;
+}
+
+.doc-viewer__btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.doc-viewer__btn--primary {
+  background: var(--anixi-green, #21a086);
+  border-color: var(--anixi-green, #21a086);
+  color: #ffffff;
+}
+
+.doc-viewer__btn--primary:hover:not(:disabled) {
+  background: #1b8873;
+}
+
+.doc-viewer__btn-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.doc-viewer__body {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: auto;
+  padding: 1rem;
+}
+
+.doc-viewer__frame {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: #ffffff;
+  border-radius: 0.5rem;
+}
+
+.doc-viewer__image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  background: #ffffff;
+}
+
+.doc-viewer__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  color: #6b7280;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.doc-viewer__empty-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  color: #9ca3af;
+}

@@ -30,6 +30,7 @@ export class ApplicationDetailsComponent {
   private _id = '';
   isUpdating = false;
   isLoadingDetail = false;
+  downloadingUrl: string | null = null;
   doctor: DoctorRecord | null = null;
 
   details$ = this.doctorId$.pipe(
@@ -110,6 +111,44 @@ export class ApplicationDetailsComponent {
     const methods = doctor.preferredContactMethods;
     if (!Array.isArray(methods) || !methods.length) return '—';
     return methods.map((m) => formatDoctorField(m)).join(', ');
+  }
+
+  async downloadDocument(url: string, fileName: string): Promise<void> {
+    if (!url || this.downloadingUrl) return;
+    this.downloadingUrl = url;
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      this.triggerDownload(objectUrl, this.buildFileName(url, fileName));
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      this.triggerDownload(url, this.buildFileName(url, fileName), true);
+    } finally {
+      this.downloadingUrl = null;
+    }
+  }
+
+  private buildFileName(url: string, fallbackName: string): string {
+    const clean = url.split('?')[0].split('#')[0];
+    const parts = clean.split('.');
+    const extension = parts.length > 1 ? parts.pop()!.toLowerCase() : '';
+    const safeExtension = /^[a-z0-9]{1,5}$/.test(extension) ? `.${extension}` : '';
+    return `${fallbackName}${safeExtension}`;
+  }
+
+  private triggerDownload(href: string, fileName: string, external = false): void {
+    const anchor = document.createElement('a');
+    anchor.href = href;
+    anchor.download = fileName;
+    if (external) {
+      anchor.target = '_blank';
+      anchor.rel = 'noopener noreferrer';
+    }
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
   }
 
   async updateDoctorStatus(

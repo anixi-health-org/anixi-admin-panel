@@ -8,7 +8,7 @@ import { DoctorVerificationComponent } from './doctor-verification/doctor-verifi
 import { DashboardComponent } from './dashboard/dashboard.component';
 import { NzLayoutModule } from 'ng-zorro-antd/layout';
 import {NzIconModule} from 'ng-zorro-antd/icon';
-import {Activity, Bell, ChevronDown, Eye, FileText, LayoutDashboard, LogOut, LucideAngularModule, MessageSquare, ShieldCheck, Stethoscope, TriangleAlert, Users, UserX} from 'lucide-angular';
+import {Activity, Bell, ChevronDown, Download, ExternalLink, Eye, FileText, LayoutDashboard, LogOut, LucideAngularModule, MessageSquare, ShieldCheck, Stethoscope, TriangleAlert, Users, UserX} from 'lucide-angular';
 import {NzAvatarModule} from 'ng-zorro-antd/avatar';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ApplicationDetailsComponent } from './application-details/application-details.component'
@@ -55,7 +55,7 @@ import { UsersComponent } from './users/users.component';
     FormsModule,
     ReactiveFormsModule,
     LucideAngularModule.pick({ Stethoscope, LayoutDashboard, FileText, Eye, Users, Activity,
-        MessageSquare, Bell, UserX, TriangleAlert, ChevronDown, LogOut, ShieldCheck
+        MessageSquare, Bell, UserX, TriangleAlert, ChevronDown, LogOut, ShieldCheck, Download, ExternalLink
     }),
     NzButtonComponent,
     NgxEchartsDirective,

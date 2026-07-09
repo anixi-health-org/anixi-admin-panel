@@ -1,5 +1,57 @@
-<div class="flex w-[80vw] h-[100vh] overflow-hidden items-center justify-center">
-    @if(url) {
-        <iframe [src]="url" width="60%" height="100%" frameBorder="0"></iframe>
+<div class="doc-viewer">
+  <div class="doc-viewer__toolbar">
+    <div class="doc-viewer__title">
+      <lucide-icon name="file-text" class="doc-viewer__title-icon"></lucide-icon>
+      <span class="doc-viewer__name" [title]="fileName">{{ fileName }}</span>
+    </div>
+    <div class="doc-viewer__actions">
+      <button
+        type="button"
+        class="doc-viewer__btn"
+        (click)="openInNewTab()"
+        [disabled]="hasError || !rawUrl"
+      >
+        <lucide-icon name="external-link" class="doc-viewer__btn-icon"></lucide-icon>
+        Open
+      </button>
+      <button
+        type="button"
+        class="doc-viewer__btn doc-viewer__btn--primary"
+        (click)="download()"
+        [disabled]="hasError || !rawUrl || isDownloading"
+      >
+        <lucide-icon name="download" class="doc-viewer__btn-icon"></lucide-icon>
+        {{ isDownloading ? 'Downloading…' : 'Download' }}
+      </button>
+    </div>
+  </div>
+
+  <div class="doc-viewer__body">
+    @if (hasError) {
+      <div class="doc-viewer__empty">
+        <lucide-icon name="file-text" class="doc-viewer__empty-icon"></lucide-icon>
+        <p>This document could not be displayed.</p>
+        @if (rawUrl) {
+          <button type="button" class="doc-viewer__btn doc-viewer__btn--primary" (click)="download()">
+            <lucide-icon name="download" class="doc-viewer__btn-icon"></lucide-icon>
+            Download instead
+          </button>
+        }
+      </div>
+    } @else if (isImage) {
+      <img
+        class="doc-viewer__image"
+        [src]="rawUrl"
+        [alt]="fileName"
+        (error)="onLoadError()"
+      />
+    } @else if (safeUrl) {
+      <iframe
+        class="doc-viewer__frame"
+        [src]="safeUrl"
+        title="Document preview"
+        (error)="onLoadError()"
+      ></iframe>
     }
+  </div>
 </div>
