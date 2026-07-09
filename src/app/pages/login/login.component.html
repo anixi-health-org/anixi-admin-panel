@@ -1,61 +1,116 @@
-<div class="auth-page">
-  <div class="auth-container">
-    <div class="auth-header">
-      <app-anixi-logo variant="auth" [showWordmark]="false"></app-anixi-logo>
-      <h1 class="auth-title">Sign in to your account</h1>
-      <p class="auth-subtitle">Anixi Health Admin Portal</p>
-    </div>
+<div class="auth-shell">
+  <div class="auth-form-panel">
+    <div class="auth-bg-grid" aria-hidden="true"></div>
+    <div class="auth-container">
+      <div class="auth-header">
+        <app-anixi-logo variant="auth" [showWordmark]="false"></app-anixi-logo>
+        <h1 class="auth-title">Sign in to your account</h1>
+        <p class="auth-subtitle">Anixi Health Admin Portal</p>
+      </div>
 
-    <div class="auth-card">
-      <h2 class="auth-card-title">Login</h2>
+      <div class="auth-card">
+        <h2 class="auth-card-title">Login</h2>
 
-      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="auth-form">
-        <div class="form-field">
-          <label for="email">Email address</label>
-          <input
-            id="email"
-            type="email"
-            formControlName="email"
-            placeholder="Enter your email"
-            autocomplete="email"
-          />
-          @if (loginForm.get('email')?.invalid && loginForm.get('email')?.touched) {
-            <span class="field-error">Enter a valid email address.</span>
-          }
-        </div>
-
-        <div class="form-field">
-          <label for="password">Password</label>
-          <div class="password-wrap">
+        <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="auth-form">
+          <div class="form-field">
+            <label for="email">Email address</label>
             <input
-              id="password"
-              [type]="showPassword ? 'text' : 'password'"
-              formControlName="password"
-              placeholder="Enter your password"
-              autocomplete="current-password"
+              id="email"
+              type="email"
+              formControlName="email"
+              placeholder="Enter your email"
+              autocomplete="email"
             />
-            <button
-              type="button"
-              class="password-toggle"
-              (click)="showPassword = !showPassword"
-              [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'"
-            >
-              {{ showPassword ? 'Hide' : 'Show' }}
-            </button>
+            @if (loginForm.get('email')?.invalid && loginForm.get('email')?.touched) {
+              <span class="field-error">Enter a valid email address.</span>
+            }
           </div>
-          @if (loginForm.get('password')?.invalid && loginForm.get('password')?.touched) {
-            <span class="field-error">Password must be at least 6 characters.</span>
+
+          <div class="form-field">
+            <label for="password">Password</label>
+            <div class="password-wrap">
+              <input
+                id="password"
+                [type]="showPassword ? 'text' : 'password'"
+                formControlName="password"
+                placeholder="Enter your password"
+                autocomplete="current-password"
+              />
+              <button
+                type="button"
+                class="password-toggle"
+                (click)="showPassword = !showPassword"
+                [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'"
+              >
+                {{ showPassword ? 'Hide' : 'Show' }}
+              </button>
+            </div>
+            @if (loginForm.get('password')?.invalid && loginForm.get('password')?.touched) {
+              <span class="field-error">Password must be at least 6 characters.</span>
+            }
+          </div>
+
+          @if (errorMessage) {
+            <div class="auth-error" role="alert">{{ errorMessage }}</div>
           }
-        </div>
 
-        @if (errorMessage) {
-          <div class="auth-error" role="alert">{{ errorMessage }}</div>
-        }
-
-        <button type="submit" class="auth-button" [disabled]="isLoading">
-          {{ isLoading ? 'Signing in…' : 'Sign in' }}
-        </button>
-      </form>
+          <button type="submit" class="auth-button" [disabled]="isLoading">
+            {{ isLoading ? 'Signing in…' : 'Sign in' }}
+          </button>
+        </form>
+      </div>
     </div>
   </div>
+
+  <aside class="auth-hero">
+    @for (slide of slides; track slide.image; let i = $index) {
+      <div
+        class="hero-bg"
+        [class.active]="i === activeSlide"
+        [style.background-image]="'url(' + slide.image + ')'"
+        aria-hidden="true"
+      ></div>
+    }
+    <div class="hero-scrim hero-scrim-bottom" aria-hidden="true"></div>
+    <div class="hero-scrim hero-scrim-left" aria-hidden="true"></div>
+    <div class="hero-tint" aria-hidden="true"></div>
+
+    <div class="hero-slides">
+      @for (slide of slides; track slide.heading; let i = $index) {
+        <div class="hero-slide" [class.active]="i === activeSlide">
+          <h2 class="hero-heading">{{ slide.heading }}</h2>
+          <p class="hero-desc">{{ slide.description }}</p>
+        </div>
+      }
+    </div>
+
+    <div class="hero-footer">
+      <div class="hero-stats">
+        @for (stat of stats; track stat.label) {
+          <div class="hero-stat">
+            <span class="hero-stat-icon-wrap">
+              <lucide-icon [name]="stat.icon" class="hero-stat-icon"></lucide-icon>
+            </span>
+            <p class="hero-stat-value">{{ stat.value }}</p>
+            <p class="hero-stat-label">{{ stat.label }}</p>
+          </div>
+        }
+      </div>
+
+      <div class="hero-controls">
+        <span class="hero-caption">{{ slides[activeSlide].caption }}</span>
+        <div class="hero-dots">
+          @for (slide of slides; track slide.heading; let i = $index) {
+            <button
+              type="button"
+              class="hero-dot"
+              [class.active]="i === activeSlide"
+              (click)="goToSlide(i)"
+              [attr.aria-label]="'Show slide ' + (i + 1)"
+            ></button>
+          }
+        </div>
+      </div>
+    </div>
+  </aside>
 </div>
