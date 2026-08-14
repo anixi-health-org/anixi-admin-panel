@@ -31,31 +31,31 @@ export class LoginComponent implements OnInit, OnDestroy {
   activeSlide = 0;
   readonly slides: HeroSlide[] = [
     {
-      heading: 'The heartbeat of the ecosystem',
+      heading: 'Chronic care, made continuous',
       description:
-        'Verify clinicians, curate condition communities, and keep all three Anixi portals running smoothly.',
-      caption: 'Full oversight',
-      image: '/hero-insight.png',
-    },
-    {
-      heading: 'Trusted care, verified',
-      description:
-        'Review and approve the doctors who support Warriors living with chronic conditions across Africa.',
-      caption: 'Confident approvals',
+        'Support your Warriors between visits. Track medication adherence, mood, and vitals in one clinical dashboard.',
+      caption: 'Continuous monitoring',
       image: '/hero-care.png',
     },
     {
-      heading: 'Content that empowers',
+      heading: 'Every patient, truly connected',
       description:
-        'Publish health education that reaches the right condition communities at exactly the right moment.',
-      caption: 'Stronger communities',
+        'Telemedicine, shared records, and real-time insights link you to patients and their caregivers across Africa.',
+      caption: 'Telemedicine ready',
+      image: '/hero-insight.png',
+    },
+    {
+      heading: 'Care beyond the clinic',
+      description:
+        'Coordinate with caregivers and Ayah, our AI companion, to guide and support patients around the clock.',
+      caption: 'Connected support',
       image: '/hero-connect.png',
     },
   ];
   readonly stats: HeroStat[] = [
-    { icon: 'layout-dashboard', value: '3', label: 'Connected portals' },
     { icon: 'users', value: '12+', label: 'Condition communities' },
-    { icon: 'shield-check', value: 'POPIA', label: 'Compliant & secure' },
+    { icon: 'sparkles', value: '24/7', label: 'Ayah AI companion' },
+    { icon: 'shield-check', value: 'POPIA', label: 'Secure & compliant' },
   ];
 
   private slideTimer?: ReturnType<typeof setInterval>;

@@ -16,6 +16,24 @@ nz-button,
   font-weight: 600;
 }
 
+.content-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: #e8ede4;
+  flex-shrink: 0;
+}
+
+.content-thumb--video {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: #1f2a24;
+  font-size: 0.75rem;
+}
+
 nz-button,
 .menu {
   border-radius: 9px;
@@ -313,4 +331,14 @@ li:hover {
     grid-template-columns: 1fr;
     max-height: 160px;
   }
+}
+
+.scheduled-note {
+  margin-bottom: 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  border: 1px solid #c7ddf0;
+  background: #eef5fb;
+  color: #1d6fa5;
+  font-size: 0.875rem;
 }

@@ -16,6 +16,7 @@ import { BreakpointObserver } from '@angular/cdk/layout';
 import {
   doctorMatchesSearch,
   getDoctorDisplayName,
+  isDoctorVerificationCandidate,
   normalizeVerificationStatus,
 } from '../../utils/doctor-record.utils';
 
@@ -73,6 +74,7 @@ export class DoctorVerificationComponent implements OnInit, OnDestroy {
     });
 
     this.doctorList$ = this.fireStoreService.getDoctors().pipe(
+      map((doctors) => doctors.filter((doctor) => isDoctorVerificationCandidate(doctor))),
       tap({
         next: () => (this.isLoadingSkeleton = false),
         error: () => (this.isLoadingSkeleton = false),

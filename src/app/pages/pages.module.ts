@@ -8,7 +8,7 @@ import { DoctorVerificationComponent } from './doctor-verification/doctor-verifi
 import { DashboardComponent } from './dashboard/dashboard.component';
 import { NzLayoutModule } from 'ng-zorro-antd/layout';
 import {NzIconModule} from 'ng-zorro-antd/icon';
-import {Activity, Bell, ChevronDown, Download, ExternalLink, Eye, FileText, LayoutDashboard, LogOut, LucideAngularModule, MessageSquare, ShieldCheck, Stethoscope, TriangleAlert, Users, UserX} from 'lucide-angular';
+import {Activity, BarChart3, Bell, Calendar, ChartColumn, CheckCircle, ChevronDown, ClipboardList, Clock, Download, ExternalLink, Eye, FilePen, FileText, LayoutDashboard, LogOut, LucideAngularModule, MessageSquare, ScrollText, Search, Settings, Shield, ShieldCheck, Sparkles, Stethoscope, TriangleAlert, Users, UserX} from 'lucide-angular';
 import {NzAvatarModule} from 'ng-zorro-antd/avatar';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ApplicationDetailsComponent } from './application-details/application-details.component'
@@ -16,6 +16,7 @@ import { NzButtonComponent } from "ng-zorro-antd/button";
 import { CardComponent } from '../components/card/card.component';
 import { NgxEchartsDirective } from "ngx-echarts";
 import { ContentComponent } from './content/content.component';
+import { ContentEditorComponent } from './content-editor/content-editor.component';
 import {NzDropdownModule} from 'ng-zorro-antd/dropdown';
 import {NzModalModule} from 'ng-zorro-antd/modal';
 import {NzUploadModule} from 'ng-zorro-antd/upload';
@@ -29,6 +30,7 @@ import { PostTitlePipe } from '../pipes/post-title.pipe';
 import {NzPopconfirmModule} from 'ng-zorro-antd/popconfirm';
 import { LinkifyPipe } from '../pipes/linkify-pipe';
 import { UsersComponent } from './users/users.component';
+import { RichTextEditorComponent } from '../components/rich-text-editor/rich-text-editor.component';
 
 @NgModule({
   declarations: [
@@ -39,12 +41,14 @@ import { UsersComponent } from './users/users.component';
     ApplicationDetailsComponent,
     CardComponent,
     ContentComponent,
+    ContentEditorComponent,
     PdfViewerComponent,
     PostTitlePipe,
     LinkifyPipe,
     UsersComponent,
     AnixiLogoComponent,
-    AdminProfileMenuComponent
+    AdminProfileMenuComponent,
+    RichTextEditorComponent
   ],
   imports: [
     CommonModule,
@@ -54,8 +58,12 @@ import { UsersComponent } from './users/users.component';
     NzAvatarModule,
     FormsModule,
     ReactiveFormsModule,
-    LucideAngularModule.pick({ Stethoscope, LayoutDashboard, FileText, Eye, Users, Activity,
-        MessageSquare, Bell, UserX, TriangleAlert, ChevronDown, LogOut, ShieldCheck, Download, ExternalLink
+    LucideAngularModule.pick({
+      Stethoscope, LayoutDashboard, FileText, Eye, Users, Activity,
+      MessageSquare, Bell, UserX, TriangleAlert, ChevronDown, LogOut,
+      ShieldCheck, Sparkles, Download, ExternalLink, Search, Calendar,
+      ClipboardList, CheckCircle, FilePen, Clock, ChartColumn, BarChart3,
+      Settings, ScrollText, Shield
     }),
     NzButtonComponent,
     NgxEchartsDirective,

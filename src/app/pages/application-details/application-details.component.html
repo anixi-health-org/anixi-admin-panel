@@ -32,32 +32,100 @@
             ></nz-icon>
             {{ utilFunctions.upperCaseFirstLetter(statusOf(doctor)) }}
           </div>
+          @if (doctor.informationRequested) {
+            <p class="info-request-banner">
+              More information requested:
+              {{ field(doctor.informationRequestReason) }}
+            </p>
+          }
         </div>
       </div>
     </div>
 
     <div class="detail-sections">
-      <section class="detail-section">
-        <h3 class="detail-section-title">Personal information</h3>
-        <dl class="detail-grid">
-          <div class="detail-row"><dt>Gender</dt><dd>{{ field(doctor.gender) }}</dd></div>
-          <div class="detail-row"><dt>ID / Passport</dt><dd>{{ field(doctor.idOrPassportNumber) }}</dd></div>
-          <div class="detail-row"><dt>Nationality</dt><dd>{{ field(doctor.nationality) }}</dd></div>
-          <div class="detail-row"><dt>Country</dt><dd>{{ field(doctor.country) }}</dd></div>
-        </dl>
+      <section class="detail-section detail-checklist">
+        <h3 class="detail-section-title">Verification checklist</h3>
+        <p class="detail-manual-note">
+          No live HPCSA API is connected. All credential checks are manual admin review.
+        </p>
+        <ul class="checklist">
+          @for (item of checklist(doctor); track item.key) {
+            <li class="checklist__item" [class.checklist__item--done]="item.done">
+              <span class="checklist__mark" aria-hidden="true">{{ item.done ? '✓' : '•' }}</span>
+              <span class="checklist__label">
+                <strong>{{ item.label }}</strong>
+                <small>{{ item.detail }}</small>
+              </span>
+              <span class="ops-badge" [class]="item.done ? 'ops-badge--green' : 'ops-badge--pending'">
+                {{ item.done ? 'Ready' : 'Pending' }}
+              </span>
+            </li>
+          }
+        </ul>
+        @if (!approvalReady(doctor)) {
+          <p class="approve-blocked-hint">
+            Complete all required verification steps before approving this doctor.
+            @for (reason of approvalBlockReasonsList(doctor); track reason) {
+              <br />• {{ reason }}
+            }
+          </p>
+        }
       </section>
 
       <section class="detail-section">
-        <h3 class="detail-section-title">Professional credentials</h3>
+        <h3 class="detail-section-title">Identity</h3>
+        <dl class="detail-grid">
+          <div class="detail-row"><dt>Name</dt><dd>{{ displayName(doctor) }}</dd></div>
+          <div class="detail-row"><dt>Email</dt><dd>{{ field(doctor.email) }}</dd></div>
+          <div class="detail-row"><dt>Gender</dt><dd>{{ field(doctor.gender) }}</dd></div>
+          <div class="detail-row"><dt>ID / Passport</dt><dd>{{ field(doctor.idOrPassportNumber) }}</dd></div>
+          <div class="detail-row"><dt>Status</dt>
+            <dd>{{ doctor.identityVerified === true ? 'Verified' : 'Pending' }}</dd>
+          </div>
+          <div class="detail-row"><dt>Verified by</dt><dd>{{ field(doctor.identityVerifiedBy) }}</dd></div>
+          <div class="detail-row"><dt>Verified at</dt><dd>{{ timestamp(doctor.identityVerifiedAt) }}</dd></div>
+          <div class="detail-row detail-row--full"><dt>Notes</dt><dd>{{ field(doctor.identityReviewerNotes) }}</dd></div>
+        </dl>
+        @if (doctor.identityVerified !== true) {
+          <button
+            type="button"
+            class="ops-btn ops-btn--secondary"
+            [disabled]="isUpdating"
+            (click)="verifyIdentity()"
+          >
+            Verify identity
+          </button>
+        }
+      </section>
+
+      <section class="detail-section">
+        <h3 class="detail-section-title">HPCSA / registration</h3>
+        <p class="detail-manual-note">
+          Verification method: <strong>Manual verification</strong>.
+          No live HPCSA API is connected.
+        </p>
         <dl class="detail-grid">
           <div class="detail-row"><dt>Registration no.</dt><dd>{{ registrationNumber(doctor) }}</dd></div>
           <div class="detail-row"><dt>Specialty</dt><dd>{{ specialty(doctor) }}</dd></div>
-          <div class="detail-row"><dt>Years in practice</dt><dd>{{ field(doctor.yearsInPractice) }}</dd></div>
-          <div class="detail-row"><dt>Medical aid affiliation</dt><dd>{{ field(doctor.hasMedicalAidAffiliation) }}</dd></div>
-          @if (doctor.hasMedicalAidAffiliation) {
-            <div class="detail-row"><dt>Affiliation type</dt><dd>{{ field(doctor.medicalAidAffiliationType) }}</dd></div>
-          }
+          <div class="detail-row"><dt>Verification status</dt>
+            <dd>{{ doctor.hpcsaManuallyVerified === true ? 'Manually verified' : 'Pending manual verification' }}</dd>
+          </div>
+          <div class="detail-row"><dt>Verification method</dt>
+            <dd>{{ field(doctor.hpcsaVerificationMethod) === '-' ? 'Manual verification' : field(doctor.hpcsaVerificationMethod) }}</dd>
+          </div>
+          <div class="detail-row"><dt>Verification reference</dt><dd>{{ field(doctor.hpcsaVerificationReference) }}</dd></div>
+          <div class="detail-row"><dt>Verified by</dt><dd>{{ field(doctor.hpcsaVerifiedBy) }}</dd></div>
+          <div class="detail-row"><dt>Verified at</dt><dd>{{ timestamp(doctor.hpcsaVerifiedAt) }}</dd></div>
+          <div class="detail-row detail-row--full"><dt>Verification notes</dt><dd>{{ field(doctor.hpcsaReviewerNotes) }}</dd></div>
         </dl>
+        <button
+          type="button"
+          class="ops-btn ops-btn--secondary"
+          [disabled]="isUpdating"
+          (click)="recordManualHpcsa()"
+        >
+          {{ doctor.hpcsaManuallyVerified === true ? 'Update manual HPCSA verification' : 'Record manual HPCSA verification' }}
+        </button>
       </section>
 
       <section class="detail-section">
@@ -84,111 +152,120 @@
       </section>
 
       <section class="detail-section">
-        <h3 class="detail-section-title">Documents</h3>
-        <div class="detail-documents">
-          @if (certificateUrl(doctor)) {
-            <div class="detail-doc-item">
-              <lucide-icon name="file-text" class="detail-doc-icon"></lucide-icon>
-              <span class="detail-doc-name">HPCSA certificate</span>
-              <a
-                class="detail-doc-btn"
-                [routerLink]="'/certificat-viewer'"
-                [queryParams]="{ file: certificateUrl(doctor), name: 'HPCSA-certificate' }"
-                target="_blank"
-                rel="noopener noreferrer"
-                title="View"
-              >
-                <lucide-icon name="eye" class="detail-doc-action"></lucide-icon>
-              </a>
-              <button
-                type="button"
-                class="detail-doc-btn"
-                (click)="downloadDocument(certificateUrl(doctor)!, 'HPCSA-certificate')"
-                [disabled]="downloadingUrl === certificateUrl(doctor)"
-                title="Download"
-              >
-                <lucide-icon name="download" class="detail-doc-action"></lucide-icon>
-              </button>
-            </div>
-          }
-          @if (licenseUrl(doctor)) {
-            <div class="detail-doc-item">
-              <lucide-icon name="file-text" class="detail-doc-icon"></lucide-icon>
-              <span class="detail-doc-name">Practice licence</span>
-              <a
-                class="detail-doc-btn"
-                [routerLink]="'/certificat-viewer'"
-                [queryParams]="{ file: licenseUrl(doctor), name: 'practice-licence' }"
-                target="_blank"
-                rel="noopener noreferrer"
-                title="View"
-              >
-                <lucide-icon name="eye" class="detail-doc-action"></lucide-icon>
-              </a>
-              <button
-                type="button"
-                class="detail-doc-btn"
-                (click)="downloadDocument(licenseUrl(doctor)!, 'practice-licence')"
-                [disabled]="downloadingUrl === licenseUrl(doctor)"
-                title="Download"
-              >
-                <lucide-icon name="download" class="detail-doc-action"></lucide-icon>
-              </button>
-            </div>
-          }
-          @if (doctor.medicalAidContractUrl) {
-            <div class="detail-doc-item">
-              <lucide-icon name="file-text" class="detail-doc-icon"></lucide-icon>
-              <span class="detail-doc-name">Medical aid contract</span>
-              <a
-                class="detail-doc-btn"
-                [routerLink]="'/certificat-viewer'"
-                [queryParams]="{ file: doctor.medicalAidContractUrl, name: 'medical-aid-contract' }"
-                target="_blank"
-                rel="noopener noreferrer"
-                title="View"
-              >
-                <lucide-icon name="eye" class="detail-doc-action"></lucide-icon>
-              </a>
-              <button
-                type="button"
-                class="detail-doc-btn"
-                (click)="downloadDocument($any(doctor.medicalAidContractUrl), 'medical-aid-contract')"
-                [disabled]="downloadingUrl === doctor.medicalAidContractUrl"
-                title="Download"
-              >
-                <lucide-icon name="download" class="detail-doc-action"></lucide-icon>
-              </button>
-            </div>
-          }
-          @if (!certificateUrl(doctor) && !licenseUrl(doctor) && !doctor.medicalAidContractUrl) {
-            <p class="detail-empty-docs">No documents uploaded yet.</p>
-          }
-        </div>
+        <h3 class="detail-section-title">Document review</h3>
+        @if (documents(doctor).length) {
+          <div class="doc-review-list">
+            @for (doc of documents(doctor); track doc.documentKey) {
+              <article class="doc-review-card">
+                <div class="doc-review-card__header">
+                  <div>
+                    <h4>{{ doc.documentName }}</h4>
+                    <p>{{ doc.documentType }}{{ doc.required ? ' · Required' : ' · Optional' }}</p>
+                  </div>
+                  <span
+                    class="ops-badge"
+                    [class.ops-badge--green]="doc.status === 'verified'"
+                    [class.ops-badge--pending]="doc.status === 'pending' || doc.status === 'under_review'"
+                    [class.ops-badge--red]="doc.status === 'rejected' || doc.status === 'requires_replacement'"
+                  >
+                    {{ docStatusLabel(doc.status) }}
+                  </span>
+                </div>
+                <dl class="detail-grid doc-review-meta">
+                  <div class="detail-row"><dt>Uploaded</dt><dd>Unavailable from source URL</dd></div>
+                  <div class="detail-row"><dt>Reviewer</dt><dd>{{ field(doc.reviewerId) }}</dd></div>
+                  <div class="detail-row"><dt>Verification date</dt><dd>{{ timestamp(doc.reviewedAt) }}</dd></div>
+                  <div class="detail-row detail-row--full"><dt>Reviewer notes</dt><dd>{{ field(doc.notes) }}</dd></div>
+                </dl>
+                <div class="doc-review-actions">
+                  <a
+                    class="ops-btn ops-btn--secondary"
+                    [routerLink]="'/certificat-viewer'"
+                    [queryParams]="{ file: doc.url, name: doc.documentName }"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Preview
+                  </a>
+                  <button
+                    type="button"
+                    class="ops-btn ops-btn--secondary"
+                    (click)="downloadDocument(doc.url, doc.documentName)"
+                    [disabled]="downloadingUrl === doc.url"
+                  >
+                    Download
+                  </button>
+                  <button
+                    type="button"
+                    class="ops-btn ops-btn--primary"
+                    [disabled]="isUpdating || doc.status === 'verified'"
+                    (click)="reviewDocument(doc, 'verified')"
+                  >
+                    Verify
+                  </button>
+                  <button
+                    type="button"
+                    class="ops-btn ops-btn--secondary"
+                    [disabled]="isUpdating"
+                    (click)="reviewDocument(doc, 'rejected')"
+                  >
+                    Reject
+                  </button>
+                  <button
+                    type="button"
+                    class="ops-btn ops-btn--secondary"
+                    [disabled]="isUpdating"
+                    (click)="reviewDocument(doc, 'requires_replacement')"
+                  >
+                    Request replacement
+                  </button>
+                </div>
+              </article>
+            }
+          </div>
+        } @else {
+          <p class="detail-empty-docs">No documents uploaded yet.</p>
+        }
       </section>
 
       <section class="detail-section">
         <h3 class="detail-section-title">Verification history</h3>
-        <dl class="detail-grid">
-          <div class="detail-row"><dt>Submitted</dt><dd>{{ timestamp(doctor.createdAt) }}</dd></div>
-          <div class="detail-row"><dt>Last verified</dt><dd>{{ timestamp(doctor.verifiedAt) }}</dd></div>
-          <div class="detail-row"><dt>Verified by</dt><dd>{{ field(doctor.verifiedBy) }}</dd></div>
-        </dl>
+        @if (history(doctor).length) {
+          <ol class="history-list">
+            @for (event of history(doctor); track event.id) {
+              <li class="history-item">
+                <div>
+                  <p class="history-item__action">{{ event.action }}</p>
+                  <p class="history-item__meta">
+                    Admin: {{ event.adminId || '-' }}
+                    @if (event.reason) {
+                      · Reason: {{ event.reason }}
+                    }
+                  </p>
+                </div>
+                <time>{{ historyWhen(event.at) }}</time>
+              </li>
+            }
+          </ol>
+        } @else {
+          <p class="detail-empty-docs">No verification events recorded yet.</p>
+        }
       </section>
     </div>
 
     <div class="detail-actions">
       <p class="detail-actions-label">Verification decision</p>
-      @if (statusOf(doctor) === 'pending') {
+      @if (statusOf(doctor) === 'pending' || statusOf(doctor) === 'rejected') {
         <div class="detail-actions-row">
           <button
             type="button"
             class="action-btn action-btn--approve"
-            [disabled]="isUpdating"
-            (click)="updateDoctorStatus(id, 'approved', 'approve')"
+            [disabled]="isUpdating || !approvalReady(doctor)"
+            [attr.title]="!approvalReady(doctor) ? 'Complete all required verification steps before approving this doctor.' : null"
+            (click)="requestApprove()"
           >
             <nz-icon nzType="check-circle" nzTheme="outline"></nz-icon>
-            Approve
+            Approve Doctor
           </button>
           <button
             type="button"
@@ -197,9 +274,25 @@
             (click)="updateDoctorStatus(id, 'rejected', 'reject')"
           >
             <nz-icon nzType="close-circle" nzTheme="outline"></nz-icon>
-            Reject
+            Reject Application
+          </button>
+          <button
+            type="button"
+            class="action-btn action-btn--info"
+            [disabled]="isUpdating"
+            (click)="requestMoreInformation()"
+          >
+            Request More Information
           </button>
         </div>
+        @if (!approvalReady(doctor)) {
+          <p class="approve-blocked-hint">
+            Complete all required verification steps before approving this doctor.
+            @for (reason of approvalBlockReasonsList(doctor); track reason) {
+              <br />• {{ reason }}
+            }
+          </p>
+        }
       }
       @if (statusOf(doctor) === 'approved') {
         <button
@@ -212,25 +305,12 @@
           Suspend doctor
         </button>
       }
-      @if (statusOf(doctor) === 'rejected') {
-        <div class="detail-actions-row">
-          <button
-            type="button"
-            class="action-btn action-btn--approve"
-            [disabled]="isUpdating"
-            (click)="updateDoctorStatus(id, 'approved', 'approve')"
-          >
-            <nz-icon nzType="check-circle" nzTheme="outline"></nz-icon>
-            Approve
-          </button>
-        </div>
-      }
       @if (statusOf(doctor) === 'suspended') {
         <button
           type="button"
           class="action-btn action-btn--approve"
-          [disabled]="isUpdating"
-          (click)="updateDoctorStatus(id, 'approved', 'reinstate')"
+          [disabled]="isUpdating || !approvalReady(doctor)"
+          (click)="requestApprove()"
         >
           <nz-icon nzType="check-circle" nzTheme="outline"></nz-icon>
           Reinstate doctor
@@ -238,6 +318,28 @@
       }
     </div>
   </div>
+
+  @if (showApproveConfirm) {
+    <div class="confirm-overlay" role="dialog" aria-modal="true" aria-labelledby="approve-title">
+      <div class="confirm-dialog">
+        <h3 id="approve-title">Approve doctor?</h3>
+        <p>
+          Approving this doctor will activate their practice account and allow them to begin accepting patients on Anixi.
+        </p>
+        <p class="confirm-doctor">
+          Doctor: <strong>{{ displayName(doctor) }}</strong>
+        </p>
+        <div class="confirm-dialog__actions">
+          <button type="button" class="ops-btn ops-btn--secondary" (click)="cancelApproveConfirm()" [disabled]="isUpdating">
+            Cancel
+          </button>
+          <button type="button" class="ops-btn ops-btn--primary" (click)="confirmApprove()" [disabled]="isUpdating">
+            {{ isUpdating ? 'Approving…' : 'Approve Doctor' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
 } @else if (id) {
   <div class="details-empty">
     <lucide-icon name="file-text" class="details-empty-icon"></lucide-icon>

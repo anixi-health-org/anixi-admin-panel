@@ -5,6 +5,7 @@ import { DashboardComponent } from './dashboard/dashboard.component';
 import { DoctorVerificationComponent } from './doctor-verification/doctor-verification.component';
 import { AdminPanelComponent } from './admin-panel/admin-panel.component';
 import { ContentComponent } from './content/content.component';
+import { ContentEditorComponent } from './content-editor/content-editor.component';
 import { PdfViewerComponent } from './pdf-viewer/pdf-viewer.component';
 import { UsersComponent } from './users/users.component';
 import { authGuard } from '../guards/auth.guard';
@@ -24,6 +25,8 @@ const routes: Routes = [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       { path: 'dashboard', component: DashboardComponent },
       { path: 'content', component: ContentComponent },
+      { path: 'content/new', component: ContentEditorComponent },
+      { path: 'content/:id/edit', component: ContentEditorComponent },
       { path: 'doctor-verification', component: DoctorVerificationComponent },
       { path: 'certificat-viewer', component: PdfViewerComponent },
       { path: 'users', component: UsersComponent },

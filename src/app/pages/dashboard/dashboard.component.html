@@ -1,63 +1,153 @@
-<div class="flex flex-col p-4">
-    <div class="flex flex-col flex-wrap mb-2">
-        <p class="sm:text-2xl text-xl font-semibold font-heading text-anixi-green">Dashboard</p>
-        <p class="text-gray-500 sm:text-sm text-xs font-sans mt-1">Overview of your Anixi application metrics and activity.</p>
+<div class="ops-page dashboard-page">
+  <header class="ops-page-header">
+    <div class="ops-page-header__copy">
+      <p class="ops-page-header__eyebrow">Anixi operations</p>
+      <h1 class="ops-page-header__title">{{ greetingLine }}, {{ greetingName }}</h1>
+      <p class="ops-page-header__subtitle">
+        Here's what needs your attention across Anixi Health today.
+      </p>
     </div>
-    @if (!isLoading) {
-    <div class="flex flex-row flex-wrap gap-2 sm:justify-between justify-center">
-        @for(card of cards; track card.index) {
-            <app-card class="sm:w-[240px] w-[100px]" [cardValue]="card"></app-card>
-        }
-        @for(card of cards2; track card.index) {
-            <app-card class="sm:w-[240px] w-[100px]" [cardValue]="card"></app-card>
-        }
+    <div class="ops-page-header__actions">
+      <span class="ops-status-pill" title="Platform health">
+        <span class="ops-status-dot" aria-hidden="true"></span>
+        Platform status: Operational
+      </span>
     </div>
+  </header>
+
+  @if (isLoading) {
+    <div class="ops-metrics ops-metrics--compact">
+      @for (i of [1, 2, 3, 4, 5, 6]; track i) {
+        <div class="ops-metric">
+          <nz-skeleton [nzActive]="true" [nzTitle]="false" [nzParagraph]="{ rows: 2 }"></nz-skeleton>
+        </div>
+      }
+    </div>
+  } @else {
+    <section class="ops-metrics ops-metrics--compact" aria-label="Key metrics">
+      <article class="ops-metric">
+        <p class="ops-metric__label">Total patients</p>
+        <p class="ops-metric__value">{{ totalPatients }}</p>
+        <p class="ops-metric__hint">Registered patient accounts</p>
+      </article>
+      <article class="ops-metric ops-metric--green">
+        <p class="ops-metric__label">Verified doctors</p>
+        <p class="ops-metric__value">{{ verifiedDoctors }}</p>
+        <p class="ops-metric__hint">Approved to practice</p>
+      </article>
+      <article class="ops-metric ops-metric--amber">
+        <p class="ops-metric__label">Pending review</p>
+        <p class="ops-metric__value">{{ pendingDoctors }}</p>
+        <p class="ops-metric__hint">Awaiting credential verification</p>
+      </article>
+      <article class="ops-metric">
+        <p class="ops-metric__label">Appointments today</p>
+        <p class="ops-metric__value">—</p>
+        <p class="ops-metric__hint">Not available in Admin</p>
+      </article>
+      <article class="ops-metric">
+        <p class="ops-metric__label">Community posts</p>
+        <p class="ops-metric__value">{{ communityPosts }}</p>
+        <p class="ops-metric__hint">Across {{ communities }} communities</p>
+      </article>
+      <article class="ops-metric" [class.ops-metric--amber]="openActions > 0">
+        <p class="ops-metric__label">Open actions</p>
+        <p class="ops-metric__value">{{ openActions }}</p>
+        <p class="ops-metric__hint">Require attention</p>
+      </article>
+    </section>
+  }
+
+  <div class="dashboard-grid">
+    <section class="ops-panel attention-panel">
+      <div class="ops-panel__header">
+        <div>
+          <p class="ops-section-label">Priority</p>
+          <h2 class="ops-panel__title">Attention required</h2>
+        </div>
+        <button type="button" class="ops-btn ops-btn--secondary" (click)="go('/doctor-verification', { status: 'pending' })">
+          Review queue
+        </button>
+      </div>
+      <div class="attention-list">
+        @if (!attentionItems.length && !isLoading) {
+          <div class="ops-empty" style="padding: 1.75rem 1rem">
+            <p class="ops-empty__title">All clear</p>
+            <p class="ops-empty__text">No open verification actions right now.</p>
+          </div>
+        }
+        @for (item of attentionItems; track item.id) {
+          <button type="button" class="attention-item attention-item--{{ item.tone }}" (click)="open(item)">
+            <div>
+              <p class="attention-item__title">{{ item.title }}</p>
+              <p class="attention-item__detail">{{ item.detail }}</p>
+            </div>
+            <span class="attention-item__chevron" aria-hidden="true">→</span>
+          </button>
+        }
+      </div>
+    </section>
+
+    <section class="ops-panel">
+      <div class="ops-panel__header">
+        <div>
+          <p class="ops-section-label">Shortcuts</p>
+          <h2 class="ops-panel__title">Quick actions</h2>
+        </div>
+      </div>
+      <div class="quick-actions">
+        <button type="button" class="ops-btn ops-btn--primary" (click)="go('/content/new')">
+          + Create content
+        </button>
+        <button type="button" class="ops-btn ops-btn--secondary" (click)="go('/doctor-verification', { status: 'pending' })">
+          Review doctors
+        </button>
+        <button type="button" class="ops-btn ops-btn--secondary" (click)="go('/users')">
+          Manage users
+        </button>
+        <button type="button" class="ops-btn ops-btn--secondary" (click)="go('/content', { filter: 'reported' })">
+          View reports
+        </button>
+      </div>
+    </section>
+  </div>
+
+  <section class="ops-panel dashboard-activity">
+    <div class="ops-panel__header">
+      <div>
+        <p class="ops-section-label">Timeline</p>
+        <h2 class="ops-panel__title">Recent activity</h2>
+      </div>
+    </div>
+    @if (isLoading) {
+      <div class="ops-panel__body">
+        <nz-skeleton [nzActive]="true" [nzParagraph]="{ rows: 5 }"></nz-skeleton>
+      </div>
+    } @else if (!activityItems.length) {
+      <div class="ops-empty">
+        <div class="ops-empty__icon" aria-hidden="true">⏱</div>
+        <p class="ops-empty__title">No recent activity yet</p>
+        <p class="ops-empty__text">
+          Approvals, applications, and community publishes will appear here as they happen.
+        </p>
+      </div>
     } @else {
-        <div class="stat-skeleton-grid">
-            @for (i of [0,1,2,3,4,5,6,7]; track i) {
-                <nz-skeleton [nzActive]="true" [nzTitle]="false" [nzParagraph]="{ rows: 2 }"></nz-skeleton>
-            }
-        </div>
+      <ul class="activity-list">
+        @for (item of activityItems; track item.id) {
+          <li class="activity-item">
+            <span class="activity-dot activity-dot--{{ item.tone }}" aria-hidden="true"></span>
+            <div class="activity-copy">
+              <p class="activity-title">{{ item.title }}</p>
+              <p class="activity-detail">{{ item.detail }}</p>
+            </div>
+            <time class="activity-when">{{ item.when }}</time>
+          </li>
+        }
+      </ul>
     }
-    <div class="charts-container gap-3 mt-4">
-        <div class="charts-wrapper shadow bg-white rounded-lg p-4" >
-            <h1 class="text-base font-normal">User Growth</h1>
-            <div echarts [options]="options" [autoResize]="true" theme="macarons" class="demo-chart"></div>
-        </div>
-        <div class="charts-wrapper border-transparent shadow bg-white rounded-lg p-4">
-            <h1 class="text-base font-normal">Weekly Engagement</h1>
-            <div echarts [options]="option" [autoResize]="true" class="chart"></div>
-        </div>
-    </div>
-    <div class="flex min-[889px]:flex-row flex-col gap-4 sm:mt-8 mt-4">
-        <div class="bg-white h-auto shadow min-[889px]:w-[70%] w-full border-gray-600 
-             rounded-xl p-4 w-full">
-            <h1 class="text-base">Recent Activity</h1>
-            @for(activity of activities; track activity.index) {
-                <div class="cursor-pointer hover:bg-gray-50 h-[60px] p-3 rounded-lg mb-4">
-                    <div class="flex flex-row justify-between gap-2">
-                        <div class="flex flex-row gap-2">
-                            <div class="rounded-lg h-[21px] text-center pl-3 pr-3" [ngStyle]="{'background-color': activity.bgColor}">
-                                <p class="text-[11px] font-semibold relative top-[2px]" [ngStyle]="{'color': activity.color}">{{activity.type}}</p>
-                            </div>
-                            <div class="flex flex-col">
-                                <h1 class="text-sm font-normal text-gray-800 h-[10px]">{{activity.title}}</h1>
-                                <p class="text-[12px] text-gray-500">{{activity.content}}</p>
-                            </div>
-                        </div>
-                        <p class="text-[12px] text-gray-500">{{activity.createdAt}}</p>
-                    </div>
-                </div>
-            }
-        </div>
-        <div class="flex flex-col bg-white shadow-lg min-[889px]:w-[30%] w-full border-gray-200 rounded-lg p-4 quick-actions-card">
-            <h1 class="text-base font-heading text-anixi-green mb-2">Quick Actions</h1>
-            @for(action of actions; track action.index) {
-                <button type="button" class="quick-action-btn" (click)="runQuickAction(action)">
-                    <lucide-icon [name]="action.icon"></lucide-icon>
-                    <span>{{action.action}}</span>
-                </button>
-            }
-        </div>
-    </div>
+  </section>
+
+  <p class="dashboard-privacy-note">
+    Patient appointments and medical records are intentionally unavailable in the Admin Portal.
+  </p>
 </div>
