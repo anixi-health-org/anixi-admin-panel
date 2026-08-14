@@ -239,11 +239,13 @@
   background-size: cover;
   background-position: center;
   opacity: 0;
-  transition: opacity 1s ease;
+  transform: scale(1.05);
+  transition: opacity 1.2s ease-out, transform 1.2s ease-out;
 }
 
 .hero-bg.active {
   opacity: 1;
+  transform: scale(1);
 }
 
 /* Directional scrims keep the photo visible while text stays legible */
@@ -293,12 +295,14 @@
   flex-direction: column;
   justify-content: center;
   opacity: 0;
-  transition: opacity 0.7s ease;
+  transform: translateY(0.75rem);
+  transition: opacity 0.7s ease-out, transform 0.7s ease-out;
   pointer-events: none;
 }
 
 .hero-slide.active {
   opacity: 1;
+  transform: translateY(0);
   pointer-events: auto;
 }
 

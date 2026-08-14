@@ -1,93 +1,92 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import { EChartsCoreOption } from 'echarts/core';
-import { Subscription } from 'rxjs';
+import { Subscription, combineLatest } from 'rxjs';
 import { COMMUNITIES } from '../../../../const';
+import { AuthService } from '../../services/auth.service';
 import { FirestoreService } from '../../services/firestore.service';
 import { PostService } from '../../services/post.service';
+import {
+  DoctorRecord,
+  formatTimestamp,
+  getDoctorDisplayName,
+  isDoctorVerificationCandidate,
+  normalizeVerificationStatus,
+} from '../../utils/doctor-record.utils';
+import {
+  PlatformUser,
+  formatUserTimestamp,
+  getUserDisplayName,
+  getUserRole,
+} from '../../utils/user-record.utils';
 
-interface QuickAction {
-  index: string;
-  action: string;
-  icon: string;
+type AttentionItem = {
+  id: string;
+  title: string;
+  detail: string;
+  tone: 'amber' | 'green' | 'blue' | 'red';
   route: string[];
   queryParams?: Record<string, string>;
-}
+};
 
-const activities = [
-  { index: '0',type: 'doctor', title: 'New doctor application', content: 'Dr. Sarah Molefe submitted verification', 
-    bgColor: '#ebf5f3' , color: '#27a288' , createdAt: '5 min ago'},
-  { index: '1',type: 'content', title: 'Content published', content: '"Managing Diabete in Summer" went live', 
-    bgColor: '#ebf5fb' , color: '#6fb9e4', createdAt: '22 min ago'},
-  { index: '2',type: 'report', title: 'User reported', content: 'Post flagged in HIV/AIDS community', 
-    bgColor: '#fcebea' , color: '#dc2928', createdAt: '1 hr ago'},
-  { index: '3',type: 'notification', title: 'Campaign sent', content: 'Weekly health tips to 8432 users', 
-    bgColor: '#fef6e9' , color: '#492d03', createdAt: '2 hrs ago'},
-  { index: '4',type: 'doctor', title: 'Doctor approved', content: 'Dr. Thabo Nkosi verified and badged', 
-    bgColor: '#ebf5f3' , color: '#27a288', createdAt: '3 hrs ago'},
-  { index: '5',type: 'moderation', title: 'User suspended', content: 'Account @toxic_user22 suspended for violations', 
-    bgColor: '#fef6e9' , color: '#f69e23', createdAt: '5 hrs ago'},
-];
-const quickActions: QuickAction[] = [
-  { index: '0', action: 'Create Article', icon: 'file-text', route: ['/content'], queryParams: { action: 'create' } },
-  { index: '1', action: 'Send Notification', icon: 'bell', route: ['/content'], queryParams: { action: 'notify' } },
-  { index: '2', action: 'Review Doctor', icon: 'stethoscope', route: ['/doctor-verification'], queryParams: { status: 'pending' } },
-  { index: '3', action: 'View Reports', icon: 'triangle-alert', route: ['/content'], queryParams: { filter: 'reported' } },
-  { index: '4', action: 'Manage Users', icon: 'users', route: ['/users'] },
-];
+type ActivityItem = {
+  id: string;
+  title: string;
+  detail: string;
+  when: string;
+  tone: 'amber' | 'green' | 'blue' | 'slate';
+};
 
 @Component({
   selector: 'app-dashboard',
   standalone: false,
-  
   templateUrl: './dashboard.component.html',
-  styleUrl: './dashboard.component.css'
+  styleUrl: './dashboard.component.css',
 })
 export class DashboardComponent implements OnInit, OnDestroy {
-  cards = [
-    {label: 'Total Doctors', icon: 'users', value: '—', index: '0'},
-    {label: 'Approved Doctors', icon: 'activity', value: '—', index: '1'},
-    {label: 'Communities', icon: 'message-square', value: String(COMMUNITIES.length), index: '2'},
-    {label: 'Admin Posts', icon: 'file-text', value: '—', index: '3'},
-  ];
-  cards2 = [
-    {label: 'Published Posts', icon: 'bell', value: '—', index: '4'},
-    {label: 'Rejected Doctors', icon: 'triangle-alert', value: '—', index: '5'},
-    {label: 'Doctors Pending', icon: 'stethoscope', value: '—', index: '6'},
-    {label: 'Suspended Doctors', icon: 'user-x', value: '—', index: '7'},
-  ];
-  activities = activities;
-  actions = quickActions;
   isLoading = true;
+  greetingName = 'Admin';
+  greetingLine = 'Good day';
+
+  totalPatients = 0;
+  verifiedDoctors = 0;
+  pendingDoctors = 0;
+  communityPosts = 0;
+  openActions = 0;
+  communities = COMMUNITIES.length;
+
+  attentionItems: AttentionItem[] = [];
+  activityItems: ActivityItem[] = [];
+
   private sub = new Subscription();
 
   constructor(
     private firestoreService: FirestoreService,
     private postService: PostService,
+    private authService: AuthService,
     private router: Router
   ) {}
 
-  runQuickAction(action: QuickAction): void {
-    this.router.navigate(action.route, { queryParams: action.queryParams });
-  }
-
   ngOnInit(): void {
+    this.setGreeting();
     this.sub.add(
-      this.firestoreService.getDashboardStats().subscribe((stats) => {
-        this.cards[0].value = String(stats.totalDoctors);
-        this.cards[1].value = String(stats.approvedDoctors);
-        this.cards2[1].value = String(stats.rejectedDoctors);
-        this.cards2[2].value = String(stats.pendingDoctors);
-        this.cards2[3].value = String(stats.suspendedDoctors);
-        this.isLoading = false;
+      this.authService.adminUser$.subscribe((admin) => {
+        this.greetingName = admin?.displayName?.split(' ')[0] || 'Admin';
       })
     );
 
     this.sub.add(
-      this.postService.fetchAdminPost().subscribe((res) => {
-        const published = res.data.filter((post) => post['status'] === 'Published').length;
-        this.cards[3].value = String(res.data.length);
-        this.cards2[0].value = String(published);
+      combineLatest([
+        this.firestoreService.getDoctors(),
+        this.firestoreService.getUsers(),
+        this.postService.fetchAdminPost(),
+      ]).subscribe({
+        next: ([doctors, users, postsRes]) => {
+          this.hydrate(doctors as DoctorRecord[], users as PlatformUser[], postsRes.data || []);
+          this.isLoading = false;
+        },
+        error: () => {
+          this.isLoading = false;
+        },
       })
     );
   }
@@ -96,78 +95,160 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.sub.unsubscribe();
   }
 
-  options: EChartsCoreOption = {
-    color: ['#21a086'],
-    tooltip : {
-      trigger: 'axis',
-      axisPointer: {
-        type: 'cross',
-        label: {
-          backgroundColor: '#6a79385'
+  open(item: AttentionItem): void {
+    void this.router.navigate(item.route, { queryParams: item.queryParams });
+  }
+
+  go(path: string, queryParams?: Record<string, string>): void {
+    void this.router.navigate([path], { queryParams });
+  }
+
+  private setGreeting(): void {
+    const hour = new Date().getHours();
+    if (hour < 12) this.greetingLine = 'Good morning';
+    else if (hour < 18) this.greetingLine = 'Good afternoon';
+    else this.greetingLine = 'Good evening';
+  }
+
+  private hydrate(doctors: DoctorRecord[], users: PlatformUser[], posts: any[]): void {
+    const clinicalDoctors = doctors.filter((d) => isDoctorVerificationCandidate(d));
+    const pending = clinicalDoctors.filter(
+      (d) => normalizeVerificationStatus(d.verificationStatus as string) === 'pending'
+    );
+    const approved = clinicalDoctors.filter(
+      (d) => normalizeVerificationStatus(d.verificationStatus as string) === 'approved'
+    );
+    const suspended = clinicalDoctors.filter(
+      (d) => normalizeVerificationStatus(d.verificationStatus as string) === 'suspended'
+    );
+    const patients = users.filter((u) => getUserRole(u) === 'patient');
+    const reported = posts.filter((p) => p?.reported === true);
+    const published = posts.filter((p) => (p?.status ?? 'Published') === 'Published');
+
+    this.pendingDoctors = pending.length;
+    this.verifiedDoctors = approved.length;
+    this.totalPatients = patients.length;
+    this.communityPosts = published.length;
+    this.openActions = pending.length + reported.length + suspended.length;
+
+    this.attentionItems = [];
+    if (pending.length) {
+      this.attentionItems.push({
+        id: 'pending-doctors',
+        title: `${pending.length} doctor${pending.length === 1 ? '' : 's'} awaiting verification`,
+        detail: 'Review credentials before approving practice access on Anixi.',
+        tone: 'amber',
+        route: ['/doctor-verification'],
+        queryParams: { status: 'pending' },
+      });
+    }
+    if (reported.length) {
+      this.attentionItems.push({
+        id: 'reported-posts',
+        title: `${reported.length} community post${reported.length === 1 ? '' : 's'} reported`,
+        detail: 'Review flagged content in Community Content.',
+        tone: 'red',
+        route: ['/content'],
+        queryParams: { filter: 'reported' },
+      });
+    }
+    if (suspended.length) {
+      this.attentionItems.push({
+        id: 'suspended-doctors',
+        title: `${suspended.length} suspended doctor account${suspended.length === 1 ? '' : 's'}`,
+        detail: 'Confirm whether access should remain restricted.',
+        tone: 'blue',
+        route: ['/doctor-verification'],
+        queryParams: { status: 'suspended' },
+      });
+    }
+    if (!this.attentionItems.length) {
+      this.attentionItems.push({
+        id: 'all-clear',
+        title: 'No urgent actions right now',
+        detail: 'Verification queue and reported content look clear.',
+        tone: 'green',
+        route: ['/doctor-verification'],
+      });
+    }
+
+    const doctorActivity = [...clinicalDoctors]
+      .sort((a, b) => this.toMillis(b.verifiedAt ?? b.createdAt) - this.toMillis(a.verifiedAt ?? a.createdAt))
+      .slice(0, 6)
+      .map((doctor, index) => {
+        const status = normalizeVerificationStatus(doctor.verificationStatus as string);
+        const name = getDoctorDisplayName(doctor);
+        if (status === 'approved') {
+          return {
+            id: `doc-${doctor.id || index}`,
+            title: 'Doctor approved',
+            detail: `${name} was approved for Anixi practice access.`,
+            when: formatTimestamp(doctor.verifiedAt ?? doctor.createdAt),
+            tone: 'green' as const,
+          };
         }
-      }
-    },
-    grid: {
-      left: '0%',
-      right: '0%',
-      bottom: '20%',
-      outerBound: true
-    },
-    xAxis: [
-      {
-        type: 'category',
-        boundaryGap: false,
-        data: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-      },
-    ],
-    yAxis: [
-      {
-        type: 'value',
-      },
-    ],
-    series: [
-      {
-        name: 'X-1',
-        type: 'line',
-        stack: 'counts',
-        areaStyle: {},
-        data: [120, 132, 101, 134, 90, 230, 210],
-      },
-    ]
-  };
+        if (status === 'suspended') {
+          return {
+            id: `doc-${doctor.id || index}`,
+            title: 'Doctor suspended',
+            detail: `${name} access was restricted.`,
+            when: formatTimestamp(doctor.verifiedAt ?? doctor.createdAt),
+            tone: 'slate' as const,
+          };
+        }
+        if (status === 'rejected') {
+          return {
+            id: `doc-${doctor.id || index}`,
+            title: 'Application rejected',
+            detail: `${name} was not approved.`,
+            when: formatTimestamp(doctor.verifiedAt ?? doctor.createdAt),
+            tone: 'slate' as const,
+          };
+        }
+        return {
+          id: `doc-${doctor.id || index}`,
+          title: 'Doctor application submitted',
+          detail: `${name} is awaiting credential review.`,
+          when: formatTimestamp(doctor.createdAt),
+          tone: 'amber' as const,
+        };
+      });
 
-  option : EChartsCoreOption = {
-    color: ['#21a086' ,'#269ed9'],
-    legend: {},
-    tooltip: {},
-    grid: {
-      left: '0%',
-      right: '0%',
-      outerBound: true
-    },
-    dataset: {
-      // Provide a set of data.
-      source: [
-        ['engagement', 'Posts', 'Comments'],
-        ['Mon', 43.3, 85.8],
-        ['Tue', 83.1, 73.4],
-        ['Wed', 83.1, 73.4],
-        ['Thu', 83.1, 73.4],
-        ['Fri', 83.1, 73.4],
-        ['Sat', 83.1, 73.4],
-        ['Sun', 83.1, 73.4],
-        
-      ],
-    },
-    // Declare an x-axis (category axis).
-    // The category map the first column in the dataset by default.
-    xAxis: { type: 'category' },
-    // Declare a y-axis (value axis).
-    yAxis: {},
-    // Declare several 'bar' series,
-    // every series will auto-map to each column by default.
-    series: [{ type: 'bar' }, { type: 'bar' }],
-  };
+    const userActivity = [...users]
+      .sort((a, b) => this.toMillis(b.createdAt) - this.toMillis(a.createdAt))
+      .slice(0, 3)
+      .map((user, index) => ({
+        id: `user-${user.id || index}`,
+        title: 'User created',
+        detail: `${getUserDisplayName(user)} joined as ${getUserRole(user)}.`,
+        when: formatUserTimestamp(user.createdAt),
+        tone: 'blue' as const,
+      }));
 
-  mergeOption!: EChartsCoreOption;
+    const postActivity = [...posts]
+      .sort((a, b) => this.toMillis(b.timeStamp) - this.toMillis(a.timeStamp))
+      .slice(0, 3)
+      .map((post, index) => ({
+        id: `post-${post.id || index}`,
+        title: 'Community article published',
+        detail: `${post.title || 'Untitled article'} · ${post.groupName || 'Community'}`,
+        when: formatTimestamp(post.timeStamp),
+        tone: 'green' as const,
+      }));
+
+    this.activityItems = [...doctorActivity, ...postActivity, ...userActivity]
+      .sort((a, b) => (a.when < b.when ? 1 : -1))
+      .slice(0, 8);
+  }
+
+  private toMillis(value: unknown): number {
+    if (!value) return 0;
+    if (typeof value === 'object' && value !== null && 'toDate' in value) {
+      const date = (value as { toDate: () => Date }).toDate?.();
+      return date ? date.getTime() : 0;
+    }
+    if (value instanceof Date) return value.getTime();
+    const parsed = new Date(value as string | number);
+    return Number.isNaN(parsed.getTime()) ? 0 : parsed.getTime();
+  }
 }

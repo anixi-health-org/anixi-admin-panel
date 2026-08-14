@@ -1,0 +1,73 @@
+.rte {
+  border: 1px solid #d7dee8;
+  border-radius: 12px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.rte__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px;
+  border-bottom: 1px solid #e8edf3;
+  background: #f7f9fb;
+}
+
+.rte__btn {
+  min-width: 36px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid #d7dee8;
+  background: #fff;
+  color: #344256;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.rte__btn:hover:not(:disabled) {
+  border-color: #496259;
+  color: #496259;
+}
+
+.rte__btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.rte__surface {
+  min-height: 220px;
+  padding: 14px 16px;
+  outline: none;
+  color: #1f2a37;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.rte__surface:empty::before {
+  content: attr(data-placeholder);
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.rte__surface h3 {
+  margin: 0 0 0.6em;
+  font-size: 1.15em;
+  color: #42584f;
+}
+
+.rte__surface p {
+  margin: 0 0 0.75em;
+}
+
+.rte__surface ul,
+.rte__surface ol {
+  margin: 0 0 0.75em;
+  padding-left: 1.25rem;
+}
+
+.rte__surface a {
+  color: #2f6fed;
+}

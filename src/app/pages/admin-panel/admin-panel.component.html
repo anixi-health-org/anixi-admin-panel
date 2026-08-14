@@ -1,73 +1,103 @@
 <nz-layout class="admin-layout">
-    @if(!isCollapsed) {
-        <nz-sider [nzWidth]="260"
-        nzBreakpoint="md"
-        (nzCollapsedChange)="onChange($event)"
-        [nzCollapsible]="true"
-        [nzTrigger]="null"
-        class="admin-sider">
-        <div class="sider-inner">
-            <div class="sider-brand">
-                <app-anixi-logo variant="sidebar" tagline="Admin Portal"></app-anixi-logo>
-            </div>
-            <div class="sider-divider"></div>
-            <nav class="sider-nav">
-                <p class="nav-section-label">Operations</p>
-                <ul class="nav-list">
-                    @for(menu of menuIcons; track menu.name) {
-                        <li
-                            class="nav-item"
-                            [routerLink]="menu.path"
-                            routerLinkActive="nav-item--active"
-                            [routerLinkActiveOptions]="{exact: true}"
-                        >
-                            <lucide-icon [name]="menu.icon" class="nav-icon"></lucide-icon>
-                            <span class="nav-label">{{ menu.name }}</span>
-                        </li>
+  <nz-sider
+    [nzWidth]="268"
+    nzBreakpoint="lg"
+    (nzCollapsedChange)="onChange($event)"
+    [nzCollapsible]="true"
+    [nzTrigger]="null"
+    class="admin-sider"
+  >
+    <div class="sider-inner" [class.sider-inner--collapsed]="isCollapsed">
+      <div class="sider-brand" [class.sider-brand--collapsed]="isCollapsed">
+        @if (!isCollapsed) {
+          <app-anixi-logo variant="sidebar" tagline="Admin Portal"></app-anixi-logo>
+        } @else {
+          <img src="/anixi.png" alt="Anixi Health" class="sider-logo-icon" />
+        }
+      </div>
+
+      <div class="sider-divider"></div>
+
+      <nav class="sider-nav" aria-label="Admin navigation">
+        @for (group of navGroups; track group.label) {
+          <div class="nav-group">
+            @if (!isCollapsed) {
+              <p class="nav-section-label">{{ group.label }}</p>
+            }
+            <ul class="nav-list" [class.nav-list--collapsed]="isCollapsed">
+              @for (menu of group.items; track menu.name) {
+                @if (menu.comingSoon) {
+                  <li
+                    class="nav-item nav-item--disabled"
+                    [class.nav-item--icon-only]="isCollapsed"
+                    [attr.title]="menu.name + ' — Coming soon'"
+                    aria-disabled="true"
+                  >
+                    <lucide-icon [name]="menu.icon" class="nav-icon"></lucide-icon>
+                    @if (!isCollapsed) {
+                      <span class="nav-label">{{ menu.name }}</span>
+                      <span class="ops-chip-coming">Soon</span>
                     }
-                </ul>
-            </nav>
-        </div>
-        </nz-sider>
-    }
-    @else {
-         <nz-sider [nzWidth]="260"
-        nzBreakpoint="md"
-        (nzCollapsedChange)="onChange($event)"
-        [nzCollapsible]="true"
-        [nzTrigger]="null"
-        class="admin-sider">
-        <div class="sider-inner sider-inner--collapsed">
-            <div class="sider-brand sider-brand--collapsed">
-                <img src="/anixi.png" alt="Anixi Health" class="sider-logo-icon" />
-            </div>
-            <ul class="nav-list nav-list--collapsed">
-                @for(menu of menuIcons; track menu.name) {
-                    <li
-                        class="nav-item nav-item--icon-only"
-                        [routerLink]="menu.path"
-                        routerLinkActive="nav-item--active"
-                        [routerLinkActiveOptions]="{exact: true}"
-                    >
-                        <lucide-icon [name]="menu.icon" class="nav-icon"></lucide-icon>
-                    </li>
+                  </li>
+                } @else {
+                  <li
+                    class="nav-item"
+                    [class.nav-item--active]="isActive(menu)"
+                    [class.nav-item--icon-only]="isCollapsed"
+                    [routerLink]="menu.path"
+                    [queryParams]="menu.queryParams || {}"
+                    [attr.title]="menu.name"
+                  >
+                    <lucide-icon [name]="menu.icon" class="nav-icon"></lucide-icon>
+                    @if (!isCollapsed) {
+                      <span class="nav-label">{{ menu.name }}</span>
+                    }
+                  </li>
                 }
+              }
             </ul>
+          </div>
+        }
+      </nav>
+    </div>
+  </nz-sider>
+
+  <nz-layout class="admin-main">
+    <header class="admin-header">
+      <form class="admin-search" (submit)="$event.preventDefault(); onSearchSubmit()">
+        <lucide-icon name="search" class="admin-search-icon"></lucide-icon>
+        <input
+          type="search"
+          [(ngModel)]="searchQuery"
+          name="globalSearch"
+          placeholder="Search patients, doctors, content…"
+          aria-label="Global search"
+        />
+      </form>
+
+      <div class="admin-header-actions">
+        <button
+          type="button"
+          class="admin-icon-btn"
+          title="Notifications coming soon"
+          aria-label="Notifications"
+          disabled
+        >
+          <lucide-icon name="bell" class="admin-icon-btn__icon"></lucide-icon>
+        </button>
+
+        <div class="admin-identity">
+          <div class="admin-identity__copy">
+            <p class="admin-identity__name">{{ adminUser?.displayName || 'Admin' }}</p>
+            <p class="admin-identity__role">{{ roleLabel() }}</p>
+          </div>
+          <app-admin-profile-menu [adminUser]="adminUser"></app-admin-profile-menu>
         </div>
-        </nz-sider>
-    }
-    <nz-layout class="admin-main">
-        <header class="admin-header">
-            <div class="admin-header-greeting">
-                <p class="greeting-label">Welcome back</p>
-                <p class="greeting-name">{{ adminUser?.displayName || 'Admin' }}</p>
-            </div>
-            <div class="admin-header-actions">
-                <app-admin-profile-menu [adminUser]="adminUser"></app-admin-profile-menu>
-            </div>
-        </header>
-        <nz-content class="admin-content">
-            <router-outlet></router-outlet>
-        </nz-content>
-    </nz-layout>
+      </div>
+    </header>
+
+    <nz-content class="admin-content">
+      <router-outlet></router-outlet>
+    </nz-content>
+  </nz-layout>
 </nz-layout>

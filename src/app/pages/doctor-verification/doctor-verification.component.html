@@ -1,111 +1,138 @@
-<div class="verification-page">
-    <div class="verification-header">
-        <h1 class="verification-title">Doctor Verification</h1>
-        <p class="verification-subtitle">Review, verify, and manage doctor applications.</p>
+<div class="ops-page verification-page">
+  <header class="ops-page-header">
+    <div class="ops-page-header__copy">
+      <p class="ops-page-header__eyebrow">Clinical operations</p>
+      <h1 class="ops-page-header__title">Doctor Verification</h1>
+      <p class="ops-page-header__subtitle">
+        Review professional credentials and approve doctors before they begin practicing on Anixi.
+      </p>
     </div>
+  </header>
 
-    <div class="stat-grid">
-        @for (card of statCards; track card.label) {
-            <div class="stat-card">
-                @if (!isLoadingSkeleton) {
-                    <p class="stat-label">{{ card.label }}</p>
-                    <p class="stat-value" [style.color]="card.color">{{ getCount(card.status) | async }}</p>
-                } @else {
-                    <nz-skeleton [nzTitle]="false" [nzParagraph]="{ rows: 1 }" [nzActive]="true"></nz-skeleton>
-                    <div class="mt-2">
-                        <nz-skeleton [nzTitle]="false" [nzParagraph]="{ rows: 1 }" [nzActive]="true"></nz-skeleton>
-                    </div>
-                }
-            </div>
+  <section class="ops-metrics verification-metrics" aria-label="Verification metrics">
+    @for (card of statCards; track card.label) {
+      <article
+        class="ops-metric"
+        [class.ops-metric--amber]="card.status === 'pending'"
+        [class.ops-metric--green]="card.status === 'approved'"
+        [class.ops-metric--red]="card.status === 'rejected'"
+        [class.ops-metric--slate]="card.status === 'suspended'"
+      >
+        @if (!isLoadingSkeleton) {
+          <p class="ops-metric__label">{{ card.label }}</p>
+          <p class="ops-metric__value">{{ getCount(card.status) | async }}</p>
+        } @else {
+          <nz-skeleton [nzActive]="true" [nzTitle]="false" [nzParagraph]="{ rows: 2 }"></nz-skeleton>
         }
-    </div>
+      </article>
+    }
+  </section>
 
-    <div class="verification-layout">
-        <div class="applications-list-card">
-            <div class="applications-list-header">
-                <h2 class="applications-list-title">Doctor applications</h2>
-                <span class="search">
-                    <nz-icon class="search-icon" nzType="search" nzTheme="outline"></nz-icon>
-                    <input
-                        class="search-input"
-                        type="search"
-                        placeholder="Search doctors..."
-                        [formControl]="searchQuery"
-                    />
+  <div class="verification-layout">
+    <section class="ops-panel applications-list-card">
+      <div class="ops-panel__header">
+        <div>
+          <p class="ops-section-label">Queue</p>
+          <h2 class="ops-panel__title">Application queue</h2>
+        </div>
+        <div class="ops-search">
+          <lucide-icon name="search" class="users-search-icon"></lucide-icon>
+          <input
+            type="search"
+            placeholder="Search doctors…"
+            [formControl]="searchQuery"
+            aria-label="Search doctors"
+          />
+        </div>
+      </div>
+
+      <div class="users-filters-wrap">
+        <div class="ops-filters">
+          @for (input of customInput; track input.value) {
+            <button
+              type="button"
+              class="ops-filter"
+              [class.ops-filter--active]="verificationStatus.value === input.value"
+              (click)="verificationStatus.setValue(input.value)"
+            >
+              {{ input.label }} ({{ getCount(input.value) | async }})
+            </button>
+          }
+        </div>
+      </div>
+
+      @if (!isLoadingSkeleton) {
+        <div class="doctor-list">
+          @for (doctor of filteredDoctors$ | async; track doctor.id) {
+            <button
+              type="button"
+              class="ops-list-row"
+              [class.ops-list-row--active]="selectedDoctorId === doctor.id"
+              (click)="setSelectedDoctor(doctor)"
+            >
+              @if (doctor.profileImageUrl || doctor.logoUrl) {
+                <img
+                  class="ops-avatar"
+                  [src]="doctor.profileImageUrl || doctor.logoUrl"
+                  alt=""
+                />
+              } @else {
+                <span class="ops-avatar" aria-hidden="true">
+                  {{ doctorName(doctor).charAt(0) }}
                 </span>
-            </div>
-
-            <div class="filter-tabs">
-                @for (input of customInput; track input.label) {
-                    <div class="custom-input">
-                        <input
-                            type="radio"
-                            [id]="input.value"
-                            [value]="input.value"
-                            [formControl]="verificationStatus"
-                        />
-                        <label [for]="input.value">
-                            {{ input.label }} ({{ getCount(input.value) | async }})
-                        </label>
-                    </div>
+              }
+              <div class="ops-list-row__main">
+                <p class="ops-list-row__title">{{ doctorName(doctor) }}</p>
+                <p class="ops-list-row__meta">
+                  {{ doctor.medicalSpecialty || doctor.specialty || 'Specialty not set' }}
+                  · {{ doctor.practiceCity || 'Location not set' }}
+                </p>
+              </div>
+              <span class="ops-badge ops-badge--{{ doctorStatus(doctor) }}">
+                {{ utilFunctions.upperCaseFirstLetter(doctorStatus(doctor)) }}
+              </span>
+            </button>
+          } @empty {
+            <div class="ops-empty">
+              <div class="ops-empty__icon" aria-hidden="true">✓</div>
+              <p class="ops-empty__title">
+                @if (getStatusValue() === 'pending') {
+                  No doctors awaiting review
+                } @else {
+                  No doctors match this filter
                 }
+              </p>
+              <p class="ops-empty__text">
+                @if (getStatusValue() === 'pending') {
+                  All doctor applications are currently up to date.
+                } @else {
+                  Try another status filter or clear the search.
+                }
+              </p>
             </div>
-
-            @if (!isLoadingSkeleton) {
-                <div class="doctor-list">
-                    @for (doctor of filteredDoctors$ | async; track doctor.id) {
-                        <button
-                            type="button"
-                            class="doctor-item"
-                            [class.doctor-item--active]="selectedDoctorId === doctor.id"
-                            (click)="setSelectedDoctor(doctor)"
-                        >
-                            <div class="doctor-item-top">
-                                <div class="doctor-item-main">
-                                    <p class="doctor-item-name">{{ doctorName(doctor) }}</p>
-                                    <div
-                                        class="doctor-item-status"
-                                        [ngStyle]="{
-                                            background: utilFunctions.getValuebyStatus(doctorStatus(doctor)).background,
-                                            borderColor: utilFunctions.getValuebyStatus(doctorStatus(doctor)).color,
-                                            color: utilFunctions.getValuebyStatus(doctorStatus(doctor)).color
-                                        }"
-                                    >
-                                        <nz-icon
-                                            [nzType]="utilFunctions.getValuebyStatus(doctorStatus(doctor)).icon"
-                                            nzTheme="outline"
-                                        ></nz-icon>
-                                        {{ utilFunctions.upperCaseFirstLetter(doctorStatus(doctor)) }}
-                                    </div>
-                                </div>
-                                <nz-icon nzType="right" nzTheme="outline"></nz-icon>
-                            </div>
-                            <p class="doctor-item-meta">
-                                {{ doctor.medicalSpecialty || doctor.specialty || '—' }} ·
-                                {{ doctor.practiceCity || '—' }} ·
-                                {{ doctor.phoneNumber || '—' }}
-                            </p>
-                        </button>
-                    } @empty {
-                        <p class="doctor-list-empty">No doctors match your filters.</p>
-                    }
-                </div>
-            } @else {
-                <div class="mt-4">
-                    <nz-skeleton [nzParagraph]="{ rows: 12 }" [nzTitle]="false" [nzActive]="true"></nz-skeleton>
-                </div>
-            }
+          }
         </div>
-
-        <div class="application-details-card">
-            @if (!selectedDoctorId) {
-                <div class="details-empty">
-                    <lucide-icon name="file-text" class="details-empty-icon"></lucide-icon>
-                    <p class="details-empty-text">Select a doctor to review their full application</p>
-                </div>
-            } @else {
-                <app-application-details [id]="selectedDoctorId"></app-application-details>
-            }
+      } @else {
+        <div class="ops-panel__body">
+          <nz-skeleton [nzParagraph]="{ rows: 10 }" [nzTitle]="false" [nzActive]="true"></nz-skeleton>
         </div>
-    </div>
+      }
+    </section>
+
+    <section class="ops-panel application-details-card">
+      @if (!selectedDoctorId) {
+        <div class="ops-empty details-empty">
+          <div class="ops-empty__icon" aria-hidden="true">
+            <lucide-icon name="file-text"></lucide-icon>
+          </div>
+          <p class="ops-empty__title">Select a doctor to review</p>
+          <p class="ops-empty__text">
+            Open an application to inspect credentials, documents, and make a verification decision.
+          </p>
+        </div>
+      } @else {
+        <app-application-details [id]="selectedDoctorId"></app-application-details>
+      }
+    </section>
+  </div>
 </div>

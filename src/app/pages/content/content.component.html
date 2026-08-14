@@ -1,154 +1,42 @@
-<div class="flex flex-col p-4">
-    <div class="flex sm:flex-row flex-col justify-between">
-        <div class="flex flex-col">
-            <p class="sm:text-2xl text-base font-semibold sm:h-[10px] ">Content Management</p>
-            <p class="text-gray-500 sm:text-sm text-xs">Create, manage and schedule health articles and tips</p>
+<div class="ops-page content-page">
+    <header class="ops-page-header">
+        <div class="ops-page-header__copy">
+            <p class="ops-page-header__eyebrow">Community</p>
+            <h1 class="ops-page-header__title">{{ pageTitle }}</h1>
+            <p class="ops-page-header__subtitle">
+                {{ pageSubtitle }}
+            </p>
         </div>
-        <div class="p-4">
-            <button nz-button nzType="primary" class="add-article" type="button" (click)="showModal()">
-                <span class="add-article-inner">
-                    <nz-icon nzType="plus" nzTheme="outline"></nz-icon>
-                    <span>New Article</span>
-                </span>
+        <div class="ops-page-header__actions">
+            <button type="button" class="ops-btn ops-btn--primary" (click)="showModal()">
+                + Create content
             </button>
         </div>
-    </div>
-    @if (isVisible) {
-        <div class="compose-overlay" role="dialog" aria-modal="true" (click)="handleCancel()">
-            <div class="compose-dialog" (click)="$event.stopPropagation()">
-                <header class="compose-header">
-                    <div class="modal-title-block">
-                        @if (contentMode === 'notification') {
-                            <h2 class="modal-title">Send Notification</h2>
-                            <p class="modal-subtitle">Publish a health update to one or more communities.</p>
-                        } @else {
-                            <h2 class="modal-title">Create Article</h2>
-                            <p class="modal-subtitle">Fill in the details to create a new health article.</p>
-                        }
-                    </div>
-                    <button type="button" class="compose-close" (click)="handleCancel()" aria-label="Close">
-                        <nz-icon nzType="close" nzTheme="outline"></nz-icon>
-                    </button>
-                </header>
+    </header>
 
-                <form [formGroup]="articleElement" class="compose-body content-modal-form" (ngSubmit)="onSubmit()">
-                    <div class="form-field">
-                        <label for="title" class="field-label">Title*</label>
-                        <input
-                            type="text"
-                            class="field-input"
-                            [placeholder]="contentMode === 'notification' ? 'Enter notification title' : 'Enter article title'"
-                            name="title"
-                            id="title"
-                            formControlName="title"
-                        >
-                        @if(articleElement.get('title')?.invalid && (articleElement.get('title')?.touched || submitted)) {
-                            @if(articleElement.get('title')?.errors?.['required']) {
-                                <div class="field-error">Title is required</div>
-                            }
-                        }
-                    </div>
-
-                    <div class="form-field">
-                        <p class="field-label">Assign to communities*</p>
-                        <div class="communities-grid">
-                            @for(community of communities; track community.id; let i = $index) {
-                                <label class="community-option" [attr.for]="'community-option-' + i">
-                                    <input
-                                        type="checkbox"
-                                        [id]="'community-option-' + i"
-                                        [value]="community.id"
-                                        (change)="onCheckBoxChange($event)"
-                                    >
-                                    <span>{{ community.label }}</span>
-                                </label>
-                            }
-                        </div>
-                        @if(articleElement.get('communities')?.invalid && (articleElement.get('communities')?.touched || submitted)) {
-                            @if(articleElement.get('communities')?.errors?.['required']) {
-                                <div class="field-error">Choose one or more communities</div>
-                            }
-                        }
-                    </div>
-
-                    <div class="form-field">
-                        <label for="content" class="field-label">Content*</label>
-                        <textarea
-                            id="content"
-                            class="field-textarea"
-                            formControlName="content"
-                            rows="4"
-                            [placeholder]="contentMode === 'notification' ? 'Write your notification message...' : 'Write your article content here...'"
-                        ></textarea>
-                        @if(articleElement.get('content')?.invalid && (articleElement.get('content')?.touched || submitted)) {
-                            @if(articleElement.get('content')?.errors?.['required']) {
-                                <div class="field-error">Content is required</div>
-                            }
-                        }
-                    </div>
-
-                    <div class="form-field form-field--last">
-                        <p class="field-label">Image or video (optional)</p>
-                        <label class="upload-zone" [class.upload-zone--filled]="!!previewUrl">
-                            <input type="file" class="upload-input" accept="image/*,video/*" (change)="onFileSelected($event)">
-                            @if(!previewUrl) {
-                                <span class="upload-placeholder">
-                                    <nz-icon nzType="file" nzTheme="outline" class="upload-icon"></nz-icon>
-                                    <span>Click to upload file</span>
-                                </span>
-                            }
-                            @if (previewUrl) {
-                                <span class="upload-preview">
-                                    @if (fileType === 'image') {
-                                        <img [src]="previewUrl" alt="Preview">
-                                    }
-                                    @if (fileType === 'video') {
-                                        <video [src]="previewUrl" controls></video>
-                                    }
-                                </span>
-                            }
-                        </label>
-                        @if (previewUrl) {
-                            <p class="upload-hint">Choose another file to replace the current upload.</p>
-                        }
-                    </div>
-                </form>
-
-                <footer class="compose-footer content-modal-footer">
-                    <button type="button" nz-button class="cancel-btn" (click)="handleCancel()">Cancel</button>
-                    @if (!isLoading) {
-                        <button type="button" nz-button nzType="primary" class="submit-btn" (click)="onSubmit()">
-                            {{ contentMode === 'notification' ? 'Send Now' : 'Publish Now' }}
-                        </button>
-                    } @else {
-                        <button type="button" nz-button nzType="primary" class="submit-btn" disabled>
-                            <nz-icon nzType="loading" nzTheme="outline"></nz-icon>
-                        </button>
-                    }
-                </footer>
-            </div>
-        </div>
+    @if (scheduledAutomationNote) {
+      <div class="scheduled-note" role="status">
+        Scheduled posts are queued for automatic publishing. They become visible to patients when the schedule time is reached.
+      </div>
     }
 
-
-    <nz-modal [(nzVisible)]="previewModalVisible" 
+    <nz-modal [(nzVisible)]="previewModalVisible"
     (nzOnCancel)="handleCancel()"
     [nzFooter]="null"
-    nzTitle="Post Preview">
+    nzTitle="Patient Community preview">
     <ng-container *nzModalContent>
         <div>
             @if (post.title || post.text) {
-                <p class="font-bold">{{post.title}}</p>
+                @if (post.title) {
+                    <p class="font-bold">{{post.title}}</p>
+                }
                 <div class="mb-2" [innerHTML]="post.text | linkify"></div>
             }
             @if (post) {
-                @if (post.mediaType == 'Picture') {
-                    <img [src]="post.mediaUrl">
-                }
-                @if (post.mediaType == 'Video') {
-                    <video [src]="post.mediaUrl"
-                    controls class="w-full max-width-[400px]"> 
-                    </video>
+                @if (isVideoPost(post) && mediaPreviewUrl(post)) {
+                    <video [src]="mediaPreviewUrl(post)!" controls class="w-full" style="max-width: 400px"></video>
+                } @else if (mediaPreviewUrl(post)) {
+                    <img [src]="mediaPreviewUrl(post)!" alt="">
                 }
             }
             <div class="flex flex-row mt-8 gap-2">
@@ -156,9 +44,12 @@
                     <p class="text-center text-[11px] font-semibold h-[8px] pl-2 pr-2">{{post.groupName}}</p>
                 </div>
                 <div class="rounded-lg border-1" [ngStyle]="{'background-color': getColorByStatus(post.status ?? 'Published').bgColor,
-                        'color': getColorByStatus(post.status ?? 'Published').color, 
+                        'color': getColorByStatus(post.status ?? 'Published').color,
                         'border-color': getColorByStatus(post.status ?? 'Published').color}">
                         <p class="text-center text-[11px] font-medium h-[8px] pl-2 pr-2">{{post.status ?? 'Published'}}</p>
+                </div>
+                <div class="rounded-lg border-transparent" style="background-color: #eef2ff; color: #4338ca">
+                    <p class="text-center text-[11px] font-semibold h-[8px] pl-2 pr-2">{{contentTypeLabel(post)}}</p>
                 </div>
             </div>
             <div class="flex flex-col mt-4">
@@ -173,26 +64,26 @@
     <div class="grid sm:grid-cols-4 gap-2 mt-4">
         @if (!isLoadingSkeleton) {
             @for (card of cards; track card.index) {
-                <div class="bg-white rounded-lg shadow cursor-pointer border-1 hover:border-green-200 border-transparent p-4 sm:h-[100px] h-[80px]">
-                    <p class="sm:text-[12px] text-[10px] text-gray-500 font-medium tracking-widest">{{card.label.toUpperCase()}}</p>
-                    <p class="sm:text-xl text-base font-bold">{{getCardValue(card.label)}}</p>
+                <div class="ops-metric">
+                    <p class="ops-metric__label">{{card.label}}</p>
+                    <p class="ops-metric__value">{{getCardValue(card.label)}}</p>
                 </div>
             }
         } @else {
             @for (card of cards; track card.index) {
-                <div class="bg-white rounded-lg shadow p-4 sm:h-[100px] h-[80px]">
+                <div class="ops-metric">
                     <nz-skeleton [nzActive]="true" [nzTitle]="false" [nzParagraph]="{ rows: 2 }"></nz-skeleton>
                 </div>
             }
         }
     </div>
-    <div class="bg-white rounded-lg shadow mt-8 p-4">
-        <div class="flex flex-row justify-between">
-            <h1 class="text-base">Posts</h1>
-            <div class="flex flex-row gap-4">
+    <div class="ops-panel mt-8">
+        <div class="ops-panel__header">
+            <h2 class="ops-panel__title">Content library</h2>
+            <div class="flex flex-row gap-4 items-center flex-wrap">
                 <form >
                     <nz-icon nzType="search" class="absolute m-2 text-lg" style="color: var(--color-gray-400);"> </nz-icon>
-                    <input type="search" placeholder="Search Article" [formControl]="search">
+                    <input type="search" placeholder="Search title, author, community…" [formControl]="search">
                 </form>
                 <button nz-button nz-dropdown nzTrigger="click" class="menu" [nzDropdownMenu]="status">
                    {{menuItemStatus.value}}
@@ -208,18 +99,43 @@
                        <li nz-menu-item (click)="setMenuItemValue('Reported')">Reported</li>
                    </ul>
                 </nz-dropdown-menu>
+                <button nz-button nz-dropdown nzTrigger="click" class="menu" [nzDropdownMenu]="typeMenu">
+                   Type: {{typeFilter.value}}
+                   <nz-icon nzType="down" nzTheme="outline"></nz-icon>
+                </button>
+                <nz-dropdown-menu #typeMenu="nzDropdownMenu">
+                   <ul nz-menu>
+                       <li nz-menu-item (click)="typeFilter.setValue('All')">All</li>
+                       <li nz-menu-item (click)="typeFilter.setValue('Article')">Article</li>
+                       <li nz-menu-item (click)="typeFilter.setValue('Video')">Video</li>
+                       <li nz-menu-item (click)="typeFilter.setValue('Image')">Image</li>
+                   </ul>
+                </nz-dropdown-menu>
+                <button nz-button nz-dropdown nzTrigger="click" class="menu" [nzDropdownMenu]="communityMenu">
+                   Community: {{communityFilter.value}}
+                   <nz-icon nzType="down" nzTheme="outline"></nz-icon>
+                </button>
+                <nz-dropdown-menu #communityMenu="nzDropdownMenu">
+                   <ul nz-menu>
+                       <li nz-menu-item (click)="communityFilter.setValue('All')">All</li>
+                       @for (community of communities; track community.id) {
+                         <li nz-menu-item (click)="communityFilter.setValue(community.id)">{{ community.label }}</li>
+                       }
+                   </ul>
+                </nz-dropdown-menu>
             </div>
         </div>
         @if (!isLoadingSkeleton) {
-            <div class="border-1 mt-4 border-gray-300 rounded-lg">
+            <div class="border-1 mt-4 border-gray-300 rounded-lg overflow-hidden">
                 <table class="table-auto w-full">
                     <thead class="border-b-1 border-gray-300 bg-gray-100">
                         <tr>
                             <th class="text-start text-gray-500 font-medium text-sm p-2">Title</th>
-                            <th class="text-start text-gray-500 font-medium text-sm">Category</th>
-                            <th class="text-start text-gray-500 font-medium text-sm">Communities</th>
+                            <th class="text-start text-gray-500 font-medium text-sm">Type</th>
+                            <th class="text-start text-gray-500 font-medium text-sm">Community</th>
                             <th class="text-start text-gray-500 font-medium text-sm">Status</th>
-                            <th class="text-start text-gray-500 font-medium text-sm">Date</th>
+                            <th class="text-start text-gray-500 font-medium text-sm">Author</th>
+                            <th class="text-start text-gray-500 font-medium text-sm">Updated</th>
                             <th class="text-start text-gray-500 font-medium text-sm">Actions</th>
                         </tr>
                     </thead>
@@ -228,8 +144,19 @@
                         @for(post of posts; track post.id) {
                             @if (postIsVisible(post)) {
                                  <tr class="border-b-1 border-gray-300">
-                                    <td class="text-start font-semibold p-4">{{getPostTitle(post.title, post.text)}}</td>
-                                    <td class="text-start text-gray-500">{{post.groupName}}</td>
+                                    <td class="text-start font-semibold p-4">
+                                      <div class="flex items-center gap-3">
+                                        @if (mediaPreviewUrl(post)) {
+                                          @if (isVideoPost(post)) {
+                                            <span class="content-thumb content-thumb--video" aria-hidden="true">▶</span>
+                                          } @else {
+                                            <img class="content-thumb" [src]="mediaPreviewUrl(post)!" alt="" />
+                                          }
+                                        }
+                                        <span>{{getPostTitle(post.title, post.text)}}</span>
+                                      </div>
+                                    </td>
+                                    <td class="text-start text-gray-600 text-sm">{{contentTypeLabel(post)}}</td>
                                     <td>
                                        <div class="flex flex-row">
                                          <div class="rounded-lg border-transparent" style="background-color: #ecf3f2; color: #377b6c">
@@ -237,11 +164,11 @@
                                         </div>
                                        </div>
                                     </td>
-            
+
                                     <td>
                                        <div class="flex flex-row gap-2">
                                          <div class="rounded-lg border-1" [ngStyle]="{'background-color': getColorByStatus(post.status ?? 'Published').bgColor,
-                                          'color': getColorByStatus(post.status ?? 'Published').color, 
+                                          'color': getColorByStatus(post.status ?? 'Published').color,
                                            'border-color': getColorByStatus(post.status ?? 'Published').color}">
                                             <p class="text-center text-[11px] font-medium h-[8px] pl-2 pr-2">{{post.status ?? 'Published'}}</p>
                                         </div>
@@ -252,25 +179,50 @@
                                         }
                                        </div>
                                     </td>
+                                    <td class="text-gray-500 text-sm">{{ post.userName || 'Admin' }}</td>
                                     <td class="text-gray-500">
-                                      {{post.timeStamp.toDate() | date: 'longDate'}}
+                                      {{post.timeStamp.toDate() | date: 'mediumDate'}}
                                     </td>
                                     <td>
                                         <nz-icon class="cursor-pointer hover:bg-orange-400 h-8 w-8 rounded-lg flex justify-center items-center" nz-dropdown nzTrigger="click" [nzDropdownMenu]="action" nzType="ellipsis" nzTheme="outline"></nz-icon>
                                         <nz-dropdown-menu #action="nzDropdownMenu">
                                             <ul nz-menu>
-                                                <li nz-menu-item>
+                                                <li nz-menu-item (click)="openPreview(post)">
                                                     <span class="flex flex-row gap-2">
                                                         <nz-icon nzType="eye" nzTheme="outline"></nz-icon>
-                                                        <p class="relative top-2" (click)="openPreview(post)">Preview</p>
+                                                        <p class="relative top-2">Preview</p>
                                                     </span>
                                                 </li>
-                                                <li nz-menu-item>
+                                                <li nz-menu-item (click)="editPost(post.id)">
                                                     <span class="flex flex-row gap-2">
                                                         <nz-icon nzType="edit" nzTheme="outline"></nz-icon>
-                                                        <p class="relative top-2">Edit</p>
+                                                        <p class="relative top-2">
+                                                          {{ (post.status ?? 'Published') === 'Draft' ? 'Continue editing' : 'Edit' }}
+                                                        </p>
                                                     </span>
                                                 </li>
+                                                @if ((post.status ?? 'Published') === 'Draft') {
+                                                  <li nz-menu-item (click)="publishPost(post)">
+                                                    <span class="flex flex-row gap-2">
+                                                        <nz-icon nzType="cloud-upload" nzTheme="outline"></nz-icon>
+                                                        <p class="relative top-2">Publish</p>
+                                                    </span>
+                                                  </li>
+                                                }
+                                                @if ((post.status ?? 'Published') === 'Published') {
+                                                  <li nz-menu-item (click)="unpublishPost(post)">
+                                                    <span class="flex flex-row gap-2">
+                                                        <nz-icon nzType="rollback" nzTheme="outline"></nz-icon>
+                                                        <p class="relative top-2">Unpublish</p>
+                                                    </span>
+                                                  </li>
+                                                  <li nz-menu-item (click)="archivePost(post)">
+                                                    <span class="flex flex-row gap-2">
+                                                        <nz-icon nzType="inbox" nzTheme="outline"></nz-icon>
+                                                        <p class="relative top-2">Archive</p>
+                                                    </span>
+                                                  </li>
+                                                }
                                                 <li nz-menu-item>
                                                     <span class="flex flex-row gap-2 text-red-600">
                                                         <nz-icon nzType="delete" nzTheme="outline"></nz-icon>
@@ -286,20 +238,30 @@
                                             </ul>
                                         </nz-dropdown-menu>
                                     </td>
-                                </tr>  
+                                </tr>
                             }
                         }
                         } @else {
                             <tr>
-                                <td colspan="6" class="p-8 text-center text-sm text-gray-500">No posts yet.</td>
+                                <td colspan="7">
+                                  <div class="ops-empty">
+                                    <div class="ops-empty__icon" aria-hidden="true">📝</div>
+                                    <p class="ops-empty__title">No community content yet</p>
+                                    <p class="ops-empty__text">
+                                      Create an article, image, or video for the Anixi patient Community.
+                                    </p>
+                                    <button type="button" class="ops-btn ops-btn--primary" (click)="showModal()">
+                                      + Create content
+                                    </button>
+                                  </div>
+                                </td>
                             </tr>
                         }
                     </tbody>
                 </table>
-                
+
             </div>
         }
-        <!-- Skeleton -->
         @else {
             <div class="mt-4">
                 <nz-skeleton [nzTitle]="false" [nzParagraph]="{rows: 20}" [nzActive]="isLoadingSkeleton"></nz-skeleton>

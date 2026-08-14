@@ -1,0 +1,37 @@
+<div class="rte">
+  <div class="rte__toolbar" role="toolbar" aria-label="Formatting">
+    <button type="button" class="rte__btn" (click)="applyHeading()" [disabled]="disabled" title="Heading">
+      H
+    </button>
+    <button type="button" class="rte__btn" (click)="applyParagraph()" [disabled]="disabled" title="Paragraph">
+      P
+    </button>
+    <button type="button" class="rte__btn" (click)="exec('bold')" [disabled]="disabled" title="Bold">
+      <strong>B</strong>
+    </button>
+    <button type="button" class="rte__btn" (click)="exec('italic')" [disabled]="disabled" title="Italic">
+      <em>I</em>
+    </button>
+    <button type="button" class="rte__btn" (click)="exec('insertUnorderedList')" [disabled]="disabled" title="Bullet list">
+      List
+    </button>
+    <button type="button" class="rte__btn" (click)="exec('insertOrderedList')" [disabled]="disabled" title="Numbered list">
+      1.
+    </button>
+    <button type="button" class="rte__btn" (click)="applyLink()" [disabled]="disabled" title="Link">
+      Link
+    </button>
+  </div>
+  <div
+    #editor
+    class="rte__surface"
+    contenteditable="true"
+    role="textbox"
+    aria-multiline="true"
+    [attr.contenteditable]="!disabled"
+    [attr.aria-disabled]="disabled"
+    (input)="onInput()"
+    (blur)="onBlur()"
+    data-placeholder="Write the article content…"
+  ></div>
+</div>

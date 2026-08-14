@@ -13,19 +13,9 @@ import { AuthService } from '../../services/auth.service';
 const contentCards = [
   { index: '0', label: 'Total Posts', value: 0 },
   { index: '1', label: 'Published', value: 0 },
-  { index: '2', label: 'Scheduled', value: 0 },
-  { index: '3', label: 'Drafts', value: 0 },
+  { index: '2', label: 'Drafts', value: 0 },
+  { index: '3', label: 'Scheduled', value: 0 },
 ];
-
-const articles = [
-  {title: 'Managing Diabetes in Summer', category: 'Diabetes',  communities: 'Diabetes', status: 'Published',  date: '2026-02-10'},
-  {title: 'Understanding HIV Treatment Options', category: 'HIV/AIDS',  communities: 'HIV/AIDS', status: 'Published',  date: '2026-02-09'},
-  {title: 'Mental Health: Breaking the Stigma', category: 'Mental Health',  communities: 'Mental Health', status: 'Scheduled',  date: '2026-02-08'},
-  {title: 'Hypertension and Diet', category: 'Hypertension',  communities: 'Hypertension', status: 'Draft',  date: '2026-02-07'},
-  {title: 'Living with Asthma: Daily tips', category: 'Respiratory',  communities: 'Respiratory Health', status: 'Published',  date: '2026-02-06'},
-  {title: 'Cancer Screening Guidelines 2026', category: 'Cancer',  communities: 'Cancer', status: 'Draft',  date: '2026-02-05'},
-  {title: 'Post-Partum Depression Awareness', category: 'Mental Health',  communities: 'Mental Health', status: 'Archived',  date: '2026-02-04'},
-]
 
 const categories = [
   {name:'Diabetes'}, {name:'HIV/AIDS'}, 
@@ -48,6 +38,11 @@ export class ContentComponent implements OnInit, OnDestroy{
   cards = contentCards;
   search = new FormControl('');
   menuItemStatus = new FormControl('All Status');
+  typeFilter = new FormControl('All');
+  communityFilter = new FormControl('All');
+  pageTitle = 'Community';
+  pageSubtitle = 'Create and manage health content published to Anixi patient communities.';
+  scheduledAutomationNote = false;
   isVisible = false;
   categories = categories;
   articleElement!: FormGroup;
@@ -89,8 +84,6 @@ export class ContentComponent implements OnInit, OnDestroy{
     this.articleElement = this.fb.group({
       title: ['', Validators.required],
       content: ['', Validators.required],
-      // categories: [this.categories[1], Validators.required],
-      // date: ['', Validators.required],
       communities: this.fb.array([], Validators.required)
     });
     this.isLoadingSkeleton = true;
@@ -108,10 +101,36 @@ export class ContentComponent implements OnInit, OnDestroy{
 
     this.route.queryParamMap.subscribe((params) => {
       const action = params.get('action');
-      if (action === 'create') {
-        setTimeout(() => this.openCreateModal('article'));
-      } else if (action === 'notify') {
-        setTimeout(() => this.openCreateModal('notification'));
+      if (action === 'create' || action === 'notify') {
+        void this.router.navigate(['/content/new']);
+        return;
+      }
+
+      const status = params.get('status');
+      if (status === 'Published' || status === 'Draft' || status === 'Scheduled' || status === 'Archived') {
+        this.setMenuItemValue(status);
+        this.pageTitle =
+          status === 'Draft'
+            ? 'Drafts'
+            : status === 'Published'
+              ? 'Published'
+              : status === 'Scheduled'
+                ? 'Scheduled'
+                : 'Archived';
+        this.pageSubtitle =
+          status === 'Scheduled'
+            ? 'Scheduled posts auto-publish at their set time (checked every few minutes).'
+            : status === 'Draft'
+              ? 'Continue editing drafts, then publish when ready.'
+              : status === 'Published'
+                ? 'Content currently visible in the patient Community.'
+                : 'Archived community content.';
+        this.scheduledAutomationNote = status === 'Scheduled';
+      } else {
+        this.pageTitle = 'Community';
+        this.pageSubtitle =
+          'Create and manage health content published to Anixi patient communities.';
+        this.scheduledAutomationNote = false;
       }
 
       const filter = params.get('filter');
@@ -166,6 +185,18 @@ export class ContentComponent implements OnInit, OnDestroy{
       return (post?.status || 'Published') === filter;
     }
 
+    postMatchesType(post: IGroupPost): boolean {
+      const filter = this.typeFilter.value;
+      if (!filter || filter === 'All') return true;
+      return this.contentTypeLabel(post).toLowerCase() === filter.toLowerCase();
+    }
+
+    postMatchesCommunity(post: IGroupPost): boolean {
+      const filter = this.communityFilter.value;
+      if (!filter || filter === 'All') return true;
+      return (post.groupName || '') === filter;
+    }
+
     postMatchesSearch(post: IGroupPost): boolean {
       const query = (this.search.value || '').trim().toLowerCase();
       if (!query) {
@@ -174,25 +205,120 @@ export class ContentComponent implements OnInit, OnDestroy{
       const title = (post.title || '').toLowerCase();
       const text = (post.text || '').toLowerCase();
       const group = (post.groupName || '').toLowerCase();
-      return title.includes(query) || text.includes(query) || group.includes(query);
+      const author = (post.userName || '').toLowerCase();
+      return (
+        title.includes(query) ||
+        text.includes(query) ||
+        group.includes(query) ||
+        author.includes(query)
+      );
     }
 
     postIsVisible(post: IGroupPost): boolean {
-      return this.postMatchesFilter(post) && this.postMatchesSearch(post);
+      return (
+        this.postMatchesFilter(post) &&
+        this.postMatchesType(post) &&
+        this.postMatchesCommunity(post) &&
+        this.postMatchesSearch(post)
+      );
+    }
+
+    visiblePosts(): IGroupPost[] {
+      return this.posts.filter((post) => this.postIsVisible(post));
+    }
+
+    postDate(post: IGroupPost): Date | null {
+      const ts = post.timeStamp;
+      if (ts && typeof ts.toDate === 'function') return ts.toDate();
+      return null;
+    }
+
+    async publishPost(post: IGroupPost): Promise<void> {
+      const confirmed = window.confirm(
+        'Publish this content?\n\nIt will become visible to patients in the assigned community.'
+      );
+      if (!confirmed) return;
+      try {
+        const result = await this.postService.setContentStatus(post.id, 'Published');
+        if (!result.verified) throw new Error('Publish was not confirmed in Firestore.');
+        this.messageService.success('Published and verified in backend.');
+      } catch (error) {
+        this.notif.create(
+          'error',
+          'Publish failed',
+          error instanceof Error ? error.message : 'Could not publish.',
+          ERROR_NOTIFICATION_BOX_POSITION
+        );
+      }
+    }
+
+    async archivePost(post: IGroupPost): Promise<void> {
+      const confirmed = window.confirm(
+        'Archive this content?\n\nIt will no longer appear in the patient Community.'
+      );
+      if (!confirmed) return;
+      try {
+        const result = await this.postService.setContentStatus(post.id, 'Archived');
+        if (!result.verified) throw new Error('Archive was not confirmed in Firestore.');
+        this.messageService.success('Archived and verified in backend.');
+      } catch (error) {
+        this.notif.create(
+          'error',
+          'Archive failed',
+          error instanceof Error ? error.message : 'Could not archive.',
+          ERROR_NOTIFICATION_BOX_POSITION
+        );
+      }
+    }
+
+    async unpublishPost(post: IGroupPost): Promise<void> {
+      const confirmed = window.confirm(
+        'Unpublish this content?\n\nIt will move back to Draft and leave the patient Community.'
+      );
+      if (!confirmed) return;
+      try {
+        const result = await this.postService.setContentStatus(post.id, 'Draft');
+        if (!result.verified) throw new Error('Unpublish was not confirmed in Firestore.');
+        this.messageService.success('Moved to Draft and verified in backend.');
+      } catch (error) {
+        this.notif.create(
+          'error',
+          'Unpublish failed',
+          error instanceof Error ? error.message : 'Could not unpublish.',
+          ERROR_NOTIFICATION_BOX_POSITION
+        );
+      }
     }
 
     showModal() {
-      this.openCreateModal('article');
+      void this.router.navigate(['/content/new']);
     }
 
-    openCreateModal(mode: 'article' | 'notification') {
-      if (!this.articleElement) {
-        return;
+    openCreateModal(_mode: 'article' | 'notification') {
+      void this.router.navigate(['/content/new']);
+    }
+
+    contentTypeLabel(post: IGroupPost): string {
+      if (post.contentType) {
+        return post.contentType.charAt(0).toUpperCase() + post.contentType.slice(1);
       }
-      this.resetComposeForm();
-      this.contentMode = mode;
-      this.isVisible = true;
-      this.setModalBodyLock(true);
+      if (post.videoUrl || post.mediaType === 'Video') return 'Video';
+      if (post.mediaUrl || post.mediaType === 'Picture' || (post.mediaUrls && post.mediaUrls.length)) {
+        return 'Image';
+      }
+      return 'Article';
+    }
+
+    mediaPreviewUrl(post: IGroupPost): string | null {
+      return post.videoUrl || post.mediaUrl || post.mediaUrls?.[0] || null;
+    }
+
+    isVideoPost(post: IGroupPost): boolean {
+      return !!(post.videoUrl || post.mediaType === 'Video' || post.contentType === 'video');
+    }
+
+    editPost(postId: string) {
+      void this.router.navigate(['/content', postId, 'edit']);
     }
 
     private resetComposeForm(): void {
@@ -375,10 +501,6 @@ export class ContentComponent implements OnInit, OnDestroy{
         default:
           return '';
       }  
-    }
-
-    async editPost(postId:string) {
-
     }
 
     getPostTitle(title?:string, text?: string) {

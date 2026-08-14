@@ -38,6 +38,24 @@ export type DoctorRecord = Record<string, unknown> & {
   hasMedicalAidAffiliation?: boolean;
   medicalAidAffiliationType?: string;
   medicalAidContractUrl?: string;
+  hpcsaManuallyVerified?: boolean;
+  hpcsaVerificationMethod?: string;
+  hpcsaVerificationReference?: string;
+  hpcsaReviewerNotes?: string;
+  hpcsaVerifiedAt?: { toDate?: () => Date };
+  hpcsaVerifiedBy?: string;
+  identityVerified?: boolean;
+  identityVerifiedAt?: { toDate?: () => Date };
+  identityVerifiedBy?: string;
+  identityReviewerNotes?: string;
+  documentReviews?: Record<string, unknown>;
+  verificationHistory?: unknown[];
+  informationRequested?: boolean;
+  informationRequestReason?: string;
+  informationRequestedAt?: { toDate?: () => Date };
+  informationRequestedBy?: string;
+  statusReason?: string;
+  rejectionReason?: string;
 };
 
 export function normalizeVerificationStatus(status?: string): VerificationStatus {
@@ -45,6 +63,29 @@ export function normalizeVerificationStatus(status?: string): VerificationStatus
     return status;
   }
   return 'pending';
+}
+
+/** Clinic portal admins are not clinicians and must not appear in doctor verification. */
+export function isClinicAdminAccount(doctor: DoctorRecord): boolean {
+  if (doctor['accountKind'] === 'clinic_admin') return true;
+  if (doctor['requiresClinicalVerification'] === false) return true;
+  if (doctor['joinIntent'] === 'clinic') return true;
+  return false;
+}
+
+/**
+ * Records that belong in Doctor Verification.
+ * Excludes clinic admins and incomplete applications that have not been submitted for review.
+ */
+export function isDoctorVerificationCandidate(doctor: DoctorRecord): boolean {
+  if (isClinicAdminAccount(doctor)) return false;
+
+  const status = normalizeVerificationStatus(doctor.verificationStatus);
+  if (status === 'pending' && doctor['applicationComplete'] !== true) {
+    return false;
+  }
+
+  return true;
 }
 
 export function capitalizeWords(value?: string): string {
@@ -67,12 +108,12 @@ export function getDoctorDisplayName(doctor: DoctorRecord): string {
 
 export function formatDoctorField(value: unknown): string {
   if (value === null || value === undefined || value === '') {
-    return '—';
+    return '-';
   }
   if (Array.isArray(value)) {
     return value.length
       ? value.map((item) => capitalizeWords(String(item))).join(', ')
-      : '—';
+      : '-';
   }
   if (typeof value === 'boolean') {
     return value ? 'Yes' : 'No';
@@ -115,15 +156,18 @@ export function getCertificateUrl(doctor: DoctorRecord): string | null {
 }
 
 export function getPracticeLicenseUrl(doctor: DoctorRecord): string | null {
-  const url = (doctor.practiceLicenseUrl as string) || null;
+  const url =
+    (doctor.practiceLicenseUrl as string) ||
+    (doctor['practiceLicenceUrl'] as string) ||
+    null;
   return url && url.trim() ? url : null;
 }
 
 export function formatTimestamp(value: unknown): string {
-  if (!value) return '—';
+  if (!value) return '-';
   if (typeof value === 'object' && value !== null && 'toDate' in value) {
     const date = (value as { toDate: () => Date }).toDate?.();
-    return date ? date.toLocaleString() : '—';
+    return date ? date.toLocaleString() : '-';
   }
   if (value instanceof Date) {
     return value.toLocaleString();

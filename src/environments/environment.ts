@@ -11,6 +11,6 @@ export const environment = {
         measurementId: "G-V0KEK7LS8E"
     },
     ADMIN_UIDS: ['Xwf3BwiJRJb6eL87p8LyL4Syyku1'],
-    /** Legacy alias — used as default content author when no session */
+    /** Legacy alias - used as default content author when no session */
     ADMIN_USER_ID: 'Xwf3BwiJRJb6eL87p8LyL4Syyku1',
 };

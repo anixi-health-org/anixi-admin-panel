@@ -1,0 +1,325 @@
+<div class="ops-page editor-page">
+  <header class="ops-page-header">
+    <div class="ops-page-header__copy">
+      <p class="ops-page-header__eyebrow">Community</p>
+      <h1 class="ops-page-header__title">
+        {{ isEditMode ? 'Edit Community Content' : 'Create Community Content' }}
+      </h1>
+      <p class="ops-page-header__subtitle">
+        Create trusted health content for the Anixi patient community.
+      </p>
+    </div>
+    <div class="ops-page-header__actions">
+      <button type="button" class="ops-btn ops-btn--ghost" (click)="cancel()" [disabled]="isSaving">
+        ← Back to Community
+      </button>
+      <button
+        type="button"
+        class="ops-btn ops-btn--secondary"
+        (click)="saveDraft()"
+        [disabled]="isSaving || uploadProgress.state === 'uploading'"
+      >
+        {{ isSaving ? 'Saving…' : 'Save draft' }}
+      </button>
+      @if (isEditMode && existingPost && (existingPost.status === 'Published' || !existingPost.status)) {
+        <button
+          type="button"
+          class="ops-btn ops-btn--secondary"
+          (click)="archiveContent()"
+          [disabled]="isSaving"
+        >
+          Archive
+        </button>
+        <button
+          type="button"
+          class="ops-btn ops-btn--secondary"
+          (click)="unpublishContent()"
+          [disabled]="isSaving"
+        >
+          Unpublish
+        </button>
+      }
+      <button
+        type="button"
+        class="ops-btn ops-btn--secondary"
+        (click)="requestSchedule()"
+        [disabled]="!canSchedule"
+      >
+        Schedule
+      </button>
+      <button
+        type="button"
+        class="ops-btn ops-btn--primary"
+        (click)="requestPublish()"
+        [disabled]="!canPublish"
+      >
+        Publish Now
+      </button>
+    </div>
+  </header>
+
+  @if (isLoadingExisting) {
+    <div class="ops-panel editor-loading">
+      <nz-spin nzTip="Loading content…"></nz-spin>
+    </div>
+  } @else {
+    @if (isEditMode && existingPost && (existingPost.status === 'Published' || !existingPost.status)) {
+      <div class="editor-live-warning" role="status">
+        This content is currently visible to patients. Saving changes will update the live Community feed
+        across {{ selectedCommunities.length || 1 }}
+        {{ selectedCommunities.length === 1 ? 'community' : 'communities' }}.
+      </div>
+    }
+
+    @if (lastError) {
+      <div class="editor-error" role="alert">
+        <strong>{{ showPublishConfirm || showScheduleConfirm ? 'Notice' : 'Action failed' }}</strong>
+        <p>{{ lastError }}</p>
+        <div class="editor-error__actions">
+          @if (uploadProgress.state === 'error') {
+            <button type="button" class="ops-btn ops-btn--secondary" (click)="retryUpload()">Retry upload</button>
+          }
+          <button type="button" class="ops-btn ops-btn--secondary" (click)="saveDraft()" [disabled]="isSaving">
+            Save as Draft
+          </button>
+        </div>
+      </div>
+    }
+
+    <div class="editor-layout" [formGroup]="form">
+      <div class="editor-main">
+        <section class="ops-panel editor-section">
+          <h2 class="ops-panel__title">Content type</h2>
+          <div class="type-grid">
+            @for (type of contentTypes; track type.id) {
+              <button
+                type="button"
+                class="type-card"
+                [class.type-card--active]="contentType === type.id"
+                [disabled]="isEditMode"
+                (click)="selectContentType(type.id)"
+              >
+                <span class="type-card__label">{{ type.label }}</span>
+                <span class="type-card__hint">{{ type.hint }}</span>
+              </button>
+            }
+          </div>
+        </section>
+
+        <section class="ops-panel editor-section">
+          <h2 class="ops-panel__title">Details</h2>
+          <label class="ops-field">
+            <span class="ops-field__label">Title *</span>
+            <input class="ops-input" formControlName="title" placeholder="Enter a clear, patient-friendly title" />
+          </label>
+          <label class="ops-field">
+            <span class="ops-field__label">
+              {{ contentType === 'article' ? 'Article body *' : 'Description' }}
+            </span>
+            @if (contentType === 'article') {
+              <app-rich-text-editor formControlName="bodyHtml"></app-rich-text-editor>
+              <span class="ops-field__hint">
+                Use headings, bold, italic, lists, and links. Patients see a clean plain-text version of this article.
+              </span>
+            } @else {
+              <textarea
+                class="ops-textarea"
+                formControlName="body"
+                rows="6"
+                placeholder="Add a short caption or description…"
+              ></textarea>
+            }
+          </label>
+        </section>
+
+        <section class="ops-panel editor-section">
+          <div class="ops-panel__header">
+            <h2 class="ops-panel__title">Communities</h2>
+            <span class="editor-meta">Published to {{ selectedCommunities.length }} communities</span>
+          </div>
+          <div class="ops-search community-search">
+            <input type="search" placeholder="Search communities…" [formControl]="communitySearch" />
+          </div>
+          <div class="community-chips">
+            @for (community of filteredCommunities; track community.id) {
+              <button
+                type="button"
+                class="community-chip"
+                [class.community-chip--active]="isCommunitySelected(community.id)"
+                (click)="toggleCommunity(community.id)"
+              >
+                {{ community.label }}
+              </button>
+            }
+          </div>
+          @if (selectedCommunities.length) {
+            <div class="selected-row">
+              @for (id of selectedCommunities; track id) {
+                <span class="ops-badge ops-badge--green">{{ communityLabel(id) }}</span>
+              }
+            </div>
+          }
+        </section>
+
+        <section class="ops-panel editor-section">
+          <h2 class="ops-panel__title">Schedule (optional)</h2>
+          <label class="ops-field">
+            <span class="ops-field__label">Publish at</span>
+            <input class="ops-input" type="datetime-local" formControlName="scheduledAtLocal" />
+            <span class="ops-field__hint">
+              Use <strong>Schedule</strong> to auto-publish at this time (checked every few minutes).
+              Or ignore this and use <strong>Publish Now</strong>.
+            </span>
+          </label>
+        </section>
+
+        @if (contentType === 'video' || contentType === 'image') {
+          <section class="ops-panel editor-section">
+            <h2 class="ops-panel__title">{{ contentType === 'video' ? 'Video' : 'Image' }}</h2>
+            <label class="upload-zone" [class.upload-zone--ready]="uploadProgress.state === 'success'">
+              <input
+                type="file"
+                class="upload-input"
+                [accept]="contentType === 'video' ? 'video/*' : 'image/*'"
+                (change)="onFileSelected($event)"
+              />
+              @if (!previewMediaUrl) {
+                <span class="upload-placeholder">
+                  Drag & drop or click to upload
+                  <small>{{ contentType === 'video' ? 'MP4 / MOV · max 95 MB' : 'JPG / PNG / WEBP · max 15 MB' }}</small>
+                </span>
+              } @else {
+                <span class="upload-preview">
+                  @if (previewIsVideo) {
+                    <video [src]="previewMediaUrl" controls></video>
+                  } @else {
+                    <img [src]="previewMediaUrl" alt="Media preview" />
+                  }
+                </span>
+              }
+            </label>
+            @if (uploadProgress.state === 'uploading') {
+              <div class="upload-progress" role="status">
+                <div class="upload-progress__bar" [style.width.%]="uploadProgress.progress"></div>
+                <span>Uploading… {{ uploadProgress.progress }}%</span>
+              </div>
+            }
+            @if (uploadProgress.state === 'success') {
+              <p class="upload-ok">Upload confirmed. Media URL stored for patient playback.</p>
+            }
+            @if (uploadProgress.state === 'error') {
+              <p class="upload-fail">{{ uploadProgress.error }}</p>
+              <button type="button" class="ops-btn ops-btn--secondary" (click)="retryUpload()">Retry upload</button>
+            }
+            @if (previewMediaUrl) {
+              <button type="button" class="ops-btn ops-btn--ghost" (click)="clearMedia()">Remove media</button>
+            }
+          </section>
+        }
+      </div>
+
+      <aside class="editor-aside">
+        <section class="ops-panel editor-section">
+          <div class="ops-panel__header">
+            <h2 class="ops-panel__title">Content check</h2>
+          </div>
+          <ul class="checklist">
+            @for (item of checklist; track item.label) {
+              <li [class.checklist__ok]="item.ok" [class.checklist__bad]="!item.ok">
+                <span aria-hidden="true">{{ item.ok ? '✓' : '○' }}</span>
+                {{ item.label }}
+              </li>
+            }
+          </ul>
+          @if (!canPublish) {
+            <p class="checklist-hint">Publish stays disabled until every required item is complete.</p>
+          }
+        </section>
+
+        <section class="ops-panel editor-section">
+          <div class="ops-panel__header">
+            <h2 class="ops-panel__title">Patient preview</h2>
+            <div class="preview-toggle">
+              <button type="button" [class.active]="previewMode === 'mobile'" (click)="previewMode = 'mobile'">Mobile</button>
+              <button type="button" [class.active]="previewMode === 'desktop'" (click)="previewMode = 'desktop'">Desktop</button>
+            </div>
+          </div>
+          <div class="preview-frame" [class.preview-frame--mobile]="previewMode === 'mobile'">
+            <div class="preview-card">
+              <p class="preview-author">Anixi Health · Community</p>
+              @if (previewTitle) {
+                <p class="preview-title">{{ previewTitle }}</p>
+              }
+              @if (previewBodyHtml && contentType === 'article') {
+                <div class="preview-html" [innerHTML]="previewBodyHtml"></div>
+              } @else if (previewBody) {
+                <p class="preview-text">{{ previewBody }}</p>
+              }
+              @if (!previewTitle && !previewBody) {
+                <p class="preview-placeholder">Your title and content will appear here.</p>
+              }
+              @if (previewMediaUrl) {
+                @if (previewIsVideo) {
+                  <video class="preview-media" [src]="previewMediaUrl" controls playsinline></video>
+                } @else {
+                  <img class="preview-media" [src]="previewMediaUrl" alt="" />
+                }
+              }
+              @if (selectedCommunities.length) {
+                <div class="preview-tags">
+                  @for (id of selectedCommunities; track id) {
+                    <span>{{ communityLabel(id) }}</span>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+        </section>
+      </aside>
+    </div>
+  }
+
+  @if (showPublishConfirm) {
+    <div class="confirm-overlay" role="dialog" aria-modal="true">
+      <div class="confirm-dialog">
+        <h3>Publish this content?</h3>
+        <p>
+          This content will become visible to patients in
+          <strong>{{ selectedCommunities.length }}</strong>
+          selected {{ selectedCommunities.length === 1 ? 'community' : 'communities' }}.
+        </p>
+        <div class="confirm-dialog__actions">
+          <button type="button" class="ops-btn ops-btn--secondary" (click)="cancelPublishConfirm()" [disabled]="isSaving">
+            Cancel
+          </button>
+          <button type="button" class="ops-btn ops-btn--primary" (click)="confirmPublish()" [disabled]="isSaving">
+            {{ isSaving ? 'Publishing…' : 'Publish' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (showScheduleConfirm) {
+    <div class="confirm-overlay" role="dialog" aria-modal="true">
+      <div class="confirm-dialog">
+        <h3>Schedule this content?</h3>
+        <p>
+          It will auto-publish at
+          <strong>{{ schedulePreviewLabel }}</strong>
+          to
+          <strong>{{ selectedCommunities.length }}</strong>
+          {{ selectedCommunities.length === 1 ? 'community' : 'communities' }}.
+        </p>
+        <div class="confirm-dialog__actions">
+          <button type="button" class="ops-btn ops-btn--secondary" (click)="cancelScheduleConfirm()" [disabled]="isSaving">
+            Cancel
+          </button>
+          <button type="button" class="ops-btn ops-btn--primary" (click)="confirmSchedule()" [disabled]="isSaving">
+            {{ isSaving ? 'Scheduling…' : 'Confirm schedule' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>
