@@ -4,7 +4,7 @@
       <p class="ops-page-header__eyebrow">Clinical operations</p>
       <h1 class="ops-page-header__title">Patients / Users</h1>
       <p class="ops-page-header__subtitle">
-        Search and review platform accounts across patients, doctors, caregivers, and admins.
+        Search and review platform accounts across patients, doctors, clinic admins, caregivers, and Anixi admins.
       </p>
     </div>
   </header>
@@ -21,6 +21,10 @@
     <article class="ops-metric ops-metric--slate">
       <p class="ops-metric__label">Doctors</p>
       <p class="ops-metric__value">{{ (doctorCount$ | async) ?? '—' }}</p>
+    </article>
+    <article class="ops-metric ops-metric--amber">
+      <p class="ops-metric__label">Clinic admins</p>
+      <p class="ops-metric__value">{{ (clinicAdminCount$ | async) ?? '—' }}</p>
     </article>
     <article class="ops-metric ops-metric--amber">
       <p class="ops-metric__label">Caregivers</p>
@@ -148,14 +152,68 @@
               <dd>{{ created(selectedUser) }}</dd>
             </div>
             <div>
+              <dt>Account status</dt>
+              <dd>{{ accountStatus(selectedUser) }}</dd>
+            </div>
+            @if (isClinicAdmin(selectedUser)) {
+              <div>
+                <dt>Managed clinic</dt>
+                <dd>{{ managedClinic(selectedUser) }}</dd>
+              </div>
+            }
+            <div>
               <dt>User ID</dt>
               <dd class="users-detail__mono">{{ selectedUser.id }}</dd>
             </div>
           </dl>
 
+          <div class="users-detail__actions">
+            @if (isDoctor(selectedUser) && !isClinicAdmin(selectedUser)) {
+              <button
+                type="button"
+                class="ops-btn ops-btn--secondary"
+                [disabled]="isUpdating"
+                (click)="markAsClinicAdmin()"
+              >
+                Mark as clinic admin
+              </button>
+            }
+            @if (canHoldOrSuspend(selectedUser) && !isHeld(selectedUser) && !isSuspended(selectedUser)) {
+              <button
+                type="button"
+                class="ops-btn ops-btn--secondary"
+                [disabled]="isUpdating"
+                (click)="setAccountStatus('on_hold')"
+              >
+                Hold for review
+              </button>
+            }
+            @if (canHoldOrSuspend(selectedUser) && !isSuspended(selectedUser)) {
+              <button
+                type="button"
+                class="ops-btn ops-btn--danger"
+                [disabled]="isUpdating"
+                (click)="setAccountStatus('suspended')"
+              >
+                Suspend account
+              </button>
+            }
+            @if (isHeld(selectedUser) || isSuspended(selectedUser)) {
+              <button
+                type="button"
+                class="ops-btn ops-btn--primary"
+                [disabled]="isUpdating"
+                (click)="setAccountStatus('active')"
+              >
+                Reinstate account
+              </button>
+            }
+          </div>
+
           <p class="users-detail__note">
-            Sensitive clinical records are not shown here. Use Doctor Verification for credential
-            review and the patient/doctor apps for care data.
+            Clinic admins manage a clinic establishment and its doctors or patients. They are not
+            practicing clinicians. Use Doctor Verification for credential review of doctors, and
+            Establishments to see registered clinics.
           </p>
         </div>
       </aside>

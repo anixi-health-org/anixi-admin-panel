@@ -299,6 +299,12 @@
   color: #dc2626;
 }
 
+.action-btn--hold {
+  background: #fbf4ea;
+  border-color: #f0d9b0;
+  color: #9a6110;
+}
+
 .detail-manual-note {
   margin: 0 0 0.85rem;
   font-size: 0.8125rem;

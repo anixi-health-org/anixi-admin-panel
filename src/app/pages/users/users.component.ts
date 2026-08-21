@@ -1,6 +1,7 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormControl } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
+import { NzNotificationService } from 'ng-zorro-antd/notification';
 import {
   combineLatest,
   map,
@@ -8,10 +9,16 @@ import {
   shareReplay,
   startWith,
   Subscription,
+  switchMap,
   tap,
 } from 'rxjs';
+import {
+  ERROR_NOTIFICATION_BOX_POSITION,
+  SUCCESS_NOTIFICATION_BOX_POSITION,
+} from '../../../../const';
 import { FirestoreService } from '../../services/firestore.service';
 import {
+  formatAccountStatusLabel,
   formatUserRoleLabel,
   formatUserTimestamp,
   getUserDisplayName,
@@ -27,6 +34,7 @@ const roleFilters: { label: string; value: UserRoleFilter }[] = [
   { label: 'All', value: 'all' },
   { label: 'Patients', value: 'patient' },
   { label: 'Doctors', value: 'doctor' },
+  { label: 'Clinic admins', value: 'clinic_admin' },
   { label: 'Caregivers', value: 'caregiver' },
   { label: 'Admins', value: 'admin' },
 ];
@@ -41,6 +49,7 @@ export class UsersComponent implements OnInit, OnDestroy {
   roleFilters = roleFilters;
   isLoadingSkeleton = true;
   selectedUser: PlatformUser | null = null;
+  isUpdating = false;
   roleFilter = new FormControl<UserRoleFilter>('all');
   searchQuery = new FormControl('');
   userList$!: Observable<PlatformUser[]>;
@@ -48,13 +57,15 @@ export class UsersComponent implements OnInit, OnDestroy {
   totalCount$!: Observable<number>;
   patientCount$!: Observable<number>;
   doctorCount$!: Observable<number>;
+  clinicAdminCount$!: Observable<number>;
   caregiverCount$!: Observable<number>;
   adminCount$!: Observable<number>;
   private sub = new Subscription();
 
   constructor(
     private fireStoreService: FirestoreService,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private notification: NzNotificationService
   ) {}
 
   ngOnInit(): void {
@@ -65,10 +76,35 @@ export class UsersComponent implements OnInit, OnDestroy {
       })
     );
 
-    this.userList$ = this.fireStoreService.getUsers().pipe(
-      map((users) => users as PlatformUser[]),
+    this.userList$ = combineLatest([
+      this.fireStoreService.getUsers(),
+      this.fireStoreService.getDoctors(),
+    ]).pipe(
+      switchMap(([users, doctors]) =>
+        this.fireStoreService
+          .getPracticesForAdmin(users as PlatformUser[], doctors)
+          .pipe(
+            map((practices) => {
+              void this.fireStoreService.syncClinicAdminAccounts(
+                users as PlatformUser[],
+                doctors as Array<Record<string, unknown> & { id: string }>,
+                practices
+              );
+              return this.fireStoreService.buildUsersWithPracticeContext(
+                users as PlatformUser[],
+                doctors as Array<Record<string, unknown> & { id: string }>,
+                practices
+              );
+            })
+          )
+      ),
       tap({
-        next: () => (this.isLoadingSkeleton = false),
+        next: (users) => {
+          this.isLoadingSkeleton = false;
+          if (this.selectedUser) {
+            this.selectedUser = users.find((u) => u.id === this.selectedUser?.id) ?? this.selectedUser;
+          }
+        },
         error: () => (this.isLoadingSkeleton = false),
       }),
       shareReplay(1)
@@ -95,6 +131,9 @@ export class UsersComponent implements OnInit, OnDestroy {
     this.doctorCount$ = this.userList$.pipe(
       map((users) => users.filter((u) => getUserRole(u) === 'doctor').length)
     );
+    this.clinicAdminCount$ = this.userList$.pipe(
+      map((users) => users.filter((u) => getUserRole(u) === 'clinic_admin').length)
+    );
     this.caregiverCount$ = this.userList$.pipe(
       map((users) => users.filter((u) => getUserRole(u) === 'caregiver').length)
     );
@@ -113,6 +152,8 @@ export class UsersComponent implements OnInit, OnDestroy {
         return this.patientCount$;
       case 'doctor':
         return this.doctorCount$;
+      case 'clinic_admin':
+        return this.clinicAdminCount$;
       case 'caregiver':
         return this.caregiverCount$;
       case 'admin':
@@ -143,12 +184,43 @@ export class UsersComponent implements OnInit, OnDestroy {
     if (r === 'doctor') return 'ops-badge--blue';
     if (r === 'patient') return 'ops-badge--green';
     if (r === 'caregiver') return 'ops-badge--pending';
+    if (r === 'clinic_admin') return 'ops-badge--hold';
     if (r === 'admin') return 'ops-badge--slate';
     return 'ops-badge--slate';
   }
 
   created(user: PlatformUser): string {
     return formatUserTimestamp(user.createdAt);
+  }
+
+  accountStatus(user: PlatformUser): string {
+    return formatAccountStatusLabel(user.accountStatus || user.verificationStatus);
+  }
+
+  managedClinic(user: PlatformUser): string {
+    const name = typeof user.managedClinicName === 'string' ? user.managedClinicName.trim() : '';
+    return name || '—';
+  }
+
+  isDoctor(user: PlatformUser): boolean {
+    return getUserRole(user) === 'doctor';
+  }
+
+  isClinicAdmin(user: PlatformUser): boolean {
+    return getUserRole(user) === 'clinic_admin';
+  }
+
+  canHoldOrSuspend(user: PlatformUser): boolean {
+    return this.isDoctor(user) || this.isClinicAdmin(user);
+  }
+
+  isHeld(user: PlatformUser): boolean {
+    const status = String(user.accountStatus || user.verificationStatus || '').toLowerCase();
+    return status === 'on_hold';
+  }
+
+  isSuspended(user: PlatformUser): boolean {
+    return String(user.accountStatus || user.verificationStatus || '').toLowerCase() === 'suspended';
   }
 
   initials(user: PlatformUser): string {
@@ -164,5 +236,78 @@ export class UsersComponent implements OnInit, OnDestroy {
 
   clearSelection(): void {
     this.selectedUser = null;
+  }
+
+  async markAsClinicAdmin(): Promise<void> {
+    if (!this.selectedUser || this.isUpdating) return;
+    const confirmed = window.confirm(
+      `${this.displayName(this.selectedUser)} will be treated as a clinic administrator, not a practicing doctor. Continue?`
+    );
+    if (!confirmed) return;
+    this.isUpdating = true;
+    try {
+      await this.fireStoreService.markAsClinicAdmin(this.selectedUser.id);
+      this.notification.create(
+        'success',
+        'Updated',
+        'This account is now a clinic admin.',
+        SUCCESS_NOTIFICATION_BOX_POSITION
+      );
+    } catch (error) {
+      this.notification.create(
+        'error',
+        'Action failed',
+        error instanceof Error ? error.message : 'Could not reclassify this account.',
+        ERROR_NOTIFICATION_BOX_POSITION
+      );
+    } finally {
+      this.isUpdating = false;
+    }
+  }
+
+  async setAccountStatus(status: 'on_hold' | 'suspended' | 'active'): Promise<void> {
+    if (!this.selectedUser || this.isUpdating) return;
+    let reason: string | undefined;
+    if (status !== 'active') {
+      const prompted = window.prompt(
+        status === 'on_hold'
+          ? 'Reason for holding this account for further review (required):'
+          : 'Reason for suspending this account (required):'
+      );
+      if (prompted === null) return;
+      reason = prompted.trim();
+      if (!reason) {
+        this.notification.create(
+          'error',
+          'Reason required',
+          'Please provide a reason before continuing.',
+          ERROR_NOTIFICATION_BOX_POSITION
+        );
+        return;
+      }
+    }
+    this.isUpdating = true;
+    try {
+      await this.fireStoreService.updateUserAccountStatus(this.selectedUser.id, status, reason);
+      this.notification.create(
+        'success',
+        'Updated',
+        status === 'active'
+          ? 'Account reinstated.'
+          : status === 'on_hold'
+            ? 'Account held for further review.'
+            : 'Account suspended.',
+        SUCCESS_NOTIFICATION_BOX_POSITION
+      );
+    } catch (error) {
+      this.notification.create(
+        'error',
+        'Action failed',
+        error instanceof Error ? error.message : 'Could not update account status.',
+        ERROR_NOTIFICATION_BOX_POSITION
+      );
+    } finally {
+      this.isUpdating = false;
+    }
   }
 }

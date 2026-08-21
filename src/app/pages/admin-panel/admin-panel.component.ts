@@ -27,6 +27,7 @@ const navGroups: NavGroup[] = [
     label: 'Clinical operations',
     items: [
       { name: 'Doctor Verification', icon: 'stethoscope', path: '/doctor-verification' },
+      { name: 'Clinics', icon: 'building-2', path: '/establishments' },
       { name: 'Patients / Users', icon: 'users', path: '/users' },
       { name: 'Appointments', icon: 'calendar', comingSoon: true },
     ],

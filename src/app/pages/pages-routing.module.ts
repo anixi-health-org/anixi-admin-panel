@@ -8,6 +8,7 @@ import { ContentComponent } from './content/content.component';
 import { ContentEditorComponent } from './content-editor/content-editor.component';
 import { PdfViewerComponent } from './pdf-viewer/pdf-viewer.component';
 import { UsersComponent } from './users/users.component';
+import { EstablishmentsComponent } from './establishments/establishments.component';
 import { authGuard } from '../guards/auth.guard';
 import { guestGuard } from '../guards/guest.guard';
 
@@ -28,6 +29,7 @@ const routes: Routes = [
       { path: 'content/new', component: ContentEditorComponent },
       { path: 'content/:id/edit', component: ContentEditorComponent },
       { path: 'doctor-verification', component: DoctorVerificationComponent },
+      { path: 'establishments', component: EstablishmentsComponent },
       { path: 'certificat-viewer', component: PdfViewerComponent },
       { path: 'users', component: UsersComponent },
     ],

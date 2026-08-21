@@ -1,38 +1,5 @@
-.users-metrics {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-@media (min-width: 900px) {
-  .users-metrics {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-  }
-}
-
-.users-layout {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1rem;
-}
-
-@media (min-width: 1100px) {
-  .users-layout--detail {
-    grid-template-columns: minmax(0, 1.6fr) minmax(280px, 0.9fr);
-  }
-}
-
-.users-filters-wrap {
-  padding: 0.75rem 1rem 0.25rem;
-}
-
-.users-filter-count {
-  font-weight: 500;
-  color: #8b9a90;
-}
-
-.users-search-icon {
-  width: 1rem;
-  height: 1rem;
-  color: #8b9a90;
+.establishments-metrics {
+  grid-template-columns: minmax(0, 12rem);
 }
 
 .users-table-wrap {
@@ -82,21 +49,24 @@
   color: #1f2a26;
 }
 
+.users-filters-wrap {
+  padding: 0.75rem 1rem 0.25rem;
+}
+
+.users-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 1100px) {
+  .users-layout--detail {
+    grid-template-columns: minmax(0, 1.6fr) minmax(280px, 0.9fr);
+  }
+}
+
 .users-detail__body {
   padding: 1rem 1.15rem 1.35rem;
-}
-
-.users-detail__identity {
-  display: flex;
-  align-items: center;
-  gap: 0.85rem;
-  margin-bottom: 1.15rem;
-}
-
-.users-detail__avatar {
-  width: 3.25rem;
-  height: 3.25rem;
-  font-size: 0.9rem;
 }
 
 .users-detail__name {
@@ -146,9 +116,32 @@
   color: #65758b;
 }
 
-.users-detail__actions {
+.establishments-members-title {
+  margin: 1.25rem 0 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8b9a90;
+}
+
+.establishments-members {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 1.1rem;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.establishments-members li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid #eef2ef;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  color: #1f2a26;
 }

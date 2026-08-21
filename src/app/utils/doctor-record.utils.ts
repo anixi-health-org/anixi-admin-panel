@@ -1,4 +1,9 @@
-export type VerificationStatus = 'pending' | 'approved' | 'rejected' | 'suspended';
+export type VerificationStatus =
+  | 'pending'
+  | 'approved'
+  | 'rejected'
+  | 'suspended'
+  | 'on_hold';
 
 export type DoctorRecord = Record<string, unknown> & {
   id?: string;
@@ -59,7 +64,12 @@ export type DoctorRecord = Record<string, unknown> & {
 };
 
 export function normalizeVerificationStatus(status?: string): VerificationStatus {
-  if (status === 'approved' || status === 'rejected' || status === 'suspended') {
+  if (
+    status === 'approved' ||
+    status === 'rejected' ||
+    status === 'suspended' ||
+    status === 'on_hold'
+  ) {
     return status;
   }
   return 'pending';
@@ -161,6 +171,29 @@ export function getPracticeLicenseUrl(doctor: DoctorRecord): string | null {
     (doctor['practiceLicenceUrl'] as string) ||
     null;
   return url && url.trim() ? url : null;
+}
+
+function isPracticeLetterheadUrl(url: string): boolean {
+  let decoded = url;
+  try {
+    decoded = decodeURIComponent(url);
+  } catch {
+    decoded = url;
+  }
+  if (/doctors\/[^/]+\/branding\//.test(decoded)) return true;
+  if (!decoded.includes('doctor-logos/')) return false;
+  if (/doctor-logos\/[^/?#]+\/profile\./i.test(decoded)) return false;
+  return true;
+}
+
+/** Headshot only — practice logos belong on invoices, not avatars. */
+export function getDoctorProfilePhotoUrl(doctor: DoctorRecord): string | null {
+  const photo = doctor.profileImageUrl?.trim() || '';
+  const logo = doctor.logoUrl?.trim() || '';
+  if (!photo || isPracticeLetterheadUrl(photo) || (logo && photo === logo)) {
+    return null;
+  }
+  return photo;
 }
 
 export function formatTimestamp(value: unknown): string {

@@ -1,0 +1,135 @@
+<div class="ops-page establishments-page">
+  <header class="ops-page-header">
+    <div class="ops-page-header__copy">
+      <p class="ops-page-header__eyebrow">Clinical operations</p>
+      <h1 class="ops-page-header__title">Clinics</h1>
+      <p class="ops-page-header__subtitle">
+        Multi-doctor clinics on Anixi. Each clinic manages its own doctors, staff, and patients.
+      </p>
+    </div>
+  </header>
+
+  <section class="ops-metrics establishments-metrics" aria-label="Clinic count">
+    <article class="ops-metric ops-metric--amber">
+      <p class="ops-metric__label">Clinics</p>
+      <p class="ops-metric__value">{{ (clinicCount$ | async) ?? '—' }}</p>
+    </article>
+  </section>
+
+  <div class="users-layout" [class.users-layout--detail]="!!selectedPractice">
+    <section class="ops-panel users-list-panel">
+      <div class="ops-panel__header">
+        <h2 class="ops-panel__title">Directory</h2>
+        <div class="ops-search">
+          <lucide-icon name="search" class="users-search-icon"></lucide-icon>
+          <input
+            type="search"
+            [formControl]="searchQuery"
+            placeholder="Search clinic…"
+            aria-label="Search clinics"
+          />
+        </div>
+      </div>
+
+      @if (isLoadingSkeleton) {
+        <div class="ops-panel__body">
+          <nz-skeleton [nzActive]="true" [nzParagraph]="{ rows: 8 }"></nz-skeleton>
+        </div>
+      } @else if ((filteredClinics$ | async)?.length === 0) {
+        <div class="ops-empty">
+          <div class="ops-empty__icon" aria-hidden="true">🏥</div>
+          <p class="ops-empty__title">No clinics match this search</p>
+          <p class="ops-empty__text">
+            Clinics appear here after a clinic administrator completes setup on the doctor portal.
+          </p>
+        </div>
+      } @else {
+        <div class="users-table-wrap">
+          <table class="users-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Locations</th>
+                <th>Created</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (practice of filteredClinics$ | async; track practice.id) {
+                <tr
+                  [class.users-table__row--active]="selectedPractice?.id === practice.id"
+                  (click)="selectPractice(practice)"
+                  (keydown.enter)="selectPractice(practice)"
+                  tabindex="0"
+                  role="button"
+                  [attr.aria-label]="'Open ' + name(practice)"
+                >
+                  <td>
+                    <div class="users-name-cell">
+                      <span>{{ name(practice) }}</span>
+                    </div>
+                  </td>
+                  <td>{{ locations(practice) }}</td>
+                  <td>{{ created(practice) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+
+    @if (selectedPractice) {
+      <aside class="ops-panel users-detail" aria-label="Clinic profile">
+        <div class="ops-panel__header">
+          <h2 class="ops-panel__title">Clinic</h2>
+          <button type="button" class="ops-btn ops-btn--secondary" (click)="clearSelection()">
+            Close
+          </button>
+        </div>
+        <div class="users-detail__body">
+          <p class="users-detail__name">{{ name(selectedPractice) }}</p>
+          <span class="ops-badge ops-badge--hold">Clinic</span>
+
+          <dl class="users-detail__grid" style="margin-top: 1.1rem">
+            @if (selectedPractice.tradingName) {
+              <div>
+                <dt>Trading name</dt>
+                <dd>{{ selectedPractice.tradingName }}</dd>
+              </div>
+            }
+            <div>
+              <dt>Locations</dt>
+              <dd>{{ locations(selectedPractice) }}</dd>
+            </div>
+            <div>
+              <dt>BHF practice number</dt>
+              <dd>{{ selectedPractice.bhfPracticeNumber || '—' }}</dd>
+            </div>
+            <div>
+              <dt>Timezone</dt>
+              <dd>{{ selectedPractice.timezone || '—' }}</dd>
+            </div>
+            <div>
+              <dt>Owner ID</dt>
+              <dd class="users-detail__mono">{{ selectedPractice.ownerId || '—' }}</dd>
+            </div>
+          </dl>
+
+          <h3 class="establishments-members-title">Doctors and staff</h3>
+          @if ((members$ | async)?.length) {
+            <ul class="establishments-members">
+              @for (member of members$ | async; track member.id) {
+                <li>
+                  <span>{{ member.displayName || member.email || member.id }}</span>
+                  <span class="ops-badge ops-badge--slate">{{ memberKind(member) }}</span>
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="users-detail__note">No members loaded for this clinic yet.</p>
+          }
+        </div>
+      </aside>
+    }
+  </div>
+</div>
