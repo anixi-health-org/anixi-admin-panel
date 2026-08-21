@@ -20,7 +20,7 @@ export type DoctorDocumentReview = {
   documentKey: DoctorDocumentKey;
   documentName: string;
   documentType: string;
-  url: string;
+  url: string | null;
   required: boolean;
   status: DocumentReviewStatus;
   reviewerId?: string;
@@ -46,9 +46,9 @@ export type ChecklistItem = {
 };
 
 /**
- * Mandatory practice-profile fields derived from persisted doctor document values.
- * Completeness is true only when every field has a non-empty string (or non-empty array).
- * This must never rely on a frontend-only boolean.
+ * Hard requirements for practice profile completeness.
+ * Soft/optional location fields (city, province, address) are shown in admin
+ * but do not block approval — mobile onboarding often omits them.
  */
 export const PRACTICE_PROFILE_REQUIRED_FIELDS: {
   key: string;
@@ -66,23 +66,8 @@ export const PRACTICE_PROFILE_REQUIRED_FIELDS: {
     read: (d) => d.medicalSpecialty || d.specialty,
   },
   {
-    key: 'practiceCity',
-    label: 'City',
-    read: (d) => d.practiceCity || d['city'],
-  },
-  {
-    key: 'practiceProvince',
-    label: 'Province',
-    read: (d) => d.practiceProvince || d['province'],
-  },
-  {
-    key: 'practiceAddress',
-    label: 'Practice address',
-    read: (d) => d.practiceAddress || d.officeAddress,
-  },
-  {
     key: 'practiceType',
-    label: 'Practice type',
+    label: 'Consultation type',
     read: (d) => d.practiceType,
   },
 ];
@@ -98,14 +83,14 @@ const DOC_DEFS: {
     key: 'hpcsa_certificate',
     name: 'HPCSA certificate',
     type: 'HPCSA Certificate',
-    required: true,
+    required: false,
     getUrl: getCertificateUrl,
   },
   {
     key: 'practice_license',
     name: 'Practice licence',
     type: 'Practice Licence',
-    required: true,
+    required: false,
     getUrl: getPracticeLicenseUrl,
   },
   {
@@ -147,9 +132,9 @@ function hasPersistedValue(value: unknown): boolean {
 }
 
 export function getPracticeProfileGaps(doctor: DoctorRecord): string[] {
-  return PRACTICE_PROFILE_REQUIRED_FIELDS.filter((field) => !hasPersistedValue(field.read(doctor))).map(
-    (field) => field.label
-  );
+  return PRACTICE_PROFILE_REQUIRED_FIELDS.filter(
+    (field) => !hasPersistedValue(field.read(doctor))
+  ).map((field) => field.label);
 }
 
 export function isPracticeProfileComplete(doctor: DoctorRecord): boolean {
@@ -168,21 +153,21 @@ function readStoredReview(
   return entry && typeof entry === 'object' ? entry : null;
 }
 
-/** Build document rows from uploaded URLs + persisted review map. */
+/** Build document rows from uploaded/linked URLs + persisted review map. */
 export function listDoctorDocuments(doctor: DoctorRecord): DoctorDocumentReview[] {
   const rows: DoctorDocumentReview[] = [];
   for (const def of DOC_DEFS) {
     const url = def.getUrl(doctor);
-    if (!url) continue;
     const stored = readStoredReview(doctor, def.key);
     const status = (stored?.status as DocumentReviewStatus) || 'pending';
+    // Always surface known document slots so admins see optional gaps.
     rows.push({
       documentKey: def.key,
       documentName: def.name,
       documentType: def.type,
       url,
       required: def.required,
-      status,
+      status: url ? status : 'pending',
       reviewerId: stored?.reviewerId,
       reviewedAt: stored?.reviewedAt,
       notes: stored?.notes,
@@ -192,9 +177,8 @@ export function listDoctorDocuments(doctor: DoctorRecord): DoctorDocumentReview[
 }
 
 /**
- * Required documents = every DOC_DEF marked required.
- * Missing upload counts as incomplete (not only uploaded-but-unverified).
- * Rejected / requires_replacement never count as verified.
+ * Document gate: only rejected / requires_replacement links block approval.
+ * Certificate and licence URLs are optional on mobile (text links, not uploads).
  */
 export function requiredDocumentsSummary(doctor: DoctorRecord): {
   verified: number;
@@ -202,18 +186,20 @@ export function requiredDocumentsSummary(doctor: DoctorRecord): {
   done: boolean;
   missing: string[];
   blocked: string[];
+  provided: number;
 } {
-  const requiredDefs = DOC_DEFS.filter((d) => d.required);
   const missing: string[] = [];
   const blocked: string[] = [];
   let verified = 0;
+  let provided = 0;
 
-  for (const def of requiredDefs) {
+  for (const def of DOC_DEFS) {
     const url = def.getUrl(doctor);
     if (!url) {
-      missing.push(def.name);
+      if (def.required) missing.push(def.name);
       continue;
     }
+    provided += 1;
     const stored = readStoredReview(doctor, def.key);
     const status = (stored?.status as DocumentReviewStatus) || 'pending';
     if (status === 'verified') {
@@ -223,57 +209,73 @@ export function requiredDocumentsSummary(doctor: DoctorRecord): {
     }
   }
 
-  const total = requiredDefs.length;
+  const requiredDefs = DOC_DEFS.filter((d) => d.required);
   return {
     verified,
-    total,
-    done: verified === total && missing.length === 0 && blocked.length === 0,
+    total: requiredDefs.length,
+    done: missing.length === 0 && blocked.length === 0,
     missing,
     blocked,
+    provided,
   };
 }
 
+export function hasIdentityProfile(doctor: DoctorRecord): boolean {
+  return !!(doctor.fullName || doctor.displayName) && !!String(doctor.email || '').trim();
+}
+
+export function getRegistrationNumber(doctor: DoctorRecord): string {
+  return (
+    (doctor.hpcsaRegistrationNumber as string) ||
+    (doctor.licenseNumber as string) ||
+    ''
+  ).trim();
+}
+
+/**
+ * Checklist reflects whether the doctor provided enough data for an admin
+ * decision. Manual confirm flags are recorded on Approve, not required first.
+ */
 export function buildVerificationChecklist(doctor: DoctorRecord): ChecklistItem[] {
-  const hasIdentityData = !!(doctor.fullName || doctor.displayName) && !!doctor.email;
-  const identityDone = hasIdentityData && doctor.identityVerified === true;
-
-  const registration =
-    (doctor.hpcsaRegistrationNumber as string) || (doctor.licenseNumber as string) || '';
-  const hpcsaDone = !!registration.trim() && doctor.hpcsaManuallyVerified === true;
-
+  const hasIdentityData = hasIdentityProfile(doctor);
+  const registration = getRegistrationNumber(doctor);
   const docs = requiredDocumentsSummary(doctor);
   const practiceGaps = getPracticeProfileGaps(doctor);
   const practiceDone = practiceGaps.length === 0;
 
   let docsDetail: string;
-  if (docs.missing.length) {
-    docsDetail = `Missing: ${docs.missing.join(', ')}`;
-  } else if (docs.blocked.length) {
+  if (docs.blocked.length) {
     docsDetail = docs.blocked.join('; ');
+  } else if (docs.provided === 0) {
+    docsDetail = 'No certificate links provided (optional)';
   } else {
-    docsDetail = `${docs.verified} / ${docs.total} verified`;
+    docsDetail = `${docs.provided} link(s) provided · ${docs.verified} marked verified`;
   }
 
   return [
     {
       key: 'identity',
       label: 'Identity',
-      done: identityDone,
-      detail: identityDone ? 'Verified' : hasIdentityData ? 'Awaiting confirmation' : 'Incomplete',
+      done: hasIdentityData,
+      detail: hasIdentityData
+        ? doctor.identityVerified === true
+          ? 'Provided · admin confirmed'
+          : 'Provided in app'
+        : 'Incomplete — name and email required',
     },
     {
       key: 'hpcsa',
       label: 'HPCSA / registration',
-      done: hpcsaDone,
-      detail: hpcsaDone
-        ? 'Manually verified'
-        : registration.trim()
-          ? 'Awaiting manual verification'
-          : 'No registration number',
+      done: !!registration,
+      detail: registration
+        ? doctor.hpcsaManuallyVerified === true
+          ? `${registration} · admin confirmed`
+          : `${registration} · provided in app`
+        : 'No registration number',
     },
     {
       key: 'documents',
-      label: 'Required documents',
+      label: 'Documents / links',
       done: docs.done,
       detail: docsDetail,
     },
@@ -286,6 +288,7 @@ export function buildVerificationChecklist(doctor: DoctorRecord): ChecklistItem[
   ];
 }
 
+/** Admin may approve when profile essentials are present and no doc is rejected. */
 export function canApproveDoctor(doctor: DoctorRecord): boolean {
   return buildVerificationChecklist(doctor).every((item) => item.done);
 }

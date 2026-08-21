@@ -76,23 +76,8 @@
       </form>
 
       <div class="admin-header-actions">
-        <button
-          type="button"
-          class="admin-icon-btn"
-          title="Notifications coming soon"
-          aria-label="Notifications"
-          disabled
-        >
-          <lucide-icon name="bell" class="admin-icon-btn__icon"></lucide-icon>
-        </button>
-
-        <div class="admin-identity">
-          <div class="admin-identity__copy">
-            <p class="admin-identity__name">{{ adminUser?.displayName || 'Admin' }}</p>
-            <p class="admin-identity__role">{{ roleLabel() }}</p>
-          </div>
-          <app-admin-profile-menu [adminUser]="adminUser"></app-admin-profile-menu>
-        </div>
+        <app-admin-notifications-menu></app-admin-notifications-menu>
+        <app-admin-profile-menu [adminUser]="adminUser"></app-admin-profile-menu>
       </div>
     </header>
 

@@ -387,6 +387,23 @@
   line-height: 1.45;
 }
 
+.approve-ready-hint {
+  margin: 0.75rem 0 0;
+  font-size: 0.8125rem;
+  color: #2f6b4f;
+  line-height: 1.45;
+}
+
+.detail-link {
+  color: #2f6b4f;
+  word-break: break-all;
+  text-decoration: underline;
+}
+
+.detail-link:hover {
+  color: #1c4734;
+}
+
 .info-request-banner {
   margin: 0.65rem 0 0;
   padding: 0.55rem 0.7rem;
@@ -487,10 +504,12 @@
   position: fixed;
   inset: 0;
   z-index: 80;
-  background: rgba(17, 24, 39, 0.45);
+  background: rgba(17, 24, 39, 0.52);
+  backdrop-filter: blur(4px);
   display: grid;
   place-items: center;
   padding: 1rem;
+  animation: decision-fade-in 160ms ease-out;
 }
 
 .confirm-dialog {
@@ -526,6 +545,272 @@
   display: flex;
   justify-content: flex-end;
   gap: 0.6rem;
+}
+
+.decision-dialog {
+  position: relative;
+  width: min(480px, 100%);
+  overflow: hidden;
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 1.35rem 1.4rem 1.25rem;
+  box-shadow: 0 24px 60px rgba(15, 26, 22, 0.22);
+  border: 1px solid #e4ebe5;
+  animation: decision-rise-in 200ms ease-out;
+}
+
+.decision-dialog__accent {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 4px;
+  background: var(--anixi-green);
+}
+
+.decision-dialog--approve .decision-dialog__accent {
+  background: linear-gradient(90deg, #3f5a4f, #6f9b7f);
+}
+
+.decision-dialog--danger .decision-dialog__accent {
+  background: linear-gradient(90deg, #9b3d3d, #c45c5c);
+}
+
+.decision-dialog--hold .decision-dialog__accent {
+  background: linear-gradient(90deg, #a56b2d, #d39a4c);
+}
+
+.decision-dialog--info .decision-dialog__accent {
+  background: linear-gradient(90deg, #1d6fa5, #4f97c4);
+}
+
+.decision-dialog__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  margin-bottom: 0.85rem;
+}
+
+.decision-dialog__icon {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  font-size: 1.2rem;
+  background: #e8efe9;
+  color: var(--anixi-green);
+}
+
+.decision-dialog--danger .decision-dialog__icon {
+  background: #fbeaea;
+  color: #9b3d3d;
+}
+
+.decision-dialog--hold .decision-dialog__icon {
+  background: #f8efdf;
+  color: #a56b2d;
+}
+
+.decision-dialog--info .decision-dialog__icon {
+  background: #eaf3fa;
+  color: #1d6fa5;
+}
+
+.decision-dialog__heading {
+  min-width: 0;
+  flex: 1;
+}
+
+.decision-dialog__eyebrow {
+  margin: 0 0 0.2rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8a9a90;
+}
+
+.decision-dialog h3 {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 1.2rem;
+  line-height: 1.3;
+  color: #1c2621;
+}
+
+.decision-dialog__close {
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: 999px;
+  background: #f3f6f4;
+  color: #66756d;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.decision-dialog__close:hover:not(:disabled) {
+  background: #e7eee9;
+  color: #1c2621;
+}
+
+.decision-dialog__close:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.decision-dialog__body {
+  margin: 0 0 1rem;
+  color: #5c6b63;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+}
+
+.decision-dialog__doctor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin-bottom: 1rem;
+  padding: 0.85rem 0.95rem;
+  border-radius: 12px;
+  background: #f4f7f5;
+  border: 1px solid #e4ebe5;
+}
+
+.decision-dialog__doctor-label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #8a9a90;
+}
+
+.decision-dialog__doctor strong {
+  color: #1c2621;
+  font-size: 0.95rem;
+}
+
+.decision-dialog__doctor-meta {
+  color: #6b7c72;
+  font-size: 0.8125rem;
+}
+
+.decision-dialog__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-bottom: 1.15rem;
+}
+
+.decision-dialog__field-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 650;
+  color: #1c2621;
+}
+
+.decision-dialog__field-label em {
+  font-style: normal;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #9b3d3d;
+}
+
+.decision-dialog__field textarea {
+  width: 100%;
+  min-height: 108px;
+  resize: vertical;
+  border: 1px solid #d5ddd8;
+  border-radius: 12px;
+  padding: 0.85rem 0.95rem;
+  font: inherit;
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  color: #1c2621;
+  background: #fbfcfb;
+  outline: none;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.decision-dialog__field textarea:focus {
+  border-color: #8aa396;
+  box-shadow: 0 0 0 3px rgba(66, 89, 80, 0.12);
+  background: #ffffff;
+}
+
+.decision-dialog__field textarea:disabled {
+  opacity: 0.65;
+}
+
+.decision-dialog__error {
+  font-size: 0.8125rem;
+  color: #9b3d3d;
+  font-weight: 600;
+}
+
+.decision-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+}
+
+.ops-btn--danger {
+  background: #9b3d3d;
+  border-color: #9b3d3d;
+  color: #ffffff;
+}
+
+.ops-btn--danger:hover:not(:disabled) {
+  background: #863434;
+  border-color: #863434;
+}
+
+.ops-btn--hold {
+  background: #a56b2d;
+  border-color: #a56b2d;
+  color: #ffffff;
+}
+
+.ops-btn--hold:hover:not(:disabled) {
+  background: #915d24;
+  border-color: #915d24;
+}
+
+.ops-btn--info {
+  background: #1d6fa5;
+  border-color: #1d6fa5;
+  color: #ffffff;
+}
+
+.ops-btn--info:hover:not(:disabled) {
+  background: #185d8b;
+  border-color: #185d8b;
+}
+
+@keyframes decision-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes decision-rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .ops-badge--red {

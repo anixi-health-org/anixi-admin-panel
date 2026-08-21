@@ -1,0 +1,64 @@
+<div class="ops-page notifications-page">
+  <header class="ops-page-header">
+    <div class="ops-page-header__copy">
+      <p class="ops-page-header__eyebrow">Platform</p>
+      <h1 class="ops-page-header__title">Notifications</h1>
+      <p class="ops-page-header__subtitle">
+        Alerts for new doctor applications and other operations events.
+      </p>
+    </div>
+    <div class="ops-page-header__actions">
+      @if (unreadCount > 0) {
+        <button type="button" class="ops-btn ops-btn--secondary" (click)="markAllRead()">
+          Mark all as read
+        </button>
+      }
+    </div>
+  </header>
+
+  <section class="ops-panel notifications-panel">
+    <div class="ops-panel__header">
+      <div>
+        <p class="ops-section-label">Inbox</p>
+        <h2 class="ops-panel__title">
+          {{ unreadCount }} unread · {{ notifications.length }} total
+        </h2>
+      </div>
+    </div>
+
+    @if (isLoading) {
+      <div class="notifications-loading">
+        <nz-spin nzSimple></nz-spin>
+      </div>
+    } @else if (loadError) {
+      <div class="notifications-empty">
+        <p>{{ loadError }}</p>
+      </div>
+    } @else if (notifications.length === 0) {
+      <div class="notifications-empty">
+        <p>No notifications yet</p>
+        <span>When a doctor signs up and waits for approval, you’ll see it here.</span>
+      </div>
+    } @else {
+      <ul class="notifications-list">
+        @for (item of notifications; track item.id) {
+          <li>
+            <button
+              type="button"
+              class="notifications-row"
+              [class.notifications-row--unread]="isUnread(item)"
+              (click)="openNotification(item)"
+            >
+              <span class="notifications-row__dot" aria-hidden="true"></span>
+              <span class="notifications-row__copy">
+                <strong>{{ item.title }}</strong>
+                <span>{{ item.body }}</span>
+              </span>
+              <time>{{ formatWhen(item) }}</time>
+            </button>
+          </li>
+        }
+      </ul>
+    }
+  </section>
+</div>

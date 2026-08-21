@@ -46,7 +46,9 @@
       <section class="detail-section detail-checklist">
         <h3 class="detail-section-title">Verification checklist</h3>
         <p class="detail-manual-note">
-          No live HPCSA API is connected. All credential checks are manual admin review.
+          Review everything the doctor provided below. When you are satisfied,
+          use <strong>Approve Doctor</strong> to activate their practice account
+          immediately. No live HPCSA API is connected — credential checks are manual.
         </p>
         <ul class="checklist">
           @for (item of checklist(doctor); track item.key) {
@@ -57,17 +59,21 @@
                 <small>{{ item.detail }}</small>
               </span>
               <span class="ops-badge" [class]="item.done ? 'ops-badge--green' : 'ops-badge--pending'">
-                {{ item.done ? 'Ready' : 'Pending' }}
+                {{ item.done ? 'Ready' : 'Needs attention' }}
               </span>
             </li>
           }
         </ul>
         @if (!approvalReady(doctor)) {
           <p class="approve-blocked-hint">
-            Complete all required verification steps before approving this doctor.
+            Resolve the items below before approving.
             @for (reason of approvalBlockReasonsList(doctor); track reason) {
               <br />• {{ reason }}
             }
+          </p>
+        } @else {
+          <p class="approve-ready-hint">
+            Profile essentials look complete. Approve when you are satisfied with the details and documents.
           </p>
         }
       </section>
@@ -75,14 +81,17 @@
       <section class="detail-section">
         <h3 class="detail-section-title">Identity</h3>
         <dl class="detail-grid">
-          <div class="detail-row"><dt>Name</dt><dd>{{ displayName(doctor) }}</dd></div>
-          <div class="detail-row"><dt>Email</dt><dd>{{ field(doctor.email) }}</dd></div>
+          <div class="detail-row"><dt>Title</dt><dd>{{ field(doctor.title) }}</dd></div>
+          <div class="detail-row"><dt>Full name</dt><dd>{{ plain(doctor.fullName || doctor.displayName) }}</dd></div>
           <div class="detail-row"><dt>Gender</dt><dd>{{ field(doctor.gender) }}</dd></div>
-          <div class="detail-row"><dt>ID / Passport</dt><dd>{{ field(doctor.idOrPassportNumber) }}</dd></div>
-          <div class="detail-row"><dt>Status</dt>
-            <dd>{{ doctor.identityVerified === true ? 'Verified' : 'Pending' }}</dd>
+          <div class="detail-row"><dt>ID / Passport</dt><dd>{{ plain(doctor.idOrPassportNumber || doctor['idOrPassport']) }}</dd></div>
+          <div class="detail-row"><dt>Nationality</dt><dd>{{ field(doctor.nationality) }}</dd></div>
+          <div class="detail-row"><dt>Email</dt><dd>{{ plain(doctor.email) }}</dd></div>
+          <div class="detail-row"><dt>Phone</dt><dd>{{ plain(doctor.phoneNumber) }}</dd></div>
+          <div class="detail-row"><dt>Admin status</dt>
+            <dd>{{ doctor.identityVerified === true ? 'Confirmed' : 'Not yet confirmed (set on approve)' }}</dd>
           </div>
-          <div class="detail-row"><dt>Verified by</dt><dd>{{ field(doctor.identityVerifiedBy) }}</dd></div>
+          <div class="detail-row"><dt>Verified by</dt><dd>{{ plain(doctor.identityVerifiedBy) }}</dd></div>
           <div class="detail-row"><dt>Verified at</dt><dd>{{ timestamp(doctor.identityVerifiedAt) }}</dd></div>
           <div class="detail-row detail-row--full"><dt>Notes</dt><dd>{{ field(doctor.identityReviewerNotes) }}</dd></div>
         </dl>
@@ -93,28 +102,46 @@
             [disabled]="isUpdating"
             (click)="verifyIdentity()"
           >
-            Verify identity
+            Confirm identity now
           </button>
         }
       </section>
 
       <section class="detail-section">
-        <h3 class="detail-section-title">HPCSA / registration</h3>
+        <h3 class="detail-section-title">Professional credentials</h3>
         <p class="detail-manual-note">
-          Verification method: <strong>Manual verification</strong>.
-          No live HPCSA API is connected.
+          Verification method: <strong>Manual review</strong>. No live HPCSA API is connected.
         </p>
         <dl class="detail-grid">
-          <div class="detail-row"><dt>Registration no.</dt><dd>{{ registrationNumber(doctor) }}</dd></div>
+          <div class="detail-row"><dt>HPCSA registration</dt><dd>{{ registrationNumber(doctor) }}</dd></div>
           <div class="detail-row"><dt>Specialty</dt><dd>{{ specialty(doctor) }}</dd></div>
-          <div class="detail-row"><dt>Verification status</dt>
-            <dd>{{ doctor.hpcsaManuallyVerified === true ? 'Manually verified' : 'Pending manual verification' }}</dd>
+          <div class="detail-row"><dt>Years in practice</dt><dd>{{ yearsInPractice(doctor) }}</dd></div>
+          <div class="detail-row detail-row--full">
+            <dt>HPCSA certificate URL</dt>
+            <dd>
+              @if (certificateUrl(doctor); as certUrl) {
+                <a [href]="certUrl" target="_blank" rel="noopener noreferrer" class="detail-link">{{ certUrl }}</a>
+              } @else {
+                —
+              }
+            </dd>
           </div>
-          <div class="detail-row"><dt>Verification method</dt>
-            <dd>{{ field(doctor.hpcsaVerificationMethod) === '-' ? 'Manual verification' : field(doctor.hpcsaVerificationMethod) }}</dd>
+          <div class="detail-row detail-row--full">
+            <dt>Practice licence URL</dt>
+            <dd>
+              @if (licenseUrl(doctor); as licUrl) {
+                <a [href]="licUrl" target="_blank" rel="noopener noreferrer" class="detail-link">{{ licUrl }}</a>
+              } @else {
+                Not provided (optional)
+              }
+            </dd>
           </div>
-          <div class="detail-row"><dt>Verification reference</dt><dd>{{ field(doctor.hpcsaVerificationReference) }}</dd></div>
-          <div class="detail-row"><dt>Verified by</dt><dd>{{ field(doctor.hpcsaVerifiedBy) }}</dd></div>
+          <div class="detail-row"><dt>Medical aid affiliation</dt><dd>{{ medicalAidAffiliation(doctor) }}</dd></div>
+          <div class="detail-row"><dt>Admin HPCSA status</dt>
+            <dd>{{ doctor.hpcsaManuallyVerified === true ? 'Confirmed' : 'Not yet confirmed (set on approve)' }}</dd>
+          </div>
+          <div class="detail-row"><dt>Verification reference</dt><dd>{{ plain(doctor.hpcsaVerificationReference) }}</dd></div>
+          <div class="detail-row"><dt>Verified by</dt><dd>{{ plain(doctor.hpcsaVerifiedBy) }}</dd></div>
           <div class="detail-row"><dt>Verified at</dt><dd>{{ timestamp(doctor.hpcsaVerifiedAt) }}</dd></div>
           <div class="detail-row detail-row--full"><dt>Verification notes</dt><dd>{{ field(doctor.hpcsaReviewerNotes) }}</dd></div>
         </dl>
@@ -124,17 +151,18 @@
           [disabled]="isUpdating"
           (click)="recordManualHpcsa()"
         >
-          {{ doctor.hpcsaManuallyVerified === true ? 'Update manual HPCSA verification' : 'Record manual HPCSA verification' }}
+          {{ doctor.hpcsaManuallyVerified === true ? 'Update HPCSA verification notes' : 'Record HPCSA verification now' }}
         </button>
       </section>
 
       <section class="detail-section">
         <h3 class="detail-section-title">Practice information</h3>
         <dl class="detail-grid">
-          <div class="detail-row"><dt>Practice name</dt><dd>{{ field(doctor.practiceName) }}</dd></div>
-          <div class="detail-row"><dt>Practice type</dt><dd>{{ field(doctor.practiceType) }}</dd></div>
+          <div class="detail-row"><dt>Practice name</dt><dd>{{ plain(doctor.practiceName) }}</dd></div>
+          <div class="detail-row"><dt>Consultation types</dt><dd>{{ field(doctor.practiceType) }}</dd></div>
+          <div class="detail-row"><dt>Practice no. (BHF)</dt><dd>{{ plain(doctor.practiceNumberBhf || doctor['practiceNumber']) }}</dd></div>
+          <div class="detail-row"><dt>VAT number</dt><dd>{{ plain(doctor.vatNumber) }}</dd></div>
           <div class="detail-row"><dt>Facility</dt><dd>{{ field(doctor.practiceFacility) }}</dd></div>
-          <div class="detail-row"><dt>Practice no. (BHF)</dt><dd>{{ field(doctor.practiceNumberBhf) }}</dd></div>
           <div class="detail-row"><dt>Province</dt><dd>{{ field(doctor.practiceProvince) }}</dd></div>
           <div class="detail-row"><dt>City</dt><dd>{{ field(doctor.practiceCity) }}</dd></div>
           <div class="detail-row detail-row--full"><dt>Address</dt><dd>{{ practiceAddress(doctor) }}</dd></div>
@@ -144,15 +172,18 @@
       <section class="detail-section">
         <h3 class="detail-section-title">Contact</h3>
         <dl class="detail-grid">
-          <div class="detail-row"><dt>Phone</dt><dd>{{ field(doctor.phoneNumber) }}</dd></div>
-          <div class="detail-row"><dt>Email</dt><dd>{{ field(doctor.email) }}</dd></div>
+          <div class="detail-row"><dt>Phone</dt><dd>{{ plain(doctor.phoneNumber) }}</dd></div>
+          <div class="detail-row"><dt>Email</dt><dd>{{ plain(doctor.email) }}</dd></div>
           <div class="detail-row"><dt>Preferred contact</dt><dd>{{ contactMethods(doctor) }}</dd></div>
-          <div class="detail-row detail-row--full"><dt>Website / social</dt><dd>{{ field(doctor.websiteOrSocialLink) }}</dd></div>
+          <div class="detail-row detail-row--full"><dt>Website / social</dt><dd>{{ plain(doctor.websiteOrSocialLink) }}</dd></div>
         </dl>
       </section>
 
       <section class="detail-section">
         <h3 class="detail-section-title">Document review</h3>
+        <p class="detail-manual-note">
+          Doctors submit certificate links in the app (not file uploads). Open each link, then Verify or leave them pending — Approve also marks provided links as verified.
+        </p>
         @if (documents(doctor).length) {
           <div class="doc-review-list">
             @for (doc of documents(doctor); track doc.documentKey) {
@@ -168,58 +199,69 @@
                     [class.ops-badge--pending]="doc.status === 'pending' || doc.status === 'under_review'"
                     [class.ops-badge--red]="doc.status === 'rejected' || doc.status === 'requires_replacement'"
                   >
-                    {{ docStatusLabel(doc.status) }}
+                    {{ doc.url ? docStatusLabel(doc.status) : 'Not provided' }}
                   </span>
                 </div>
                 <dl class="detail-grid doc-review-meta">
-                  <div class="detail-row"><dt>Uploaded</dt><dd>Unavailable from source URL</dd></div>
-                  <div class="detail-row"><dt>Reviewer</dt><dd>{{ field(doc.reviewerId) }}</dd></div>
+                  <div class="detail-row detail-row--full">
+                    <dt>Source URL</dt>
+                    <dd>
+                      @if (doc.url) {
+                        <a [href]="doc.url" target="_blank" rel="noopener noreferrer" class="detail-link">{{ doc.url }}</a>
+                      } @else {
+                        Not provided
+                      }
+                    </dd>
+                  </div>
+                  <div class="detail-row"><dt>Reviewer</dt><dd>{{ plain(doc.reviewerId) }}</dd></div>
                   <div class="detail-row"><dt>Verification date</dt><dd>{{ timestamp(doc.reviewedAt) }}</dd></div>
                   <div class="detail-row detail-row--full"><dt>Reviewer notes</dt><dd>{{ field(doc.notes) }}</dd></div>
                 </dl>
-                <div class="doc-review-actions">
-                  <a
-                    class="ops-btn ops-btn--secondary"
-                    [routerLink]="'/certificat-viewer'"
-                    [queryParams]="{ file: doc.url, name: doc.documentName }"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Preview
-                  </a>
-                  <button
-                    type="button"
-                    class="ops-btn ops-btn--secondary"
-                    (click)="downloadDocument(doc.url, doc.documentName)"
-                    [disabled]="downloadingUrl === doc.url"
-                  >
-                    Download
-                  </button>
-                  <button
-                    type="button"
-                    class="ops-btn ops-btn--primary"
-                    [disabled]="isUpdating || doc.status === 'verified'"
-                    (click)="reviewDocument(doc, 'verified')"
-                  >
-                    Verify
-                  </button>
-                  <button
-                    type="button"
-                    class="ops-btn ops-btn--secondary"
-                    [disabled]="isUpdating"
-                    (click)="reviewDocument(doc, 'rejected')"
-                  >
-                    Reject
-                  </button>
-                  <button
-                    type="button"
-                    class="ops-btn ops-btn--secondary"
-                    [disabled]="isUpdating"
-                    (click)="reviewDocument(doc, 'requires_replacement')"
-                  >
-                    Request replacement
-                  </button>
-                </div>
+                @if (doc.url) {
+                  <div class="doc-review-actions">
+                    <a
+                      class="ops-btn ops-btn--secondary"
+                      [routerLink]="'/certificat-viewer'"
+                      [queryParams]="{ file: doc.url, name: doc.documentName }"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Preview
+                    </a>
+                    <button
+                      type="button"
+                      class="ops-btn ops-btn--secondary"
+                      (click)="downloadDocument(doc.url!, doc.documentName)"
+                      [disabled]="downloadingUrl === doc.url"
+                    >
+                      Download
+                    </button>
+                    <button
+                      type="button"
+                      class="ops-btn ops-btn--primary"
+                      [disabled]="isUpdating || doc.status === 'verified'"
+                      (click)="reviewDocument(doc, 'verified')"
+                    >
+                      Verify
+                    </button>
+                    <button
+                      type="button"
+                      class="ops-btn ops-btn--secondary"
+                      [disabled]="isUpdating"
+                      (click)="reviewDocument(doc, 'rejected')"
+                    >
+                      Reject
+                    </button>
+                    <button
+                      type="button"
+                      class="ops-btn ops-btn--secondary"
+                      [disabled]="isUpdating"
+                      (click)="reviewDocument(doc, 'requires_replacement')"
+                    >
+                      Request replacement
+                    </button>
+                  </div>
+                }
               </article>
             }
           </div>
@@ -261,8 +303,8 @@
             type="button"
             class="action-btn action-btn--approve"
             [disabled]="isUpdating || !approvalReady(doctor)"
-            [attr.title]="!approvalReady(doctor) ? 'Complete all required verification steps before approving this doctor.' : null"
-            (click)="requestApprove()"
+            [attr.title]="!approvalReady(doctor) ? 'Resolve checklist items before approving.' : null"
+            (click)="openDecisionModal('approve')"
           >
             <nz-icon nzType="check-circle" nzTheme="outline"></nz-icon>
             Approve Doctor
@@ -271,7 +313,7 @@
             type="button"
             class="action-btn action-btn--reject"
             [disabled]="isUpdating"
-            (click)="updateDoctorStatus(id, 'rejected', 'reject')"
+            (click)="openDecisionModal('reject')"
           >
             <nz-icon nzType="close-circle" nzTheme="outline"></nz-icon>
             Reject Application
@@ -281,7 +323,7 @@
               type="button"
               class="action-btn action-btn--hold"
               [disabled]="isUpdating"
-              (click)="updateDoctorStatus(id, 'on_hold', 'hold')"
+              (click)="openDecisionModal('hold')"
             >
               Hold for review
             </button>
@@ -290,7 +332,7 @@
             type="button"
             class="action-btn action-btn--info"
             [disabled]="isUpdating"
-            (click)="requestMoreInformation()"
+            (click)="openDecisionModal('request_info')"
           >
             Request More Information
           </button>
@@ -298,7 +340,7 @@
             type="button"
             class="action-btn action-btn--suspend"
             [disabled]="isUpdating"
-            (click)="updateDoctorStatus(id, 'suspended', 'suspend')"
+            (click)="openDecisionModal('suspend')"
           >
             <nz-icon nzType="warning" nzTheme="outline"></nz-icon>
             Suspend account
@@ -306,7 +348,7 @@
         </div>
         @if (!approvalReady(doctor)) {
           <p class="approve-blocked-hint">
-            Complete all required verification steps before approving this doctor.
+            Resolve the checklist items above before approving.
             @for (reason of approvalBlockReasonsList(doctor); track reason) {
               <br />• {{ reason }}
             }
@@ -319,7 +361,7 @@
             type="button"
             class="action-btn action-btn--hold"
             [disabled]="isUpdating"
-            (click)="updateDoctorStatus(id, 'on_hold', 'hold')"
+            (click)="openDecisionModal('hold')"
           >
             Hold for review
           </button>
@@ -327,7 +369,7 @@
             type="button"
             class="action-btn action-btn--suspend"
             [disabled]="isUpdating"
-            (click)="updateDoctorStatus(id, 'suspended', 'suspend')"
+            (click)="openDecisionModal('suspend')"
           >
             <nz-icon nzType="warning" nzTheme="outline"></nz-icon>
             Suspend account
@@ -339,7 +381,7 @@
           type="button"
           class="action-btn action-btn--approve"
           [disabled]="isUpdating || !approvalReady(doctor)"
-          (click)="requestApprove()"
+          (click)="openDecisionModal('approve')"
         >
           <nz-icon nzType="check-circle" nzTheme="outline"></nz-icon>
           Reinstate doctor
@@ -348,22 +390,110 @@
     </div>
   </div>
 
-  @if (showApproveConfirm) {
-    <div class="confirm-overlay" role="dialog" aria-modal="true" aria-labelledby="approve-title">
-      <div class="confirm-dialog">
-        <h3 id="approve-title">Approve doctor?</h3>
-        <p>
-          Approving this doctor will activate their practice account and allow them to begin accepting patients on Anixi.
-        </p>
-        <p class="confirm-doctor">
-          Doctor: <strong>{{ displayName(doctor) }}</strong>
-        </p>
-        <div class="confirm-dialog__actions">
-          <button type="button" class="ops-btn ops-btn--secondary" (click)="cancelApproveConfirm()" [disabled]="isUpdating">
+  @if (decisionModal; as modal) {
+    <div
+      class="confirm-overlay"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-labelledby]="'decision-modal-title'"
+      (click)="closeDecisionModal()"
+    >
+      <div
+        class="decision-dialog"
+        [class.decision-dialog--approve]="decisionModalTone(modal.kind) === 'approve'"
+        [class.decision-dialog--danger]="decisionModalTone(modal.kind) === 'danger'"
+        [class.decision-dialog--hold]="decisionModalTone(modal.kind) === 'hold'"
+        [class.decision-dialog--info]="decisionModalTone(modal.kind) === 'info'"
+        (click)="$event.stopPropagation()"
+      >
+        <div class="decision-dialog__accent"></div>
+        <div class="decision-dialog__header">
+          <div class="decision-dialog__icon" aria-hidden="true">
+            @switch (modal.kind) {
+              @case ('approve') {
+                <nz-icon nzType="check-circle" nzTheme="outline"></nz-icon>
+              }
+              @case ('reject') {
+                <nz-icon nzType="close-circle" nzTheme="outline"></nz-icon>
+              }
+              @case ('hold') {
+                <nz-icon nzType="pause-circle" nzTheme="outline"></nz-icon>
+              }
+              @case ('suspend') {
+                <nz-icon nzType="warning" nzTheme="outline"></nz-icon>
+              }
+              @case ('request_info') {
+                <nz-icon nzType="mail" nzTheme="outline"></nz-icon>
+              }
+            }
+          </div>
+          <div class="decision-dialog__heading">
+            <p class="decision-dialog__eyebrow">Verification decision</p>
+            <h3 id="decision-modal-title">{{ decisionModalTitle(modal.kind) }}</h3>
+          </div>
+          <button
+            type="button"
+            class="decision-dialog__close"
+            (click)="closeDecisionModal()"
+            [disabled]="isUpdating"
+            aria-label="Close"
+          >
+            <nz-icon nzType="close" nzTheme="outline"></nz-icon>
+          </button>
+        </div>
+
+        <p class="decision-dialog__body">{{ decisionModalBody(modal.kind) }}</p>
+
+        <div class="decision-dialog__doctor">
+          <span class="decision-dialog__doctor-label">Doctor</span>
+          <strong>{{ displayName(doctor) }}</strong>
+          <span class="decision-dialog__doctor-meta">
+            {{ specialty(doctor) }}
+            @if (field(doctor.practiceCity) !== '-') {
+              · {{ field(doctor.practiceCity) }}
+            }
+          </span>
+        </div>
+
+        @if (decisionModalRequiresReason(modal.kind)) {
+          <label class="decision-dialog__field">
+            <span class="decision-dialog__field-label">
+              {{ decisionModalReasonLabel(modal.kind) }}
+              <em>Required</em>
+            </span>
+            <textarea
+              rows="4"
+              [value]="modal.reason"
+              [placeholder]="decisionModalReasonPlaceholder(modal.kind)"
+              [disabled]="isUpdating"
+              (input)="onDecisionReasonChange($any($event.target).value)"
+            ></textarea>
+            @if (modal.error) {
+              <span class="decision-dialog__error">{{ modal.error }}</span>
+            }
+          </label>
+        }
+
+        <div class="decision-dialog__actions">
+          <button
+            type="button"
+            class="ops-btn ops-btn--secondary"
+            (click)="closeDecisionModal()"
+            [disabled]="isUpdating"
+          >
             Cancel
           </button>
-          <button type="button" class="ops-btn ops-btn--primary" (click)="confirmApprove()" [disabled]="isUpdating">
-            {{ isUpdating ? 'Approving…' : 'Approve Doctor' }}
+          <button
+            type="button"
+            class="ops-btn"
+            [class.ops-btn--primary]="modal.kind === 'approve'"
+            [class.ops-btn--danger]="modal.kind === 'reject' || modal.kind === 'suspend'"
+            [class.ops-btn--hold]="modal.kind === 'hold'"
+            [class.ops-btn--info]="modal.kind === 'request_info'"
+            (click)="confirmDecisionModal()"
+            [disabled]="isUpdating"
+          >
+            {{ isUpdating ? 'Saving…' : decisionModalConfirmLabel(modal.kind) }}
           </button>
         </div>
       </div>

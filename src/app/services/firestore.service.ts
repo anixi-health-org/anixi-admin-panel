@@ -20,7 +20,12 @@ import {
   DocumentReviewStatus,
   DoctorDocumentKey,
 } from '../utils/doctor-verification.utils';
-import { DoctorRecord, isDoctorVerificationCandidate } from '../utils/doctor-record.utils';
+import {
+  DoctorRecord,
+  getCertificateUrl,
+  getPracticeLicenseUrl,
+  isDoctorVerificationCandidate,
+} from '../utils/doctor-record.utils';
 import {
   getPracticeName,
   getPracticeOrgType,
@@ -88,18 +93,21 @@ export class FirestoreService {
   ): Promise<{ verified: boolean; status: string | null }> {
     const ref = doc(this.db, `doctors/${doctorId}`);
     const adminId = this.authService.getAdminUserId();
+    let doctorForApprove: DoctorRecord | null = null;
 
     if (status === 'approved') {
       const current = await getDoc(ref);
       if (!current.exists()) {
         throw new Error('Doctor record not found.');
       }
-      const doctor = {
+      doctorForApprove = {
         ...(current.data() as DoctorRecord),
         id: doctorId,
       };
-      if (!canApproveDoctor(doctor)) {
-        throw new Error(`Cannot approve: ${approvalBlockReasons(doctor).join(' | ')}`);
+      if (!canApproveDoctor(doctorForApprove)) {
+        throw new Error(
+          `Cannot approve: ${approvalBlockReasons(doctorForApprove).join(' | ')}`
+        );
       }
     }
 
@@ -134,8 +142,50 @@ export class FirestoreService {
         payload['rejectionReason'] = options.reason.trim();
       }
     }
-    if (status === 'approved') {
+    if (status === 'approved' && doctorForApprove) {
       payload['informationRequested'] = false;
+      // Approving records admin satisfaction and unlocks practice access.
+      payload['identityVerified'] = true;
+      payload['identityVerifiedAt'] = serverTimestamp();
+      payload['identityVerifiedBy'] = adminId;
+      payload['hpcsaManuallyVerified'] = true;
+      payload['hpcsaVerificationMethod'] = 'manual';
+      payload['hpcsaVerifiedAt'] = serverTimestamp();
+      payload['hpcsaVerifiedBy'] = adminId;
+
+      const reviews: Record<string, unknown> = {
+        ...((doctorForApprove.documentReviews as Record<string, unknown>) || {}),
+      };
+      for (const key of [
+        'hpcsa_certificate',
+        'practice_license',
+        'medical_aid_contract',
+      ] as const) {
+        const url =
+          key === 'hpcsa_certificate'
+            ? getCertificateUrl(doctorForApprove)
+            : key === 'practice_license'
+              ? getPracticeLicenseUrl(doctorForApprove)
+              : ((doctorForApprove.medicalAidContractUrl as string) || '').trim() ||
+                null;
+        if (!url) continue;
+        const existing = (reviews[key] as Record<string, unknown> | undefined) || {};
+        if (
+          existing['status'] === 'rejected' ||
+          existing['status'] === 'requires_replacement'
+        ) {
+          continue;
+        }
+        reviews[key] = {
+          ...existing,
+          status: 'verified',
+          reviewerId: adminId,
+          reviewedAt: new Date(),
+          notes:
+            (existing['notes'] as string) || 'Marked verified on approval',
+        };
+      }
+      payload['documentReviews'] = reviews;
     }
     if (status === 'rejected' || status === 'pending' || status === 'on_hold') {
       // verificationStatus is the source of truth for doctor web/mobile access.

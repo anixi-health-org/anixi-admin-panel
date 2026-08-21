@@ -23,6 +23,7 @@ import {NzUploadModule} from 'ng-zorro-antd/upload';
 import { PdfViewerComponent } from './pdf-viewer/pdf-viewer.component';
 import { AnixiLogoComponent } from '../components/brand/anixi-logo.component';
 import { AdminProfileMenuComponent } from '../components/admin-profile-menu/admin-profile-menu.component';
+import { AdminNotificationsMenuComponent } from '../components/admin-notifications-menu/admin-notifications-menu.component';
 import {NzSkeletonModule} from 'ng-zorro-antd/skeleton';
 import {NzResultModule} from 'ng-zorro-antd/result';
 import {NzSpinModule} from 'ng-zorro-antd/spin';
@@ -31,6 +32,7 @@ import {NzPopconfirmModule} from 'ng-zorro-antd/popconfirm';
 import { LinkifyPipe } from '../pipes/linkify-pipe';
 import { UsersComponent } from './users/users.component';
 import { EstablishmentsComponent } from './establishments/establishments.component';
+import { NotificationsComponent } from './notifications/notifications.component';
 import { RichTextEditorComponent } from '../components/rich-text-editor/rich-text-editor.component';
 
 @NgModule({
@@ -48,8 +50,10 @@ import { RichTextEditorComponent } from '../components/rich-text-editor/rich-tex
     LinkifyPipe,
     UsersComponent,
     EstablishmentsComponent,
+    NotificationsComponent,
     AnixiLogoComponent,
     AdminProfileMenuComponent,
+    AdminNotificationsMenuComponent,
     RichTextEditorComponent
   ],
   imports: [
