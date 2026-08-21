@@ -29,7 +29,6 @@ const navGroups: NavGroup[] = [
       { name: 'Doctor Verification', icon: 'stethoscope', path: '/doctor-verification' },
       { name: 'Clinics', icon: 'building-2', path: '/establishments' },
       { name: 'Patients / Users', icon: 'users', path: '/users' },
-      { name: 'Appointments', icon: 'calendar', comingSoon: true },
     ],
   },
   {
@@ -59,7 +58,7 @@ const navGroups: NavGroup[] = [
   {
     label: 'Platform',
     items: [
-      { name: 'Notifications', icon: 'bell', comingSoon: true },
+      { name: 'Notifications', icon: 'bell', path: '/notifications' },
       { name: 'Analytics', icon: 'chart-column', comingSoon: true },
       { name: 'Settings', icon: 'settings', comingSoon: true },
     ],
@@ -135,11 +134,6 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
       );
     }
     return this.currentPath === item.path || this.currentPath.startsWith(`${item.path}/`);
-  }
-
-  roleLabel(): string {
-    if (!this.adminUser?.role) return 'Administrator';
-    return this.adminUser.role === 'super_admin' ? 'Super admin' : 'Administrator';
   }
 
   onSearchSubmit(): void {

@@ -23,6 +23,7 @@ export type DoctorRecord = Record<string, unknown> & {
   practiceType?: string | string[];
   practiceName?: string;
   practiceNumberBhf?: string;
+  vatNumber?: string;
   practiceFacility?: string;
   practiceProvince?: string;
   practiceCity?: string;
@@ -31,6 +32,7 @@ export type DoctorRecord = Record<string, unknown> & {
   phoneNumber?: string;
   email?: string;
   preferredContactMethods?: string[];
+  contactMethodDetails?: unknown;
   websiteOrSocialLink?: string;
   profileImageUrl?: string;
   logoUrl?: string;
@@ -85,13 +87,16 @@ export function isClinicAdminAccount(doctor: DoctorRecord): boolean {
 
 /**
  * Records that belong in Doctor Verification.
- * Excludes clinic admins and incomplete applications that have not been submitted for review.
+ * Excludes clinic admins and incomplete web onboarding drafts
+ * (`applicationComplete: false`). Mobile signups historically omitted the
+ * flag while still writing `verificationStatus: 'pending'` — treat missing
+ * as submitted so they appear in Pending Review.
  */
 export function isDoctorVerificationCandidate(doctor: DoctorRecord): boolean {
   if (isClinicAdminAccount(doctor)) return false;
 
   const status = normalizeVerificationStatus(doctor.verificationStatus);
-  if (status === 'pending' && doctor['applicationComplete'] !== true) {
+  if (status === 'pending' && doctor['applicationComplete'] === false) {
     return false;
   }
 

@@ -9,6 +9,7 @@ import { ContentEditorComponent } from './content-editor/content-editor.componen
 import { PdfViewerComponent } from './pdf-viewer/pdf-viewer.component';
 import { UsersComponent } from './users/users.component';
 import { EstablishmentsComponent } from './establishments/establishments.component';
+import { NotificationsComponent } from './notifications/notifications.component';
 import { authGuard } from '../guards/auth.guard';
 import { guestGuard } from '../guards/guest.guard';
 
@@ -32,6 +33,7 @@ const routes: Routes = [
       { path: 'establishments', component: EstablishmentsComponent },
       { path: 'certificat-viewer', component: PdfViewerComponent },
       { path: 'users', component: UsersComponent },
+      { path: 'notifications', component: NotificationsComponent },
     ],
   },
   { path: '**', redirectTo: 'dashboard' },

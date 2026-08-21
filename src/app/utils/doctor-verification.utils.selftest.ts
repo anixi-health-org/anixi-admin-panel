@@ -18,83 +18,98 @@ function baseDoctor(overrides: Partial<DoctorRecord> = {}): DoctorRecord {
     id: 'doc-1',
     fullName: 'Dr Test',
     email: 'doctor@test.com',
-    identityVerified: true,
+    identityVerified: false,
     hpcsaRegistrationNumber: 'MP123',
-    hpcsaManuallyVerified: true,
+    hpcsaManuallyVerified: false,
     hpcsaCertificateUrl: 'https://example.com/cert.pdf',
-    practiceLicenseUrl: 'https://example.com/licence.pdf',
-    documentReviews: {
-      hpcsa_certificate: { status: 'verified' },
-      practice_license: { status: 'verified' },
-    },
+    practiceLicenseUrl: '',
     practiceName: 'Test Practice',
     medicalSpecialty: 'GP',
-    practiceCity: 'Durban',
-    practiceProvince: 'KZN',
-    practiceAddress: '1 Main Rd',
-    practiceType: 'Private',
+    practiceType: ['in-practice', 'telehealth'],
     ...overrides,
   };
 }
 
 function run(): void {
-  // Happy path
+  // Happy path — profile essentials from the mobile app are enough to approve
   assert(canApproveDoctor(baseDoctor()), 'complete doctor should be approvable');
-  assert(isPracticeProfileComplete(baseDoctor()), 'practice profile should be complete');
-
-  // Missing identity verification
   assert(
-    !canApproveDoctor(baseDoctor({ identityVerified: false })),
-    'missing identity must block approve'
+    isPracticeProfileComplete(baseDoctor()),
+    'practice profile should be complete'
   );
 
-  // Missing HPCSA
+  // McRoy-style: admin flags not set yet, optional licence missing, location empty
   assert(
-    !canApproveDoctor(baseDoctor({ hpcsaManuallyVerified: false })),
-    'missing HPCSA must block approve'
+    canApproveDoctor(
+      baseDoctor({
+        identityVerified: false,
+        hpcsaManuallyVerified: false,
+        practiceLicenseUrl: '',
+        practiceCity: '',
+        practiceProvince: '',
+        practiceAddress: '',
+      })
+    ),
+    'provided profile without admin stamps must be approvable'
   );
 
-  // Missing required document upload
+  // Missing identity data
+  assert(
+    !canApproveDoctor(baseDoctor({ fullName: '', displayName: '', email: '' })),
+    'missing name/email must block approve'
+  );
+
+  // Missing HPCSA registration number
+  assert(
+    !canApproveDoctor(
+      baseDoctor({ hpcsaRegistrationNumber: '', licenseNumber: '' })
+    ),
+    'missing registration must block approve'
+  );
+
+  // Optional licence missing must NOT block
   const missingLicence = baseDoctor({ practiceLicenseUrl: '' });
   const docsMissing = requiredDocumentsSummary(missingLicence);
-  assert(docsMissing.done === false, 'missing licence upload must fail docs');
-  assert(docsMissing.missing.includes('Practice licence'), 'must report missing licence');
-  assert(!canApproveDoctor(missingLicence), 'missing licence must block approve');
+  assert(docsMissing.done === true, 'optional licence must not fail docs');
+  assert(canApproveDoctor(missingLicence), 'optional licence must not block approve');
 
-  // Rejected document
+  // Rejected document blocks
   const rejected = baseDoctor({
     documentReviews: {
-      hpcsa_certificate: { status: 'verified' },
-      practice_license: { status: 'rejected' },
+      hpcsa_certificate: { status: 'rejected' },
     },
   });
   assert(!canApproveDoctor(rejected), 'rejected document must block approve');
 
-  // Replacement requested
+  // Replacement requested blocks
   const replacement = baseDoctor({
     documentReviews: {
       hpcsa_certificate: { status: 'requires_replacement' },
-      practice_license: { status: 'verified' },
     },
   });
   assert(!canApproveDoctor(replacement), 'replacement requested must block approve');
 
-  // Incomplete practice profile
-  const incompletePractice = baseDoctor({ practiceAddress: '' });
+  // Incomplete practice essentials
+  const incompletePractice = baseDoctor({ practiceName: '' });
   assert(
     !isPracticeProfileComplete(incompletePractice),
-    'empty practice address must be incomplete'
+    'empty practice name must be incomplete'
   );
-  assert(!canApproveDoctor(incompletePractice), 'incomplete practice must block approve');
+  assert(
+    !canApproveDoctor(incompletePractice),
+    'incomplete practice must block approve'
+  );
 
-  // Practice must not pass on a single soft field
+  // Address alone is not required
+  assert(
+    isPracticeProfileComplete(baseDoctor({ practiceAddress: '' })),
+    'empty address must still be practice-complete'
+  );
+
   const softOnly = baseDoctor({
     practiceName: '',
     medicalSpecialty: 'GP',
     specialty: 'GP',
-    practiceCity: '',
-    practiceProvince: '',
-    practiceAddress: '',
     practiceType: '',
   });
   assert(
@@ -103,7 +118,7 @@ function run(): void {
   );
 
   const reasons = approvalBlockReasons(
-    baseDoctor({ identityVerified: false, hpcsaManuallyVerified: false })
+    baseDoctor({ fullName: '', displayName: '', email: '', practiceName: '' })
   );
   assert(reasons.length >= 2, 'block reasons should list incomplete steps');
   assert(

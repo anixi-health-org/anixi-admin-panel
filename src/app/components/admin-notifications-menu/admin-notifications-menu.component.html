@@ -1,0 +1,68 @@
+<div class="notif-menu">
+  <button
+    type="button"
+    class="notif-trigger"
+    (click)="toggle()"
+    [attr.aria-expanded]="isOpen"
+    aria-haspopup="menu"
+    aria-label="Notifications"
+    title="Notifications"
+  >
+    <lucide-icon name="bell" class="notif-trigger__icon"></lucide-icon>
+    @if (unreadCount > 0) {
+      <span class="notif-badge" aria-label="{{ unreadCount }} unread">
+        {{ unreadCount > 9 ? '9+' : unreadCount }}
+      </span>
+    }
+  </button>
+
+  @if (isOpen) {
+    <div class="notif-dropdown" role="menu">
+      <div class="notif-dropdown__header">
+        <div>
+          <p class="notif-dropdown__title">Notifications</p>
+          <p class="notif-dropdown__subtitle">
+            {{ unreadCount }} unread
+          </p>
+        </div>
+        @if (unreadCount > 0) {
+          <button type="button" class="notif-link-btn" (click)="markAllRead()">
+            Mark all read
+          </button>
+        }
+      </div>
+
+      <div class="notif-dropdown__list">
+        @if (notifications.length === 0) {
+          <div class="notif-empty">
+            <p>No notifications yet</p>
+            <span>New doctor applications will show up here.</span>
+          </div>
+        } @else {
+          @for (item of notifications.slice(0, 8); track item.id) {
+            <button
+              type="button"
+              class="notif-item"
+              [class.notif-item--unread]="isUnread(item)"
+              role="menuitem"
+              (click)="openNotification(item)"
+            >
+              <span class="notif-item__dot" aria-hidden="true"></span>
+              <span class="notif-item__copy">
+                <strong>{{ item.title }}</strong>
+                <span>{{ item.body }}</span>
+                <time>{{ formatWhen(item) }}</time>
+              </span>
+            </button>
+          }
+        }
+      </div>
+
+      <div class="notif-dropdown__footer">
+        <button type="button" class="notif-footer-btn" (click)="viewAll()">
+          View all notifications
+        </button>
+      </div>
+    </div>
+  }
+</div>
