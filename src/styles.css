@@ -298,6 +298,13 @@ body.content-modal-open {
   border-color: #d9e0e7;
 }
 
+.ops-badge--on_hold,
+.ops-badge--hold {
+  color: #9a6110;
+  background: #fbf4ea;
+  border-color: #f0d9b0;
+}
+
 .ops-badge--scheduled,
 .ops-badge--blue {
   color: #3a4f8f;

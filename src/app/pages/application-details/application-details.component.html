@@ -255,7 +255,7 @@
 
     <div class="detail-actions">
       <p class="detail-actions-label">Verification decision</p>
-      @if (statusOf(doctor) === 'pending' || statusOf(doctor) === 'rejected') {
+      @if (statusOf(doctor) === 'pending' || statusOf(doctor) === 'rejected' || statusOf(doctor) === 'on_hold') {
         <div class="detail-actions-row">
           <button
             type="button"
@@ -276,6 +276,16 @@
             <nz-icon nzType="close-circle" nzTheme="outline"></nz-icon>
             Reject Application
           </button>
+          @if (statusOf(doctor) !== 'on_hold') {
+            <button
+              type="button"
+              class="action-btn action-btn--hold"
+              [disabled]="isUpdating"
+              (click)="updateDoctorStatus(id, 'on_hold', 'hold')"
+            >
+              Hold for review
+            </button>
+          }
           <button
             type="button"
             class="action-btn action-btn--info"
@@ -283,6 +293,15 @@
             (click)="requestMoreInformation()"
           >
             Request More Information
+          </button>
+          <button
+            type="button"
+            class="action-btn action-btn--suspend"
+            [disabled]="isUpdating"
+            (click)="updateDoctorStatus(id, 'suspended', 'suspend')"
+          >
+            <nz-icon nzType="warning" nzTheme="outline"></nz-icon>
+            Suspend account
           </button>
         </div>
         @if (!approvalReady(doctor)) {
@@ -295,15 +314,25 @@
         }
       }
       @if (statusOf(doctor) === 'approved') {
-        <button
-          type="button"
-          class="action-btn action-btn--suspend"
-          [disabled]="isUpdating"
-          (click)="updateDoctorStatus(id, 'suspended', 'suspend')"
-        >
-          <nz-icon nzType="warning" nzTheme="outline"></nz-icon>
-          Suspend doctor
-        </button>
+        <div class="detail-actions-row">
+          <button
+            type="button"
+            class="action-btn action-btn--hold"
+            [disabled]="isUpdating"
+            (click)="updateDoctorStatus(id, 'on_hold', 'hold')"
+          >
+            Hold for review
+          </button>
+          <button
+            type="button"
+            class="action-btn action-btn--suspend"
+            [disabled]="isUpdating"
+            (click)="updateDoctorStatus(id, 'suspended', 'suspend')"
+          >
+            <nz-icon nzType="warning" nzTheme="outline"></nz-icon>
+            Suspend account
+          </button>
+        </div>
       }
       @if (statusOf(doctor) === 'suspended') {
         <button

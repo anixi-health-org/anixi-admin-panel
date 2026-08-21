@@ -13,7 +13,7 @@
     @for (card of statCards; track card.label) {
       <article
         class="ops-metric"
-        [class.ops-metric--amber]="card.status === 'pending'"
+        [class.ops-metric--amber]="card.status === 'pending' || card.status === 'on_hold'"
         [class.ops-metric--green]="card.status === 'approved'"
         [class.ops-metric--red]="card.status === 'rejected'"
         [class.ops-metric--slate]="card.status === 'suspended'"
@@ -70,10 +70,10 @@
               [class.ops-list-row--active]="selectedDoctorId === doctor.id"
               (click)="setSelectedDoctor(doctor)"
             >
-              @if (doctor.profileImageUrl || doctor.logoUrl) {
+              @if (profilePhoto(doctor)) {
                 <img
                   class="ops-avatar"
-                  [src]="doctor.profileImageUrl || doctor.logoUrl"
+                  [src]="profilePhoto(doctor)!"
                   alt=""
                 />
               } @else {

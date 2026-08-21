@@ -16,12 +16,14 @@ import { BreakpointObserver } from '@angular/cdk/layout';
 import {
   doctorMatchesSearch,
   getDoctorDisplayName,
+  getDoctorProfilePhotoUrl,
   isDoctorVerificationCandidate,
   normalizeVerificationStatus,
 } from '../../utils/doctor-record.utils';
 
 const statCards = [
   { label: 'Pending Review', status: 'pending', color: '#f69e23' },
+  { label: 'On hold', status: 'on_hold', color: '#9a6110' },
   { label: 'Approved', status: 'approved', color: '#2cab6f' },
   { label: 'Rejected', status: 'rejected', color: '#dc2928' },
   { label: 'Suspended', status: 'suspended', color: '#66758a' },
@@ -30,6 +32,7 @@ const statCards = [
 const customInput = [
   { label: 'All', value: 'all' },
   { label: 'Pending', value: 'pending' },
+  { label: 'On hold', value: 'on_hold' },
   { label: 'Approved', value: 'approved' },
   { label: 'Rejected', value: 'rejected' },
   { label: 'Suspended', value: 'suspended' },
@@ -54,6 +57,7 @@ export class DoctorVerificationComponent implements OnInit, OnDestroy {
   pendingCount$!: Observable<number>;
   rejectedCount$!: Observable<number>;
   suspendedCount$!: Observable<number>;
+  onHoldCount$!: Observable<number>;
   isLoadingSkeleton = true;
   private sub = new Subscription();
   isResponsive = false;
@@ -68,7 +72,7 @@ export class DoctorVerificationComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.route.queryParamMap.subscribe((params) => {
       const status = params.get('status');
-      if (status && ['all', 'pending', 'approved', 'rejected', 'suspended'].includes(status)) {
+      if (status && ['all', 'pending', 'approved', 'rejected', 'suspended', 'on_hold'].includes(status)) {
         this.verificationStatus.setValue(status);
       }
     });
@@ -121,6 +125,12 @@ export class DoctorVerificationComponent implements OnInit, OnDestroy {
           .length
       )
     );
+    this.onHoldCount$ = this.doctorList$.pipe(
+      map((doctors) =>
+        doctors.filter((d) => normalizeVerificationStatus(d.verificationStatus) === 'on_hold')
+          .length
+      )
+    );
 
     this.sub.add(
       this.breakPoint.observe('(max-width:980px)').subscribe((result) => {
@@ -145,6 +155,8 @@ export class DoctorVerificationComponent implements OnInit, OnDestroy {
         return this.rejectedCount$;
       case 'suspended':
         return this.suspendedCount$;
+      case 'on_hold':
+        return this.onHoldCount$;
       case 'all':
         return this.totalCount$;
       default:
@@ -154,6 +166,10 @@ export class DoctorVerificationComponent implements OnInit, OnDestroy {
 
   doctorName(doctor: any): string {
     return getDoctorDisplayName(doctor);
+  }
+
+  profilePhoto(doctor: any): string | null {
+    return getDoctorProfilePhotoUrl(doctor);
   }
 
   doctorStatus(doctor: any): string {

@@ -26,6 +26,11 @@ export class UtilFunctions {
             icon = 'warning';
             bgColor = '#fbfbfb';
             break;
+          case 'on_hold':
+            color = '#9a6110';
+            icon = 'pause-circle';
+            bgColor = '#fbf4ea';
+            break;
           default:
             color = '#f69e23';
             icon = 'history';

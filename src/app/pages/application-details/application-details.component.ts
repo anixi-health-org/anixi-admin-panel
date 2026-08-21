@@ -14,6 +14,7 @@ import {
   formatTimestamp,
   getCertificateUrl,
   getDoctorDisplayName,
+  getDoctorProfilePhotoUrl,
   getPracticeLicenseUrl,
   normalizeVerificationStatus,
   VerificationStatus,
@@ -102,9 +103,7 @@ export class ApplicationDetailsComponent {
   }
 
   profileImage(doctor: DoctorRecord): string | null {
-    const url =
-      (doctor.profileImageUrl as string) || (doctor.logoUrl as string) || null;
-    return url && url.trim() ? url : null;
+    return getDoctorProfilePhotoUrl(doctor);
   }
 
   specialty(doctor: DoctorRecord): string {
@@ -253,11 +252,13 @@ export class ApplicationDetailsComponent {
     if (this.isUpdating || !this.doctor) return;
 
     let reason: string | undefined;
-    if (status === 'rejected' || status === 'suspended') {
+    if (status === 'rejected' || status === 'suspended' || status === 'on_hold') {
       const prompted = window.prompt(
         status === 'rejected'
           ? 'Reason for rejection (required):'
-          : 'Reason for suspension (required):'
+          : status === 'on_hold'
+            ? 'Reason for holding this account for further review (required):'
+            : 'Reason for suspension (required):'
       );
       if (prompted === null) return;
       reason = prompted.trim();
