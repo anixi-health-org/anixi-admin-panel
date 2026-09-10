@@ -8,7 +8,7 @@ import { DoctorVerificationComponent } from './doctor-verification/doctor-verifi
 import { DashboardComponent } from './dashboard/dashboard.component';
 import { NzLayoutModule } from 'ng-zorro-antd/layout';
 import {NzIconModule} from 'ng-zorro-antd/icon';
-import {Activity, BarChart3, Bell, Building2, Calendar, ChartColumn, CheckCircle, ChevronDown, ClipboardList, Clock, Download, ExternalLink, Eye, FilePen, FileText, LayoutDashboard, LogOut, LucideAngularModule, MessageSquare, ScrollText, Search, Settings, Shield, ShieldCheck, Sparkles, Stethoscope, TriangleAlert, Users, UserX} from 'lucide-angular';
+import {Activity, BarChart3, Bell, Building2, Calendar, ChartColumn, CheckCircle, ChevronDown, ClipboardList, Clock, Download, ExternalLink, Eye, FilePen, FileText, LayoutDashboard, LogOut, LucideAngularModule, MessageSquare, ScrollText, Search, Settings, Shield, ShieldCheck, Sparkles, Stethoscope, Store, TriangleAlert, Users, UserX} from 'lucide-angular';
 import {NzAvatarModule} from 'ng-zorro-antd/avatar';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ApplicationDetailsComponent } from './application-details/application-details.component'
@@ -33,6 +33,7 @@ import { LinkifyPipe } from '../pipes/linkify-pipe';
 import { UsersComponent } from './users/users.component';
 import { EstablishmentsComponent } from './establishments/establishments.component';
 import { NotificationsComponent } from './notifications/notifications.component';
+import { MarketplacePartnersComponent } from './marketplace-partners/marketplace-partners.component';
 import { RichTextEditorComponent } from '../components/rich-text-editor/rich-text-editor.component';
 
 @NgModule({
@@ -51,6 +52,7 @@ import { RichTextEditorComponent } from '../components/rich-text-editor/rich-tex
     UsersComponent,
     EstablishmentsComponent,
     NotificationsComponent,
+    MarketplacePartnersComponent,
     AnixiLogoComponent,
     AdminProfileMenuComponent,
     AdminNotificationsMenuComponent,
@@ -69,7 +71,7 @@ import { RichTextEditorComponent } from '../components/rich-text-editor/rich-tex
       MessageSquare, Bell, UserX, TriangleAlert, ChevronDown, LogOut,
       ShieldCheck, Sparkles, Download, ExternalLink, Search, Calendar,
       ClipboardList, CheckCircle, FilePen, Clock, ChartColumn, BarChart3,
-      Settings, ScrollText, Shield, Building2
+      Settings, ScrollText, Shield, Building2, Store
     }),
     NzButtonComponent,
     NgxEchartsDirective,

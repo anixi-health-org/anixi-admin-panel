@@ -1,0 +1,159 @@
+<div class="ops-page">
+  <header class="ops-page-header">
+    <div class="ops-page-header__copy">
+      <p class="ops-page-header__eyebrow">Marketplace</p>
+      <h1 class="ops-page-header__title">Partners</h1>
+      <p class="ops-page-header__subtitle">
+        Onboard wellness providers and pharmacies for the patient Market tab. Publish only after verification.
+      </p>
+    </div>
+  </header>
+
+  <div class="marketplace-tabs">
+    <button
+      type="button"
+      class="ops-btn"
+      [class.ops-btn--primary]="tab === 'wellness'"
+      [class.ops-btn--secondary]="tab !== 'wellness'"
+      (click)="setTab('wellness')"
+    >
+      Wellness
+    </button>
+    <button
+      type="button"
+      class="ops-btn"
+      [class.ops-btn--primary]="tab === 'pharmacies'"
+      [class.ops-btn--secondary]="tab !== 'pharmacies'"
+      (click)="setTab('pharmacies')"
+    >
+      Pharmacies
+    </button>
+  </div>
+
+  @if (message) {
+    <p class="marketplace-flash marketplace-flash--ok">{{ message }}</p>
+  }
+  @if (error) {
+    <p class="marketplace-flash marketplace-flash--err">{{ error }}</p>
+  }
+
+  @if (tab === 'wellness') {
+    <div class="users-layout">
+      <section class="ops-panel">
+        <div class="ops-panel__header">
+          <h2 class="ops-panel__title">{{ editingId ? 'Edit' : 'Add' }} wellness partner</h2>
+        </div>
+        <form class="marketplace-form" [formGroup]="wellnessForm" (ngSubmit)="saveWellness()">
+          <label>Name<input formControlName="name" /></label>
+          <label>Category
+            <select formControlName="category">
+              @for (cat of wellnessCategories; track cat) {
+                <option [value]="cat">{{ cat }}</option>
+              }
+            </select>
+          </label>
+          <label>Tagline<input formControlName="tagline" /></label>
+          <label>Description<textarea formControlName="description" rows="3"></textarea></label>
+          <label>Email<input formControlName="email" type="email" /></label>
+          <label>Phone<input formControlName="phone" /></label>
+          <label>City<input formControlName="city" /></label>
+          <label>Province<input formControlName="province" /></label>
+          <label>Services (comma-separated)<input formControlName="services" /></label>
+          <label class="marketplace-check"><input type="checkbox" formControlName="verified" /> Verified</label>
+          <label class="marketplace-check"><input type="checkbox" formControlName="published" /> Published in app</label>
+          <div class="marketplace-actions">
+            <button type="submit" class="ops-btn ops-btn--primary" [disabled]="isSaving || wellnessForm.invalid">
+              {{ isSaving ? 'Saving…' : 'Save partner' }}
+            </button>
+            @if (editingId) {
+              <button type="button" class="ops-btn ops-btn--secondary" (click)="clearForm()">Cancel</button>
+            }
+          </div>
+        </form>
+      </section>
+
+      <section class="ops-panel">
+        <div class="ops-panel__header"><h2 class="ops-panel__title">Directory ({{ wellnessRows.length }})</h2></div>
+        <div class="users-table-wrap">
+          <table class="users-table">
+            <thead><tr><th>Name</th><th>Category</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+              @for (row of wellnessRows; track row.id) {
+                <tr>
+                  <td>{{ row['name'] }}</td>
+                  <td>{{ row['category'] }}</td>
+                  <td>
+                    @if (row['published']) { <span class="ops-badge ops-badge--green">Live</span> }
+                    @else { <span class="ops-badge ops-badge--slate">Draft</span> }
+                  </td>
+                  <td class="marketplace-row-actions">
+                    <button type="button" class="ops-btn ops-btn--secondary" (click)="editWellness(row)">Edit</button>
+                    @if (row['published']) {
+                      <button type="button" class="ops-btn ops-btn--secondary" (click)="unpublishWellness(row.id)">Unpublish</button>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  }
+
+  @if (tab === 'pharmacies') {
+    <div class="users-layout">
+      <section class="ops-panel">
+        <div class="ops-panel__header">
+          <h2 class="ops-panel__title">{{ editingId ? 'Edit' : 'Add' }} pharmacy</h2>
+        </div>
+        <form class="marketplace-form" [formGroup]="pharmacyForm" (ngSubmit)="savePharmacy()">
+          <label>Name<input formControlName="name" /></label>
+          <label>Email<input formControlName="email" type="email" /></label>
+          <label>Phone<input formControlName="phone" /></label>
+          <label>Address<input formControlName="address" /></label>
+          <label>City<input formControlName="city" /></label>
+          <label>Province<input formControlName="province" /></label>
+          <label class="marketplace-check"><input type="checkbox" formControlName="deliveryAvailable" /> Delivery available</label>
+          <label class="marketplace-check"><input type="checkbox" formControlName="verified" /> Verified</label>
+          <label class="marketplace-check"><input type="checkbox" formControlName="published" /> Published in app</label>
+          <div class="marketplace-actions">
+            <button type="submit" class="ops-btn ops-btn--primary" [disabled]="isSaving || pharmacyForm.invalid">
+              {{ isSaving ? 'Saving…' : 'Save pharmacy' }}
+            </button>
+            @if (editingId) {
+              <button type="button" class="ops-btn ops-btn--secondary" (click)="clearForm()">Cancel</button>
+            }
+          </div>
+        </form>
+      </section>
+
+      <section class="ops-panel">
+        <div class="ops-panel__header"><h2 class="ops-panel__title">Directory ({{ pharmacyRows.length }})</h2></div>
+        <div class="users-table-wrap">
+          <table class="users-table">
+            <thead><tr><th>Name</th><th>Email</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+              @for (row of pharmacyRows; track row.id) {
+                <tr>
+                  <td>{{ row['name'] }}</td>
+                  <td>{{ row['email'] }}</td>
+                  <td>
+                    @if (row['published']) { <span class="ops-badge ops-badge--green">Live</span> }
+                    @else { <span class="ops-badge ops-badge--slate">Draft</span> }
+                  </td>
+                  <td class="marketplace-row-actions">
+                    <button type="button" class="ops-btn ops-btn--secondary" (click)="editPharmacy(row)">Edit</button>
+                    @if (row['published']) {
+                      <button type="button" class="ops-btn ops-btn--secondary" (click)="unpublishPharmacy(row.id)">Unpublish</button>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  }
+</div>

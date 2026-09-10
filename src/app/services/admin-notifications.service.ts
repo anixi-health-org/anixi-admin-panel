@@ -1,17 +1,7 @@
 import { Injectable } from '@angular/core';
-import {
-  arrayUnion,
-  collection,
-  doc,
-  Firestore,
-  limit,
-  onSnapshot,
-  orderBy,
-  query,
-  updateDoc,
-} from '@angular/fire/firestore';
-import { Observable } from 'rxjs';
+import { interval, Observable, startWith, switchMap } from 'rxjs';
 import { AuthService } from './auth.service';
+import { DjangoApiService } from './django-api.service';
 
 export type AdminNotification = {
   id: string;
@@ -20,7 +10,7 @@ export type AdminNotification = {
   body: string;
   href?: string | null;
   doctorId?: string | null;
-  createdAt?: { toDate?: () => Date } | Date | null;
+  createdAt?: { toDate?: () => Date } | Date | string | null;
   readBy?: string[];
 };
 
@@ -29,30 +19,34 @@ export type AdminNotification = {
 })
 export class AdminNotificationsService {
   constructor(
-    private db: Firestore,
-    private authService: AuthService
+    private authService: AuthService,
+    private djangoApi: DjangoApiService,
   ) {}
 
   listenNotifications(max = 50): Observable<AdminNotification[]> {
-    return new Observable((observer) => {
-      const ref = query(
-        collection(this.db, 'admin_notifications'),
-        orderBy('createdAt', 'desc'),
-        limit(max)
-      );
-      const unsubscribe = onSnapshot(
-        ref,
-        (snapshot) => {
-          const items = snapshot.docs.map((d) => ({
-            id: d.id,
-            ...(d.data() as Omit<AdminNotification, 'id'>),
+    return interval(60_000).pipe(
+      startWith(0),
+      switchMap(async () => {
+        if (!this.authService.getAdminUserId()) {
+          return [] as AdminNotification[];
+        }
+        try {
+          const doctors = await this.djangoApi.listDoctors('pending');
+          return doctors.slice(0, max).map((doctor) => ({
+            id: String(doctor['id'] ?? ''),
+            type: 'doctor_application',
+            title: 'Doctor application pending review',
+            body: String(doctor['displayName'] ?? doctor['email'] ?? 'Unknown doctor'),
+            href: '/doctor-verification',
+            doctorId: String(doctor['id'] ?? ''),
+            createdAt: doctor['createdAt'] ?? null,
+            readBy: [],
           }));
-          observer.next(items);
-        },
-        (error) => observer.error(error)
-      );
-      return () => unsubscribe();
-    });
+        } catch {
+          return [] as AdminNotification[];
+        }
+      }),
+    );
   }
 
   isUnread(notification: AdminNotification, adminId?: string | null): boolean {
@@ -66,25 +60,12 @@ export class AdminNotificationsService {
     return notifications.filter((n) => this.isUnread(n, adminId)).length;
   }
 
-  async markAsRead(notificationId: string): Promise<void> {
-    const uid = this.authService.getAdminUserId();
-    if (!uid || !notificationId) return;
-    await updateDoc(doc(this.db, 'admin_notifications', notificationId), {
-      readBy: arrayUnion(uid),
-    });
+  async markAsRead(_notificationId: string): Promise<void> {
+    return;
   }
 
-  async markAllAsRead(notifications: AdminNotification[]): Promise<void> {
-    const uid = this.authService.getAdminUserId();
-    if (!uid) return;
-    const unread = notifications.filter((n) => this.isUnread(n, uid));
-    await Promise.all(
-      unread.map((n) =>
-        updateDoc(doc(this.db, 'admin_notifications', n.id), {
-          readBy: arrayUnion(uid),
-        })
-      )
-    );
+  async markAllAsRead(_notifications: AdminNotification[]): Promise<void> {
+    return;
   }
 
   formatWhen(value: AdminNotification['createdAt']): string {
@@ -92,10 +73,12 @@ export class AdminNotificationsService {
     const date =
       value instanceof Date
         ? value
-        : typeof value === 'object' && value && 'toDate' in value
-          ? value.toDate?.()
-          : null;
-    if (!date) return '';
+        : typeof value === 'string'
+          ? new Date(value)
+          : typeof value === 'object' && value && 'toDate' in value
+            ? value.toDate?.()
+            : null;
+    if (!date || Number.isNaN(date.getTime())) return '';
     return date.toLocaleString();
   }
 }

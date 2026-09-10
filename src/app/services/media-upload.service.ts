@@ -1,10 +1,5 @@
 import { Injectable } from '@angular/core';
-import {
-  getDownloadURL,
-  ref,
-  Storage,
-  uploadBytesResumable,
-} from '@angular/fire/storage';
+import { DjangoApiService } from './django-api.service';
 
 export type MediaUploadKind = 'image' | 'video';
 
@@ -25,11 +20,11 @@ export type MediaUploadResult = {
 
 @Injectable({ providedIn: 'root' })
 export class MediaUploadService {
-  constructor(private storage: Storage) {}
+  constructor(private djangoApi: DjangoApiService) {}
 
   validateFile(
     file: File,
-    kind: MediaUploadKind
+    kind: MediaUploadKind,
   ): { ok: true } | { ok: false; error: string } {
     const type = (file.type || '').toLowerCase();
     if (kind === 'image') {
@@ -52,9 +47,9 @@ export class MediaUploadService {
 
   uploadCommunityMedia(
     file: File,
-    groupId: string,
+    _groupId: string,
     kind: MediaUploadKind,
-    onProgress?: (progress: MediaUploadProgress) => void
+    onProgress?: (progress: MediaUploadProgress) => void,
   ): Promise<MediaUploadResult> {
     const validation = this.validateFile(file, kind);
     if (!validation.ok) {
@@ -62,49 +57,24 @@ export class MediaUploadService {
       return Promise.reject(new Error(validation.error));
     }
 
-    const contentType = file.type || (kind === 'video' ? 'video/mp4' : 'image/jpeg');
-    const folder = kind === 'video' ? 'videos' : 'images';
-    const safeName = file.name.replace(/[^\w.\-]+/g, '_');
-    const storagePath = `community-posts/${groupId}/${folder}/${Date.now()}_${safeName}`;
-    const fileRef = ref(this.storage, storagePath);
-    const task = uploadBytesResumable(fileRef, file, { contentType });
-
-    return new Promise((resolve, reject) => {
-      onProgress?.({ progress: 0, state: 'uploading' });
-      task.on(
-        'state_changed',
-        (snapshot) => {
-          const progress =
-            snapshot.totalBytes > 0
-              ? Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100)
-              : 0;
-          onProgress?.({ progress, state: 'uploading' });
-        },
-        (error) => {
-          const message = error?.message || 'Upload failed.';
-          onProgress?.({ progress: 0, state: 'error', error: message });
-          reject(error);
-        },
-        async () => {
-          try {
-            const downloadURL = await getDownloadURL(task.snapshot.ref);
-            onProgress?.({ progress: 100, state: 'success' });
-            resolve({
-              downloadURL,
-              storagePath,
-              contentType,
-              kind,
-              fileName: file.name,
-              size: file.size,
-            });
-          } catch (error) {
-            const message =
-              error instanceof Error ? error.message : 'Could not get download URL.';
-            onProgress?.({ progress: 0, state: 'error', error: message });
-            reject(error);
-          }
-        }
-      );
-    });
+    onProgress?.({ progress: 10, state: 'uploading' });
+    return this.djangoApi
+      .uploadDocument(file, 'community-post')
+      .then((result) => {
+        onProgress?.({ progress: 100, state: 'success' });
+        return {
+          downloadURL: result.url,
+          storagePath: result.storageKey,
+          contentType: file.type || (kind === 'video' ? 'video/mp4' : 'image/jpeg'),
+          kind,
+          fileName: file.name,
+          size: file.size,
+        };
+      })
+      .catch((error) => {
+        const message = error instanceof Error ? error.message : 'Upload failed.';
+        onProgress?.({ progress: 0, state: 'error', error: message });
+        throw error;
+      });
   }
 }

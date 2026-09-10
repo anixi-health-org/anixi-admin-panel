@@ -1,10 +1,10 @@
-import { Component, EnvironmentInjector, OnDestroy, OnInit, runInInjectionContext } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Form, FormArray, FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { COMMUNITIES, displayNotificationMessage, ERROR_NOTIFICATION_BOX_POSITION, markAllFormControlsAsTouched, SUCCESS_NOTIFICATION_BOX_POSITION } from '../../../../const';
 import { NzNotificationService } from 'ng-zorro-antd/notification';
-import { getDownloadURL, ref, Storage, uploadBytes } from '@angular/fire/storage';
 import { PostService } from '../../services/post.service';
+import { MediaUploadService } from '../../services/media-upload.service';
 import { IGroupPost } from '../../../interfaces/IgroupPost';
 import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 import { NzMessageService } from 'ng-zorro-antd/message';
@@ -68,10 +68,9 @@ export class ContentComponent implements OnInit, OnDestroy{
   post!: IGroupPost;
   isDeleted = false;
 
-  constructor(private fb: FormBuilder, 
-    private envInjector: EnvironmentInjector,
+  constructor(private fb: FormBuilder,
   private notif: NzNotificationService,
-  private storage: Storage,
+  private mediaUpload: MediaUploadService,
   private postService: PostService,
   private sanitizer: DomSanitizer,
   private messageService: NzMessageService,
@@ -240,7 +239,7 @@ export class ContentComponent implements OnInit, OnDestroy{
       if (!confirmed) return;
       try {
         const result = await this.postService.setContentStatus(post.id, 'Published');
-        if (!result.verified) throw new Error('Publish was not confirmed in Firestore.');
+        if (!result.verified) throw new Error('Publish was not confirmed by the API.');
         this.messageService.success('Published and verified in backend.');
       } catch (error) {
         this.notif.create(
@@ -259,7 +258,7 @@ export class ContentComponent implements OnInit, OnDestroy{
       if (!confirmed) return;
       try {
         const result = await this.postService.setContentStatus(post.id, 'Archived');
-        if (!result.verified) throw new Error('Archive was not confirmed in Firestore.');
+        if (!result.verified) throw new Error('Archive was not confirmed by the API.');
         this.messageService.success('Archived and verified in backend.');
       } catch (error) {
         this.notif.create(
@@ -278,7 +277,7 @@ export class ContentComponent implements OnInit, OnDestroy{
       if (!confirmed) return;
       try {
         const result = await this.postService.setContentStatus(post.id, 'Draft');
-        if (!result.verified) throw new Error('Unpublish was not confirmed in Firestore.');
+        if (!result.verified) throw new Error('Unpublish was not confirmed by the API.');
         this.messageService.success('Moved to Draft and verified in backend.');
       } catch (error) {
         this.notif.create(
@@ -464,14 +463,10 @@ export class ContentComponent implements OnInit, OnDestroy{
       }
     }
 
-    async uploadFile(file:File, groupId: string): Promise<string> {
-      const filePath = `community-posts/${groupId}/${Date.now()}_${file.name}`;
-      console.log(filePath);
-      return await runInInjectionContext(this.envInjector, async () => {
-        const fileRef = ref(this.storage, filePath);
-        await uploadBytes(fileRef, file);
-        return await getDownloadURL(fileRef);
-      })
+    async uploadFile(file: File, groupId: string): Promise<string> {
+      const kind = (file.type || '').startsWith('video/') ? 'video' : 'image';
+      const result = await this.mediaUpload.uploadCommunityMedia(file, groupId, kind);
+      return result.downloadURL;
     }
 
     cancel() {

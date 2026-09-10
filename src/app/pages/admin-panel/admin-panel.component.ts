@@ -28,6 +28,7 @@ const navGroups: NavGroup[] = [
     items: [
       { name: 'Doctor Verification', icon: 'stethoscope', path: '/doctor-verification' },
       { name: 'Clinics', icon: 'building-2', path: '/establishments' },
+      { name: 'Marketplace partners', icon: 'store', path: '/marketplace-partners' },
       { name: 'Patients / Users', icon: 'users', path: '/users' },
     ],
   },

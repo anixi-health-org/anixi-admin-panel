@@ -1,19 +1,16 @@
 import { Injectable } from '@angular/core';
 import {
-  arrayUnion,
-  collection,
-  doc,
-  Firestore,
-  getDoc,
-  getDocs,
-  onSnapshot,
-  query,
-  serverTimestamp,
-  setDoc,
-  where,
-} from '@angular/fire/firestore';
-import { catchError, from, map, Observable, of, switchMap } from 'rxjs';
+  catchError,
+  from,
+  interval,
+  map,
+  Observable,
+  of,
+  startWith,
+  switchMap,
+} from 'rxjs';
 import { AuthService } from './auth.service';
+import { DjangoApiService } from './django-api.service';
 import {
   approvalBlockReasons,
   canApproveDoctor,
@@ -43,70 +40,72 @@ import {
 })
 export class FirestoreService {
   constructor(
-    private db: Firestore,
-    private authService: AuthService
+    private authService: AuthService,
+    private djangoApi: DjangoApiService,
   ) {}
 
   getAllDoctors(): Observable<any[]> {
-    const ref = collection(this.db, 'doctors');
-
-    return from(getDocs(ref)).pipe(
-      map((snapshot) =>
-        snapshot.docs.map((d) => ({
-          ...(d.data() as Omit<any, 'id'>),
-          id: d.id,
-        }))
-      )
+    return from(this.djangoApi.listDoctors()).pipe(
+      map((doctors) =>
+        doctors.map((d) =>
+          this.djangoApi.enrichDoctorMedia({
+            ...d,
+            id: String(d['id'] ?? ''),
+          }),
+        ),
+      ),
     );
   }
 
   getUsers(): Observable<any[]> {
-    return new Observable((observer) => {
-      const ref = collection(this.db, 'Users');
-      const unsubscribe = onSnapshot(ref, (snapshot) => {
-        const users = snapshot.docs.map((d) => ({
-          ...(d.data() as Omit<any, 'id'>),
-          id: d.id,
-        }));
-        observer.next(users);
-      });
-      return () => unsubscribe();
-    });
+    return interval(30_000).pipe(
+      startWith(0),
+      switchMap(() => from(this.djangoApi.listUsers())),
+      map((users) => users.map((u) => ({ ...u, id: String(u['id'] ?? '') }))),
+    );
   }
 
-  private historyEvent(action: string, reason?: string, entity?: { type: string; id: string }) {
+  private historyEvent(
+    action: string,
+    reason?: string,
+    entity?: { type: string; id: string },
+  ) {
     const adminId = this.authService.getAdminUserId() || 'unknown';
     return {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       action,
       adminId,
-      at: new Date(),
+      at: new Date().toISOString(),
       ...(reason?.trim() ? { reason: reason.trim() } : {}),
       ...(entity ? { entityType: entity.type, entityId: entity.id } : {}),
     };
   }
 
+  private async appendDoctorHistory(
+    doctorId: string,
+    action: string,
+    reason?: string,
+    entity?: { type: string; id: string },
+  ): Promise<void> {
+    const current = await this.djangoApi.getDoctor(doctorId);
+    const history = Array.isArray(current['verificationHistory'])
+      ? [...(current['verificationHistory'] as unknown[])]
+      : [];
+    history.push(this.historyEvent(action, reason, entity));
+    await this.djangoApi.patchDoctor(doctorId, { verificationHistory: history });
+  }
+
   async updateDoctorStatus(
     doctorId: string,
     status: string,
-    options?: { reason?: string }
+    options?: { reason?: string },
   ): Promise<{ verified: boolean; status: string | null }> {
-    const ref = doc(this.db, `doctors/${doctorId}`);
-    const adminId = this.authService.getAdminUserId();
-    let doctorForApprove: DoctorRecord | null = null;
-
     if (status === 'approved') {
-      const current = await getDoc(ref);
-      if (!current.exists()) {
-        throw new Error('Doctor record not found.');
-      }
-      doctorForApprove = {
-        ...(current.data() as DoctorRecord),
-        id: doctorId,
-      };
-      if (!canApproveDoctor(doctorForApprove)) {
+      const current = await this.djangoApi.getDoctor(doctorId);
+      const doctor = { ...(current as DoctorRecord), id: doctorId };
+      if (!canApproveDoctor(doctor)) {
         throw new Error(
-          `Cannot approve: ${approvalBlockReasons(doctorForApprove).join(' | ')}`
+          `Cannot approve: ${approvalBlockReasons(doctor).join(' | ')}`,
         );
       }
     }
@@ -122,40 +121,24 @@ export class FirestoreService {
               ? 'Held for further review'
               : `Status set to ${status}`;
 
-    const payload: Record<string, unknown> = {
-      verificationStatus: status,
-      verifiedAt: serverTimestamp(),
-      verifiedBy: adminId,
-      updatedAt: serverTimestamp(),
-      verificationHistory: arrayUnion(
-        this.historyEvent(actionLabel, options?.reason, {
-          type: 'doctor',
-          id: doctorId,
-        })
-      ),
-    };
-    if (options?.reason?.trim()) {
-      payload['statusReason'] = options.reason.trim();
-      payload['statusReasonAt'] = serverTimestamp();
-      payload['statusReasonBy'] = adminId;
-      if (status === 'rejected' || status === 'suspended' || status === 'on_hold') {
-        payload['rejectionReason'] = options.reason.trim();
-      }
-    }
-    if (status === 'approved' && doctorForApprove) {
-      payload['informationRequested'] = false;
-      // Approving records admin satisfaction and unlocks practice access.
-      payload['identityVerified'] = true;
-      payload['identityVerifiedAt'] = serverTimestamp();
-      payload['identityVerifiedBy'] = adminId;
-      payload['hpcsaManuallyVerified'] = true;
-      payload['hpcsaVerificationMethod'] = 'manual';
-      payload['hpcsaVerifiedAt'] = serverTimestamp();
-      payload['hpcsaVerifiedBy'] = adminId;
+    await this.djangoApi.updateDoctorStatus(
+      doctorId,
+      status,
+      options?.reason,
+    );
+    await this.appendDoctorHistory(
+      doctorId,
+      actionLabel,
+      options?.reason,
+      { type: 'doctor', id: doctorId },
+    );
 
-      const reviews: Record<string, unknown> = {
-        ...((doctorForApprove.documentReviews as Record<string, unknown>) || {}),
+    if (status === 'approved') {
+      const current = await this.djangoApi.getDoctor(doctorId);
+      const reviews = {
+        ...((current['documentReviews'] as Record<string, unknown>) || {}),
       };
+      const doctor = { ...(current as DoctorRecord), id: doctorId };
       for (const key of [
         'hpcsa_certificate',
         'practice_license',
@@ -163,13 +146,12 @@ export class FirestoreService {
       ] as const) {
         const url =
           key === 'hpcsa_certificate'
-            ? getCertificateUrl(doctorForApprove)
+            ? getCertificateUrl(doctor)
             : key === 'practice_license'
-              ? getPracticeLicenseUrl(doctorForApprove)
-              : ((doctorForApprove.medicalAidContractUrl as string) || '').trim() ||
-                null;
+              ? getPracticeLicenseUrl(doctor)
+              : String(doctor.medicalAidContractUrl ?? '').trim() || null;
         if (!url) continue;
-        const existing = (reviews[key] as Record<string, unknown> | undefined) || {};
+        const existing = (reviews[key] as Record<string, unknown>) || {};
         if (
           existing['status'] === 'rejected' ||
           existing['status'] === 'requires_replacement'
@@ -179,27 +161,18 @@ export class FirestoreService {
         reviews[key] = {
           ...existing,
           status: 'verified',
-          reviewerId: adminId,
-          reviewedAt: new Date(),
-          notes:
-            (existing['notes'] as string) || 'Marked verified on approval',
+          reviewedAt: new Date().toISOString(),
         };
       }
-      payload['documentReviews'] = reviews;
+      await this.djangoApi.patchDoctor(doctorId, {
+        identityVerified: true,
+        hpcsaManuallyVerified: true,
+        informationRequested: false,
+        documentReviews: reviews,
+      });
     }
-    if (status === 'rejected' || status === 'pending' || status === 'on_hold') {
-      // verificationStatus is the source of truth for doctor web/mobile access.
-    }
-    await setDoc(ref, payload, { merge: true });
-    await this.mirrorUserAccountStatus(doctorId, status, options?.reason);
 
-    const snap = await getDoc(ref);
-    if (!snap.exists()) return { verified: false, status: null };
-    const data = snap.data() as Record<string, unknown>;
-    return {
-      verified: data['verificationStatus'] === status,
-      status: (data['verificationStatus'] as string) || null,
-    };
+    return { verified: true, status };
   }
 
   async recordManualHpcsaVerification(
@@ -208,61 +181,42 @@ export class FirestoreService {
       verified: boolean;
       reference?: string;
       notes?: string;
-    }
+    },
   ): Promise<{ verified: boolean }> {
-    const ref = doc(this.db, `doctors/${doctorId}`);
     const adminId = this.authService.getAdminUserId();
-    await setDoc(
-      ref,
-      {
-        hpcsaManuallyVerified: input.verified,
-        hpcsaVerificationMethod: 'manual',
-        hpcsaVerificationReference: (input.reference || '').trim(),
-        hpcsaReviewerNotes: (input.notes || '').trim(),
-        hpcsaVerifiedAt: serverTimestamp(),
-        hpcsaVerifiedBy: adminId,
-        updatedAt: serverTimestamp(),
-        verificationHistory: arrayUnion(
-          this.historyEvent(
-            input.verified ? 'HPCSA manually verified' : 'HPCSA verification cleared',
-            input.notes || input.reference,
-            { type: 'hpcsa', id: doctorId }
-          )
-        ),
-      },
-      { merge: true }
+    await this.djangoApi.patchDoctor(doctorId, {
+      hpcsaManuallyVerified: input.verified,
+      hpcsaVerificationMethod: 'manual',
+      hpcsaVerificationReference: (input.reference || '').trim(),
+      hpcsaReviewerNotes: (input.notes || '').trim(),
+      hpcsaVerifiedAt: new Date().toISOString(),
+      hpcsaVerifiedBy: adminId,
+    });
+    await this.appendDoctorHistory(
+      doctorId,
+      input.verified ? 'HPCSA manually verified' : 'HPCSA verification cleared',
+      input.notes || input.reference,
+      { type: 'hpcsa', id: doctorId },
     );
-    const snap = await getDoc(ref);
-    const data = snap.data() as Record<string, unknown> | undefined;
-    return { verified: data?.['hpcsaManuallyVerified'] === input.verified };
+    return { verified: input.verified };
   }
 
   async recordIdentityVerification(
     doctorId: string,
-    notes?: string
+    notes?: string,
   ): Promise<{ verified: boolean }> {
-    const ref = doc(this.db, `doctors/${doctorId}`);
     const adminId = this.authService.getAdminUserId();
-    await setDoc(
-      ref,
-      {
-        identityVerified: true,
-        identityVerifiedAt: serverTimestamp(),
-        identityVerifiedBy: adminId,
-        identityReviewerNotes: (notes || '').trim(),
-        updatedAt: serverTimestamp(),
-        verificationHistory: arrayUnion(
-          this.historyEvent('Identity verified', notes, {
-            type: 'identity',
-            id: doctorId,
-          })
-        ),
-      },
-      { merge: true }
-    );
-    const snap = await getDoc(ref);
-    const data = snap.data() as Record<string, unknown> | undefined;
-    return { verified: data?.['identityVerified'] === true };
+    await this.djangoApi.patchDoctor(doctorId, {
+      identityVerified: true,
+      identityVerifiedAt: new Date().toISOString(),
+      identityVerifiedBy: adminId,
+      identityReviewerNotes: (notes || '').trim(),
+    });
+    await this.appendDoctorHistory(doctorId, 'Identity verified', notes, {
+      type: 'identity',
+      id: doctorId,
+    });
+    return { verified: true };
   }
 
   async updateDocumentReview(
@@ -274,21 +228,23 @@ export class FirestoreService {
       url: string;
       status: DocumentReviewStatus;
       notes?: string;
-    }
+    },
   ): Promise<{ verified: boolean; status: DocumentReviewStatus | null }> {
-    const ref = doc(this.db, `doctors/${doctorId}`);
     const adminId = this.authService.getAdminUserId();
-    const review = {
+    const current = await this.djangoApi.getDoctor(doctorId);
+    const reviews = {
+      ...((current['documentReviews'] as Record<string, unknown>) || {}),
+    };
+    reviews[input.documentKey] = {
       documentKey: input.documentKey,
       documentName: input.documentName,
       documentType: input.documentType,
       url: input.url,
       status: input.status,
       reviewerId: adminId,
-      reviewedAt: new Date(),
+      reviewedAt: new Date().toISOString(),
       notes: (input.notes || '').trim(),
     };
-
     const action =
       input.status === 'verified'
         ? `Document verified: ${input.documentName}`
@@ -297,84 +253,50 @@ export class FirestoreService {
           : input.status === 'requires_replacement'
             ? `Replacement requested: ${input.documentName}`
             : `Document marked ${input.status}: ${input.documentName}`;
-
-    await setDoc(
-      ref,
-      {
-        [`documentReviews.${input.documentKey}`]: review,
-        updatedAt: serverTimestamp(),
-        verificationHistory: arrayUnion(
-          this.historyEvent(action, input.notes, {
-            type: 'document',
-            id: input.documentKey,
-          })
-        ),
-      },
-      { merge: true }
-    );
-
-    const snap = await getDoc(ref);
-    const data = snap.data() as Record<string, unknown> | undefined;
-    const reviews = (data?.['documentReviews'] as Record<string, { status?: string }>) || {};
-    const saved = reviews[input.documentKey];
-    return {
-      verified: saved?.status === input.status,
-      status: (saved?.status as DocumentReviewStatus) || null,
-    };
+    await this.djangoApi.patchDoctor(doctorId, { documentReviews: reviews });
+    await this.appendDoctorHistory(doctorId, action, input.notes, {
+      type: 'document',
+      id: input.documentKey,
+    });
+    return { verified: true, status: input.status };
   }
 
   async requestMoreInformation(
     doctorId: string,
-    reason: string
+    reason: string,
   ): Promise<{ verified: boolean }> {
-    const ref = doc(this.db, `doctors/${doctorId}`);
     const adminId = this.authService.getAdminUserId();
     const trimmed = reason.trim();
-    await setDoc(
-      ref,
-      {
-        informationRequested: true,
-        informationRequestReason: trimmed,
-        informationRequestedAt: serverTimestamp(),
-        informationRequestedBy: adminId,
-        // Keep pending — do not activate.
-        verificationStatus: 'pending',
-        updatedAt: serverTimestamp(),
-        verificationHistory: arrayUnion(
-          this.historyEvent('More information requested', trimmed, {
-            type: 'doctor',
-            id: doctorId,
-          })
-        ),
-      },
-      { merge: true }
+    await this.djangoApi.patchDoctor(doctorId, {
+      informationRequested: true,
+      informationRequestReason: trimmed,
+      informationRequestedAt: new Date().toISOString(),
+      informationRequestedBy: adminId,
+      verificationStatus: 'pending',
+    });
+    await this.appendDoctorHistory(
+      doctorId,
+      'More information requested',
+      trimmed,
+      { type: 'doctor', id: doctorId },
     );
-    const snap = await getDoc(ref);
-    const data = snap.data() as Record<string, unknown> | undefined;
-    return {
-      verified:
-        data?.['informationRequested'] === true &&
-        data?.['informationRequestReason'] === trimmed &&
-        data?.['verificationStatus'] !== 'approved',
-    };
+    return { verified: true };
   }
 
   getDoctors(): Observable<any[]> {
-    return new Observable((observer) => {
-      const ref = collection(this.db, 'doctors');
-      const unsubscribe = onSnapshot(
-        ref,
-        (snapshot) => {
-          const doctors = snapshot.docs.map((d) => ({
-            ...(d.data() as Omit<any, 'id'>),
-            id: d.id,
-          }));
-          observer.next(doctors);
-        },
-        (error) => observer.error(error)
-      );
-      return () => unsubscribe();
-    });
+    return interval(30_000).pipe(
+      startWith(0),
+      switchMap(() => from(this.djangoApi.listDoctors())),
+      map((doctors) =>
+        doctors.map((d) =>
+          this.djangoApi.enrichDoctorMedia({
+            ...d,
+            id: String(d['id'] ?? ''),
+            verificationStatus: d['verificationStatus'] ?? d['verification_status'],
+          }),
+        ),
+      ),
+    );
   }
 
   getDashboardStats(): Observable<{
@@ -390,7 +312,7 @@ export class FirestoreService {
         return {
           totalDoctors: clinical.length,
           pendingDoctors: clinical.filter(
-            (d) => !d.verificationStatus || d.verificationStatus === 'pending'
+            (d) => !d.verificationStatus || d.verificationStatus === 'pending',
           ).length,
           approvedDoctors: clinical.filter((d) => d.verificationStatus === 'approved')
             .length,
@@ -399,42 +321,35 @@ export class FirestoreService {
           suspendedDoctors: clinical.filter((d) => d.verificationStatus === 'suspended')
             .length,
         };
-      })
+      }),
     );
   }
 
   getPractices(): Observable<PracticeRecord[]> {
-    return new Observable((observer) => {
-      const ref = collection(this.db, 'practices');
-      const unsubscribe = onSnapshot(
-        ref,
-        (snapshot) => {
-          const practices = snapshot.docs.map((d) => ({
-            ...(d.data() as Omit<PracticeRecord, 'id'>),
-            id: d.id,
-          }));
-          observer.next(practices);
-        },
-        (error) => observer.error(error)
-      );
-      return () => unsubscribe();
-    });
-  }
-
-  getPracticeById(practiceId: string): Observable<PracticeRecord | null> {
-    return from(getDoc(doc(this.db, `practices/${practiceId}`))).pipe(
-      map((snap) =>
-        snap.exists()
-          ? ({ ...(snap.data() as Omit<PracticeRecord, 'id'>), id: snap.id } as PracticeRecord)
-          : null
-      )
+    return from(this.djangoApi.listPractices()).pipe(
+      map((rows) =>
+        rows.map((row) => ({
+          ...(row as Omit<PracticeRecord, 'id'>),
+          id: String(row['id']),
+        })),
+      ),
     );
   }
 
-  /** List establishments; falls back to linked practice IDs when collection list is empty. */
+  getPracticeById(practiceId: string): Observable<PracticeRecord | null> {
+    return from(this.djangoApi.listPractices()).pipe(
+      map((rows) => {
+        const match = rows.find((row) => String(row['id']) === practiceId);
+        return match
+          ? ({ ...(match as Omit<PracticeRecord, 'id'>), id: practiceId } as PracticeRecord)
+          : null;
+      }),
+    );
+  }
+
   getPracticesForAdmin(
     users: PlatformUser[],
-    doctors: Array<Record<string, unknown> & { id: string }>
+    doctors: Array<Record<string, unknown> & { id: string }>,
   ): Observable<PracticeRecord[]> {
     return this.getPractices().pipe(
       catchError(() => of([] as PracticeRecord[])),
@@ -443,7 +358,7 @@ export class FirestoreService {
           return of(this.uniquePractices(practices));
         }
         return from(this.loadPracticesFallback(users, doctors));
-      })
+      }),
     );
   }
 
@@ -457,13 +372,9 @@ export class FirestoreService {
 
   private async loadPracticesFallback(
     users: PlatformUser[],
-    doctors: Array<Record<string, unknown> & { id: string }>
+    doctors: Array<Record<string, unknown> & { id: string }>,
   ): Promise<PracticeRecord[]> {
     const byId = new Map<string, PracticeRecord>();
-    const addPractice = (practice: PracticeRecord | null) => {
-      if (practice) byId.set(practice.id, practice);
-    };
-
     const linkedIds = new Set<string>();
     for (const user of users) {
       const practiceId = String(user.primaryPracticeId ?? '').trim();
@@ -476,38 +387,9 @@ export class FirestoreService {
 
     await Promise.all(
       [...linkedIds].map(async (id) => {
-        const snap = await getDoc(doc(this.db, `practices/${id}`));
-        addPractice(
-          snap.exists()
-            ? ({ ...(snap.data() as Omit<PracticeRecord, 'id'>), id: snap.id } as PracticeRecord)
-            : null
-        );
-      })
-    );
-
-    const ownerIds = new Set<string>();
-    for (const user of users) {
-      if (String(user.accountType ?? user.role ?? '').toLowerCase() === 'doctor') {
-        ownerIds.add(user.id);
-      }
-    }
-    for (const doctor of doctors) {
-      ownerIds.add(doctor.id);
-    }
-
-    await Promise.all(
-      [...ownerIds].map(async (ownerId) => {
-        if ([...byId.values()].some((practice) => practice.ownerId === ownerId)) return;
-        const snap = await getDocs(
-          query(collection(this.db, 'practices'), where('ownerId', '==', ownerId))
-        );
-        snap.docs.forEach((d) =>
-          addPractice({
-            ...(d.data() as Omit<PracticeRecord, 'id'>),
-            id: d.id,
-          })
-        );
-      })
+        const practice = await this.getPracticeById(id).toPromise();
+        if (practice) byId.set(practice.id, practice);
+      }),
     );
 
     return [...byId.values()];
@@ -516,7 +398,7 @@ export class FirestoreService {
   buildUsersWithPracticeContext(
     users: PlatformUser[],
     doctors: Array<Record<string, unknown> & { id: string }>,
-    practices: PracticeRecord[]
+    practices: PracticeRecord[],
   ): PlatformUser[] {
     const doctorById = new Map(doctors.map((d) => [d.id, d]));
     const clinicByOwner = new Map<string, PracticeRecord>();
@@ -550,164 +432,137 @@ export class FirestoreService {
     });
   }
 
-  /** Persist clinic-admin flags for accounts that own a clinic establishment. */
   async syncClinicAdminAccounts(
     _users: PlatformUser[],
     doctors: Array<Record<string, unknown> & { id: string }>,
-    practices: PracticeRecord[]
+    practices: PracticeRecord[],
   ): Promise<void> {
     const clinicOwners = practices.filter((p) => getPracticeOrgType(p) === 'clinic');
-    if (!clinicOwners.length) return;
-
-    const doctorById = new Map(doctors.map((d) => [d.id, d]));
-
     for (const practice of clinicOwners) {
       const ownerId = String(practice.ownerId ?? '').trim();
       if (!ownerId) continue;
-      const doctor = doctorById.get(ownerId);
+      const doctor = doctors.find((d) => d.id === ownerId);
       if (doctor?.['accountKind'] === 'clinic_admin') continue;
       await this.markAsClinicAdmin(ownerId);
     }
   }
 
   getPracticeMembers(practiceId: string): Observable<PracticeMemberRecord[]> {
-    return new Observable((observer) => {
-      const ref = collection(this.db, `practices/${practiceId}/members`);
-      const unsubscribe = onSnapshot(
-        ref,
-        (snapshot) => {
-          const members = snapshot.docs.map((d) => ({
-            ...(d.data() as Omit<PracticeMemberRecord, 'id'>),
-            id: d.id,
-            uid: (d.data()['uid'] as string) || d.id,
-          }));
-          observer.next(members);
-        },
-        (error) => observer.error(error)
-      );
-      return () => unsubscribe();
-    });
+    return from(this.djangoApi.listPracticeMembers(practiceId)).pipe(
+      map((members) =>
+        members.map((member) => ({
+          ...(member as Omit<PracticeMemberRecord, 'id'>),
+          id: String(member['uid'] ?? member['id'] ?? ''),
+          uid: String(member['uid'] ?? member['id'] ?? ''),
+        })),
+      ),
+    );
   }
 
   async markAsClinicAdmin(userId: string): Promise<void> {
-    const adminId = this.authService.getAdminUserId();
-    const payload = {
+    await this.djangoApi.patchDoctor(userId, {
       accountKind: 'clinic_admin',
       requiresClinicalVerification: false,
       verificationStatus: 'not_required',
-      joinIntent: 'clinic',
-      applicationComplete: false,
-      updatedAt: serverTimestamp(),
-      verificationHistory: arrayUnion(
-        this.historyEvent('Reclassified as clinic admin', undefined, {
-          type: 'user',
-          id: userId,
-        })
-      ),
-    };
-    await setDoc(doc(this.db, `doctors/${userId}`), payload, { merge: true });
-    await setDoc(
-      doc(this.db, `Users/${userId}`),
-      {
-        accountKind: 'clinic_admin',
-        joinIntent: 'clinic',
-        accountStatus: 'active',
-        updatedAt: serverTimestamp(),
-        lastReviewedBy: adminId,
-      },
-      { merge: true }
+    });
+    await this.djangoApi.patchUser(userId, {
+      accountStatus: 'active',
+    });
+    await this.appendDoctorHistory(
+      userId,
+      'Reclassified as clinic admin',
+      undefined,
+      { type: 'user', id: userId },
     );
   }
 
   async updateUserAccountStatus(
     userId: string,
     status: 'active' | 'on_hold' | 'suspended',
-    reason?: string
+    reason?: string,
   ): Promise<void> {
-    await this.mirrorUserAccountStatus(userId, status, reason);
-    const doctorRef = doc(this.db, `doctors/${userId}`);
-    const doctorSnap = await getDoc(doctorRef);
-    if (!doctorSnap.exists()) return;
-
-    const data = doctorSnap.data() as Record<string, unknown>;
-    const isClinicAdmin =
-      data['accountKind'] === 'clinic_admin' || data['requiresClinicalVerification'] === false;
-    const verificationStatus =
-      status === 'active'
-        ? isClinicAdmin
-          ? 'not_required'
-          : 'approved'
-        : status === 'on_hold'
-          ? 'on_hold'
-          : 'suspended';
-    await setDoc(
-      doctorRef,
-      {
-        verificationStatus,
-        accountStatus: status,
-        updatedAt: serverTimestamp(),
-        ...(reason?.trim()
-          ? {
-              statusReason: reason.trim(),
-              statusReasonAt: serverTimestamp(),
-              statusReasonBy: this.authService.getAdminUserId(),
-            }
-          : {}),
-        verificationHistory: arrayUnion(
-          this.historyEvent(
-            status === 'active'
-              ? 'Account reinstated'
-              : status === 'on_hold'
-                ? 'Held for further review'
-                : 'Account suspended',
-            reason,
-            { type: 'user', id: userId }
-          )
-        ),
-      },
-      { merge: true }
-    );
-  }
-
-  private async mirrorUserAccountStatus(
-    userId: string,
-    status: string,
-    reason?: string
-  ): Promise<void> {
-    const accountStatus =
-      status === 'approved' || status === 'not_required' || status === 'active'
-        ? 'active'
-        : status;
-    try {
-      await setDoc(
-        doc(this.db, `Users/${userId}`),
-        {
-          accountStatus,
-          updatedAt: serverTimestamp(),
-          lastReviewedBy: this.authService.getAdminUserId(),
-          ...(reason?.trim() ? { accountStatusReason: reason.trim() } : {}),
-        },
-        { merge: true }
-      );
-    } catch (error) {
-      console.warn('[admin] Users accountStatus mirror skipped', error);
-    }
+    await this.djangoApi.patchUser(userId, {
+      accountStatus: status,
+      ...(reason?.trim() ? { accountStatusReason: reason.trim() } : {}),
+    });
   }
 
   getDoctorsById(id: string): Observable<any | null> {
-    return new Observable((observer) => {
-      const ref = doc(this.db, `doctors/${id}`);
-      const unsubscribe = onSnapshot(ref, (snapshot) => {
-        if (snapshot.exists()) {
-          observer.next({
-            ...(snapshot.data() as Omit<any, 'id'>),
-            id: snapshot.id,
-          });
-        } else {
-          observer.next(null);
-        }
-      });
-      return () => unsubscribe();
-    });
+    return interval(15_000).pipe(
+      startWith(0),
+      switchMap(() => from(this.djangoApi.getDoctor(id))),
+      map((doctor) =>
+        this.djangoApi.enrichDoctorMedia({
+          ...doctor,
+          id: String(doctor['id'] ?? id),
+        }),
+      ),
+      catchError(() => of(null)),
+    );
+  }
+
+  getWellnessProviders(): Observable<Array<Record<string, unknown> & { id: string }>> {
+    return interval(30_000).pipe(
+      startWith(0),
+      switchMap(() => from(this.djangoApi.listWellnessProviders())),
+      map((rows) => rows.map((row) => ({ ...row, id: String(row['id'] ?? '') }))),
+    );
+  }
+
+  async upsertWellnessProvider(
+    id: string | null,
+    data: Record<string, unknown>,
+  ): Promise<string> {
+    const metadata = {
+      tagline: data['tagline'] ?? '',
+      email: data['email'] ?? '',
+      phone: data['phone'] ?? '',
+      services: data['services'] ?? [],
+    };
+    const payload = {
+      name: data['name'],
+      category: data['category'],
+      description: data['description'],
+      city: data['city'],
+      province: data['province'],
+      published: data['published'],
+      verified: data['verified'],
+      metadata,
+    };
+    if (id) {
+      await this.djangoApi.patchWellnessProvider(id, payload);
+      return id;
+    }
+    const created = await this.djangoApi.createWellnessProvider(payload);
+    return String(created['id']);
+  }
+
+  async deleteWellnessProvider(id: string): Promise<void> {
+    await this.djangoApi.deleteWellnessProvider(id);
+  }
+
+  getPharmacies(): Observable<Array<Record<string, unknown> & { id: string }>> {
+    return interval(30_000).pipe(
+      startWith(0),
+      switchMap(() => from(this.djangoApi.listPharmacies())),
+      map((rows) => rows.map((row) => ({ ...row, id: String(row['id'] ?? '') }))),
+    );
+  }
+
+  async upsertPharmacy(id: string | null, data: Record<string, unknown>): Promise<string> {
+    if (id) {
+      await this.djangoApi.patchPharmacy(id, data);
+      return id;
+    }
+    const created = await this.djangoApi.createPharmacy(data);
+    return String(created['id']);
+  }
+
+  async deletePharmacy(id: string): Promise<void> {
+    await this.djangoApi.deletePharmacy(id);
+  }
+
+  getEmployers(): Observable<Array<Record<string, unknown> & { id: string }>> {
+    return of([]);
   }
 }

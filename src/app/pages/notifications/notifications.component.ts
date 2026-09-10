@@ -35,8 +35,7 @@ export class NotificationsComponent implements OnInit, OnDestroy {
         },
         error: () => {
           this.isLoading = false;
-          this.loadError =
-            'Could not load notifications. Check that Firestore rules allow admin access.';
+          this.loadError = 'Could not load notifications from the API.';
         },
       })
     );

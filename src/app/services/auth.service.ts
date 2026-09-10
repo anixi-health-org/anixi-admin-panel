@@ -1,23 +1,19 @@
 import { Injectable } from '@angular/core';
 import {
-  Auth,
-  User,
-  signInWithEmailAndPassword,
-  signOut,
-  user,
-} from '@angular/fire/auth';
-import { doc, Firestore, getDoc, serverTimestamp, setDoc } from '@angular/fire/firestore';
-import {
   BehaviorSubject,
   Observable,
   combineLatest,
-  from,
   map,
-  of,
-  switchMap,
 } from 'rxjs';
-import { environment } from '../../environments/environment';
 import { AdminUser } from '../models/admin-user';
+import { DjangoApiService } from './django-api.service';
+
+const SESSION_KEY = 'anixi_admin_session';
+
+type StoredSession = {
+  accessToken: string;
+  admin: AdminUser;
+};
 
 @Injectable({
   providedIn: 'root',
@@ -26,63 +22,98 @@ export class AuthService {
   private readonly adminSubject = new BehaviorSubject<AdminUser | null>(null);
   private readonly authReadySubject = new BehaviorSubject(false);
 
-  readonly firebaseUser$: Observable<User | null>;
   readonly adminUser$ = this.adminSubject.asObservable();
   readonly authReady$ = this.authReadySubject.asObservable();
-
   readonly isAuthenticatedAdmin$: Observable<boolean>;
 
-  constructor(
-    private auth: Auth,
-    private firestore: Firestore
-  ) {
-    this.firebaseUser$ = user(this.auth);
-
+  constructor(private djangoApi: DjangoApiService) {
     this.isAuthenticatedAdmin$ = combineLatest([
-      this.firebaseUser$,
       this.adminUser$,
       this.authReady$,
-    ]).pipe(
-      map(([firebaseUser, adminUser, ready]) => ready && !!firebaseUser && !!adminUser)
-    );
+    ]).pipe(map(([adminUser, ready]) => ready && !!adminUser));
+    void this.restoreSession();
+  }
 
-    this.firebaseUser$
-      .pipe(
-        switchMap((firebaseUser) => {
-          if (!firebaseUser) {
-            this.adminSubject.next(null);
-            this.authReadySubject.next(true);
-            return of(null);
-          }
-          return from(this.resolveAdminUser(firebaseUser));
-        })
-      )
-      .subscribe((admin) => {
-        this.adminSubject.next(admin);
+  private async restoreSession(): Promise<void> {
+    try {
+      const raw = sessionStorage.getItem(SESSION_KEY);
+      if (!raw) {
         this.authReadySubject.next(true);
-      });
+        return;
+      }
+      const stored = JSON.parse(raw) as StoredSession;
+      if (!stored?.accessToken || !stored?.admin?.uid) {
+        sessionStorage.removeItem(SESSION_KEY);
+        this.authReadySubject.next(true);
+        return;
+      }
+      this.djangoApi.setAccessToken(stored.accessToken);
+      const me = await this.djangoApi.getMe();
+      const role = String(me['role'] ?? '');
+      const isStaff = Boolean(me['isStaff'] ?? me['is_staff']);
+      if (role !== 'admin' && !isStaff) {
+        this.clearSession();
+        this.authReadySubject.next(true);
+        return;
+      }
+      const admin: AdminUser = {
+        uid: String(me['id'] ?? me['uid'] ?? stored.admin.uid),
+        email: String(me['email'] ?? stored.admin.email),
+        displayName: String(
+          me['displayName'] ?? me['display_name'] ?? stored.admin.displayName,
+        ),
+        role: 'admin',
+      };
+      this.adminSubject.next(admin);
+      this.persistSession(stored.accessToken, admin);
+    } catch {
+      this.clearSession();
+    } finally {
+      this.authReadySubject.next(true);
+    }
+  }
+
+  private persistSession(accessToken: string, admin: AdminUser): void {
+    sessionStorage.setItem(
+      SESSION_KEY,
+      JSON.stringify({ accessToken, admin } satisfies StoredSession),
+    );
+  }
+
+  private clearSession(): void {
+    sessionStorage.removeItem(SESSION_KEY);
+    this.djangoApi.setAccessToken(null);
+    this.adminSubject.next(null);
   }
 
   async signIn(email: string, password: string): Promise<AdminUser> {
-    const credential = await signInWithEmailAndPassword(
-      this.auth,
-      email.trim(),
-      password
-    );
-    const admin = await this.resolveAdminUser(credential.user);
-    if (!admin) {
-      await signOut(this.auth);
+    const result = await this.djangoApi.login(email.trim(), password);
+    const userRecord = result.user;
+    const role = String(userRecord['role'] ?? '');
+    const isStaff = Boolean(userRecord['isStaff'] ?? userRecord['is_staff']);
+    if (role !== 'admin' && !isStaff) {
+      this.clearSession();
       throw new Error(
-        'Access denied. This account is not authorized for the admin portal.'
+        'Access denied. This account is not authorized for the admin portal.',
       );
     }
+    this.djangoApi.setAccessToken(result.tokens.access);
+    const admin: AdminUser = {
+      uid: String(userRecord['id'] ?? userRecord['uid'] ?? ''),
+      email: String(userRecord['email'] ?? email),
+      displayName: String(
+        userRecord['displayName'] ?? userRecord['display_name'] ?? 'Admin',
+      ),
+      role: 'admin',
+    };
+    this.persistSession(result.tokens.access, admin);
     this.adminSubject.next(admin);
+    this.authReadySubject.next(true);
     return admin;
   }
 
   async signOut(): Promise<void> {
-    await signOut(this.auth);
-    this.adminSubject.next(null);
+    this.clearSession();
   }
 
   getAdminUser(): AdminUser | null {
@@ -91,69 +122,5 @@ export class AuthService {
 
   getAdminUserId(): string | null {
     return this.adminSubject.value?.uid ?? null;
-  }
-
-  private async resolveAdminUser(firebaseUser: User): Promise<AdminUser | null> {
-    const uid = firebaseUser.uid;
-    const email = firebaseUser.email ?? '';
-
-    if (this.isAllowlistedAdmin(uid)) {
-      await this.ensureAdminDocument(uid, email, firebaseUser.displayName);
-      return {
-        uid,
-        email,
-        displayName: firebaseUser.displayName || email.split('@')[0] || 'Admin',
-        role: 'super_admin',
-      };
-    }
-
-    const adminDoc = await getDoc(doc(this.firestore, 'admins', uid));
-    if (!adminDoc.exists()) {
-      return null;
-    }
-
-    const data = adminDoc.data();
-    if (data['active'] === false) {
-      return null;
-    }
-
-    return {
-      uid,
-      email: (data['email'] as string) || email,
-      displayName:
-        (data['displayName'] as string) ||
-        firebaseUser.displayName ||
-        'Admin',
-      role: (data['role'] as AdminUser['role']) || 'admin',
-    };
-  }
-
-  private isAllowlistedAdmin(uid: string): boolean {
-    return environment.ADMIN_UIDS.includes(uid);
-  }
-
-  private async ensureAdminDocument(
-    uid: string,
-    email: string,
-    displayName: string | null
-  ): Promise<void> {
-    const adminRef = doc(this.firestore, 'admins', uid);
-    const existing = await getDoc(adminRef);
-    if (existing.exists()) {
-      return;
-    }
-
-    try {
-      await setDoc(adminRef, {
-        email,
-        displayName: displayName || email.split('@')[0] || 'Admin',
-        role: 'super_admin',
-        active: true,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-    } catch {
-      // Rules may block auto-provision; allowlisted UID still works in app.
-    }
   }
 }

@@ -1,18 +1,5 @@
 import { Injectable } from '@angular/core';
-import {
-  collection,
-  deleteDoc,
-  doc,
-  Firestore,
-  getDoc,
-  getDocs,
-  onSnapshot,
-  query,
-  setDoc,
-  updateDoc,
-  where,
-} from '@angular/fire/firestore';
-import { Observable } from 'rxjs';
+import { from, interval, map, Observable, startWith, switchMap } from 'rxjs';
 import {
   buildPatientBody,
   buildSearchText,
@@ -24,6 +11,7 @@ import {
 } from '../../interfaces/IgroupPost';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
+import { DjangoApiService } from './django-api.service';
 
 export type PublishCommunityInput = {
   title: string;
@@ -51,45 +39,119 @@ export type PublishCommunityResult = {
 })
 export class PostService {
   constructor(
-    private db: Firestore,
-    private authService: AuthService
+    private authService: AuthService,
+    private djangoApi: DjangoApiService,
   ) {}
 
   private resolveAdminUserId(): string {
     return this.authService.getAdminUserId() || environment.ADMIN_USER_ID;
   }
 
-  async saveGroupPost(postId: string, data: Partial<IGroupPost>) {
-    const docRef = doc(this.db, 'group_posts', postId);
-    const adminUserId = this.resolveAdminUserId();
+  private mapDjangoPost(row: Record<string, unknown>): IGroupPost {
+    const metadata = (row['metadata'] as Record<string, unknown>) || {};
+    return {
+      id: String(row['id'] ?? ''),
+      title: String(row['title'] ?? metadata['title'] ?? ''),
+      comments: [],
+      userId: String(row['userId'] ?? this.resolveAdminUserId()),
+      userName: 'anixi health',
+      firstName: 'admin',
+      lastName: 'anixihealth',
+      groupName: String(row['groupName'] ?? metadata['groupName'] ?? ''),
+      text: String(row['text'] ?? row['body'] ?? ''),
+      bodyHtml: String(row['bodyHtml'] ?? metadata['bodyHtml'] ?? ''),
+      postType: 'Post',
+      mediaType: String(metadata['contentType'] === 'video' ? 'Video' : 'Picture'),
+      mediaUrl: String(row['mediaUrl'] ?? metadata['mediaUrl'] ?? ''),
+      mediaUrls: (row['mediaUrls'] as string[]) ?? (metadata['mediaUrls'] as string[]) ?? [],
+      videoUrl: String(row['videoUrl'] ?? metadata['videoUrl'] ?? ''),
+      textLower: String(metadata['textLower'] ?? ''),
+      hashtags: (metadata['hashtags'] as string[]) ?? [],
+      contentType: (row['contentType'] ?? metadata['contentType']) as CommunityContentType,
+      source: String(row['source'] ?? metadata['source'] ?? 'admin_cms'),
+      contentBatchId: String(metadata['contentBatchId'] ?? ''),
+      communities: (metadata['communities'] as string[]) ?? [],
+      scheduledAt: metadata['scheduledAt'] ?? row['publishAt'] ?? null,
+      publishedAt: metadata['publishedAt'] ?? null,
+      archivedAt: metadata['archivedAt'] ?? null,
+      hyperlink: '',
+      originalPostId: '',
+      repostText: '',
+      repostUserId: '',
+      repostTimeStamp: row['createdAt'] ?? new Date(),
+      timeStamp: row['createdAt'] ?? new Date(),
+      visibility: 'Visible to public',
+      reported: false,
+      likes: [],
+      taggedFriends: [],
+      status: (row['status'] ?? metadata['status'] ?? 'Draft') as CommunityContentStatus,
+      commentCount: 0,
+    };
+  }
 
-    return setDoc(
-      docRef,
-      {
-        ...data,
-        timeStamp: data.timeStamp || new Date(),
-        repostTimeStamp: data.repostTimeStamp || new Date(),
-        reported: data.reported ?? false,
-        likes: data.likes || [],
-        comments: data.comments || [],
-        taggedFriends: data.taggedFriends || [],
-        originalPostId: data.originalPostId || '',
-        repostUserId: data.repostUserId || '',
-        repostText: data.repostText || '',
-        visibility: 'Visible to public',
-        userId: data.userId || adminUserId,
-        hyperlink: data.hyperlink || '',
-        commentCount: data.commentCount ?? 0,
-        source: data.source || 'admin_cms',
-        updatedAt: new Date(),
+  private buildDjangoPayload(
+    postId: string,
+    data: Partial<IGroupPost>,
+  ): Record<string, unknown> {
+    const status = String(data.status ?? 'Draft');
+    return {
+      title: data.title ?? '',
+      body: data.text ?? '',
+      text: data.text ?? '',
+      status,
+      published: status === 'Published',
+      publishAt:
+        status === 'Scheduled' && data.scheduledAt
+          ? new Date(data.scheduledAt as string | Date).toISOString()
+          : null,
+      contentType: data.contentType,
+      mediaUrl: data.mediaUrl,
+      mediaUrls: data.mediaUrls,
+      videoUrl: data.videoUrl,
+      bodyHtml: data.bodyHtml,
+      groupName: data.groupName,
+      communities: data.communities,
+      source: data.source ?? 'admin_cms',
+      scheduledAt:
+        data.scheduledAt instanceof Date
+          ? data.scheduledAt.toISOString()
+          : data.scheduledAt ?? null,
+      metadata: {
+        contentBatchId: data.contentBatchId,
+        contentType: data.contentType,
+        mediaUrl: data.mediaUrl,
+        mediaUrls: data.mediaUrls,
+        videoUrl: data.videoUrl,
+        bodyHtml: data.bodyHtml,
+        groupName: data.groupName,
+        communities: data.communities,
+        source: data.source ?? 'admin_cms',
+        status,
+        scheduledAt:
+          data.scheduledAt instanceof Date
+            ? data.scheduledAt.toISOString()
+            : data.scheduledAt ?? null,
+        textLower: data.textLower,
+        hashtags: data.hashtags,
       },
-      { merge: true }
-    );
+      id: postId,
+    };
+  }
+
+  async saveGroupPost(postId: string, data: Partial<IGroupPost>) {
+    const payload = this.buildDjangoPayload(postId, {
+      ...data,
+      userId: data.userId || this.resolveAdminUserId(),
+    });
+    try {
+      await this.djangoApi.patchPost(postId, payload);
+    } catch {
+      await this.djangoApi.createPost(payload);
+    }
   }
 
   /**
-   * Publishes patient-compatible community content.
-   * Writes videoUrl / mediaUrls the patient app expects, then verifies Firestore.
+   * Publishes patient-compatible community content via the Django API.
    */
   async publishCommunityContent(input: PublishCommunityInput): Promise<PublishCommunityResult> {
     const communities = Array.from(new Set(input.communities.map((c) => c.trim()).filter(Boolean)));
@@ -127,9 +189,8 @@ export class PostService {
     }
 
     const caption = buildPatientBody(title, body);
-    const searchBlob = buildSearchText(title, body);
+    const textLower = buildSearchText(title, body);
     const hashtags = extractHashtags(`${title}\n${body}`);
-    const textLower = searchBlob;
     const adminUserId = this.resolveAdminUserId();
     const baseMs = Date.now();
     const contentBatchId = input.contentBatchId || newContentBatchId();
@@ -212,7 +273,7 @@ export class PostService {
     });
 
     const byCommunity = new Map(
-      input.existingPosts.map((post) => [post.groupName, post] as const)
+      input.existingPosts.map((post) => [post.groupName, post] as const),
     );
     const postIds: string[] = [];
     const keepIds = new Set<string>();
@@ -276,12 +337,8 @@ export class PostService {
   }
 
   async getPostsByBatchId(contentBatchId: string): Promise<IGroupPost[]> {
-    const q = query(
-      collection(this.db, 'group_posts'),
-      where('contentBatchId', '==', contentBatchId)
-    );
-    const snap = await getDocs(q);
-    return snap.docs.map((d) => ({ ...(d.data() as IGroupPost), id: d.id }));
+    const rows = await this.djangoApi.listPostsByBatch(contentBatchId);
+    return rows.map((row) => this.mapDjangoPost(row));
   }
 
   private buildMediaFields(input: PublishCommunityInput): Partial<IGroupPost> {
@@ -313,23 +370,21 @@ export class PostService {
   private async verifyPublishedDocs(
     postIds: string[],
     expectedStatus: CommunityContentStatus,
-    expected?: { contentType: CommunityContentType; mediaUrl?: string }
+    expected?: { contentType: CommunityContentType; mediaUrl?: string },
   ): Promise<boolean> {
     for (const id of postIds) {
-      const snap = await getDoc(doc(this.db, 'group_posts', id));
-      if (!snap.exists()) return false;
-      const data = snap.data() as Record<string, unknown>;
-      if (data['status'] !== expectedStatus) return false;
-      if (typeof data['text'] !== 'string' || !String(data['text']).trim()) return false;
-      if (!data['groupName']) return false;
+      const post = await this.getPostById(id);
+      if (!post) return false;
+      if (post.status !== expectedStatus) return false;
+      if (!post.text?.trim()) return false;
+      if (!post.groupName) return false;
       if (expected?.contentType === 'video' && expected.mediaUrl) {
-        if (!data['videoUrl'] || data['videoUrl'] !== expected.mediaUrl) return false;
+        if (post.videoUrl !== expected.mediaUrl) return false;
       }
       if (expected?.contentType === 'image' && expected.mediaUrl) {
-        const urls = data['mediaUrls'];
         const hasUrl =
-          data['mediaUrl'] === expected.mediaUrl ||
-          (Array.isArray(urls) && urls.includes(expected.mediaUrl));
+          post.mediaUrl === expected.mediaUrl ||
+          (Array.isArray(post.mediaUrls) && post.mediaUrls.includes(expected.mediaUrl));
         if (!hasUrl) return false;
       }
     }
@@ -337,109 +392,48 @@ export class PostService {
   }
 
   async editPost(postId: string, data: Partial<IGroupPost>) {
-    const docRef = doc(this.db, 'group_posts', postId);
-    await updateDoc(docRef, {
-      ...data,
-      lastEditAt: new Date(),
-      updatedAt: new Date(),
-    });
+    await this.djangoApi.patchPost(postId, this.buildDjangoPayload(postId, data));
   }
 
   async setContentStatus(
     postId: string,
-    status: CommunityContentStatus
+    status: CommunityContentStatus,
   ): Promise<{ verified: boolean; status: string | null }> {
-    const docRef = doc(this.db, 'group_posts', postId);
     const patch: Record<string, unknown> = {
       status,
-      lastEditAt: new Date(),
-      updatedAt: new Date(),
+      published: status === 'Published',
     };
     if (status === 'Published') {
-      patch['publishedAt'] = new Date();
+      patch['publishedAt'] = new Date().toISOString();
       patch['scheduledAt'] = null;
     }
     if (status === 'Archived') {
-      patch['archivedAt'] = new Date();
+      patch['archivedAt'] = new Date().toISOString();
     }
-    await updateDoc(docRef, patch);
-    const snap = await getDoc(docRef);
-    if (!snap.exists()) return { verified: false, status: null };
-    const data = snap.data() as Record<string, unknown>;
-    return {
-      verified: data['status'] === status,
-      status: (data['status'] as string) || null,
-    };
+    await this.djangoApi.patchPost(postId, patch);
+    const post = await this.getPostById(postId);
+    return { verified: post?.status === status, status: post?.status ?? null };
   }
 
   async deleteGroupPost(postId: string) {
-    const docRef = doc(this.db, 'group_posts', postId);
-    await deleteDoc(docRef);
+    await this.djangoApi.deletePost(postId);
   }
 
   async getPostById(postId: string): Promise<IGroupPost | null> {
-    const snap = await getDoc(doc(this.db, 'group_posts', postId));
-    if (!snap.exists()) return null;
-    return { ...(snap.data() as IGroupPost), id: snap.id };
+    const rows = await this.djangoApi.listAdminPosts();
+    const match = rows.find((row) => String(row['id']) === postId);
+    return match ? this.mapDjangoPost(match) : null;
   }
 
   /** All admin CMS posts (not limited to the signed-in author). */
   fetchAdminPost(_adminId?: string): Observable<{ data: any[]; loading: boolean }> {
-    return new Observable((observer) => {
-      const refCol = collection(this.db, 'group_posts');
-      const q = query(
-        refCol,
-        where('contentType', 'in', ['article', 'video', 'image'])
-      );
-
-      const unsubscribe = onSnapshot(
-        q,
-        (snapshot) => {
-          const posts = snapshot.docs
-            .map((d) => ({
-              ...d.data(),
-              id: d.id,
-            }))
-            .filter((post: any) => {
-              if (post.source === 'admin_cms') return true;
-              if (post.groupName === 'main') return false;
-              return (
-                post.firstName === 'admin' ||
-                post.userName === 'anixi health' ||
-                post.contentType === 'article' ||
-                post.contentType === 'video' ||
-                post.contentType === 'image'
-              );
-            });
-          observer.next({ data: posts, loading: false });
-        },
-        async (error) => {
-          console.warn('[PostService] contentType query failed, falling back', error);
-          try {
-            const fallback = await this.fetchLegacyAdminPosts();
-            observer.next({ data: fallback, loading: false });
-          } catch (fallbackError) {
-            observer.error(fallbackError);
-          }
-        }
-      );
-      return () => unsubscribe();
-    });
-  }
-
-  private async fetchLegacyAdminPosts(): Promise<any[]> {
-    const snap = await getDocs(collection(this.db, 'group_posts'));
-    return snap.docs
-      .map((d) => ({ ...d.data(), id: d.id }))
-      .filter((post: any) => {
-        if (post.source === 'admin_cms') return true;
-        if (post.contentType === 'article' || post.contentType === 'video' || post.contentType === 'image') {
-          return true;
-        }
-        return (
-          post.firstName === 'admin' &&
-          (post.lastName === 'anixihealth' || post.userName === 'anixi health')
-        );
-      });
+    return interval(30_000).pipe(
+      startWith(0),
+      switchMap(() => from(this.djangoApi.listAdminPosts())),
+      map((rows) => ({
+        data: rows.map((row) => this.mapDjangoPost(row)),
+        loading: false,
+      })),
+    );
   }
 }

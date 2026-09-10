@@ -10,6 +10,7 @@ import { PdfViewerComponent } from './pdf-viewer/pdf-viewer.component';
 import { UsersComponent } from './users/users.component';
 import { EstablishmentsComponent } from './establishments/establishments.component';
 import { NotificationsComponent } from './notifications/notifications.component';
+import { MarketplacePartnersComponent } from './marketplace-partners/marketplace-partners.component';
 import { authGuard } from '../guards/auth.guard';
 import { guestGuard } from '../guards/guest.guard';
 
@@ -31,6 +32,7 @@ const routes: Routes = [
       { path: 'content/:id/edit', component: ContentEditorComponent },
       { path: 'doctor-verification', component: DoctorVerificationComponent },
       { path: 'establishments', component: EstablishmentsComponent },
+      { path: 'marketplace-partners', component: MarketplacePartnersComponent },
       { path: 'certificat-viewer', component: PdfViewerComponent },
       { path: 'users', component: UsersComponent },
       { path: 'notifications', component: NotificationsComponent },
