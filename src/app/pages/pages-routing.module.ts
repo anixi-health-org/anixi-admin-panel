@@ -11,6 +11,7 @@ import { UsersComponent } from './users/users.component';
 import { EstablishmentsComponent } from './establishments/establishments.component';
 import { NotificationsComponent } from './notifications/notifications.component';
 import { MarketplacePartnersComponent } from './marketplace-partners/marketplace-partners.component';
+import { PatientImportComponent } from './patient-import/patient-import.component';
 import { authGuard } from '../guards/auth.guard';
 import { guestGuard } from '../guards/guest.guard';
 
@@ -33,6 +34,7 @@ const routes: Routes = [
       { path: 'doctor-verification', component: DoctorVerificationComponent },
       { path: 'establishments', component: EstablishmentsComponent },
       { path: 'marketplace-partners', component: MarketplacePartnersComponent },
+      { path: 'patient-import', component: PatientImportComponent },
       { path: 'certificat-viewer', component: PdfViewerComponent },
       { path: 'users', component: UsersComponent },
       { path: 'notifications', component: NotificationsComponent },
