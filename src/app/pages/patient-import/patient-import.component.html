@@ -1,0 +1,149 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Patient Bulk Import</h1>
+      <p class="page-subtitle">Upload a CSV roster to onboard patients for a clinic. All patients use the clinic's shared activation code.</p>
+    </div>
+  </div>
+
+  <!-- Upload Card -->
+  <div class="upload-card">
+    <div class="upload-card-header">
+      <lucide-icon name="users" class="upload-icon"></lucide-icon>
+      <div>
+        <h3 class="upload-title">Upload Patient CSV</h3>
+        <p class="upload-description">
+          CSV columns: full_name, email, phone, date_of_birth, gender, chart_id, mrn.
+          Auto-detects common PMS header synonyms. Each row requires a name + at least one of email, phone, MRN, or chart ID.
+        </p>
+      </div>
+    </div>
+
+    <div class="upload-form">
+      <div class="form-row">
+        <label class="form-label" for="practice-select">Clinic / Practice</label>
+        <select
+          id="practice-select"
+          [(ngModel)]="selectedPracticeId"
+          class="form-select"
+        >
+          <option value="">Select a practice…</option>
+          @for (p of practices; track p.id) {
+            <option [value]="p.id">{{ p.name }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="form-row">
+        <label class="form-label" for="csv-file">CSV File</label>
+        <input
+          id="csv-file"
+          type="file"
+          accept=".csv,text/csv"
+          (change)="onFileSelected($event)"
+          class="form-file-input"
+        />
+      </div>
+
+      @if (selectedFile) {
+        <p class="file-info">
+          Selected: <strong>{{ selectedFile.name }}</strong>
+          ({{ (selectedFile.size / 1024).toFixed(1) }} KB)
+        </p>
+      }
+
+      <button
+        class="btn-primary"
+        [disabled]="isUploading || !selectedFile || !selectedPracticeId"
+        (click)="upload()"
+      >
+        @if (isUploading) {
+          <span class="spinner"></span> Uploading & queuing…
+        } @else {
+          <lucide-icon name="upload" class="btn-icon"></lucide-icon>
+          Upload & Start Import
+        }
+      </button>
+
+      @if (uploadError) {
+        <div class="alert alert-error">{{ uploadError }}</div>
+      }
+      @if (uploadSuccess) {
+        <div class="alert alert-success">{{ uploadSuccess }}</div>
+      }
+      @if (selectedClinicCode) {
+        <div class="clinic-code-card">
+          <p class="clinic-code-label">Share this clinic code with patients:</p>
+          <p class="clinic-code-value">{{ selectedClinicCode }}</p>
+          <p class="clinic-code-hint">Patients enter this code + their personal details in the Anixi app to activate their account.</p>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Jobs Table -->
+  <div class="jobs-card">
+    <h3 class="jobs-title">Import History</h3>
+
+    @if (isLoading) {
+      <nz-skeleton [nzActive]="true" [nzParagraph]="{ rows: 5 }"></nz-skeleton>
+    } @else if (jobs.length === 0) {
+      <p class="jobs-empty">No import jobs yet. Upload a CSV to get started.</p>
+    } @else {
+      <div class="table-wrapper">
+        <table class="jobs-table">
+          <thead>
+            <tr>
+              <th>File</th>
+              <th>Practice</th>
+              <th>Clinic Code</th>
+              <th>Status</th>
+              <th>Progress</th>
+              <th>Imported</th>
+              <th>Skipped</th>
+              <th>Errors</th>
+              <th>Created</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (job of jobs; track job.jobId) {
+              <tr>
+                <td class="cell-filename">{{ job.fileName }}</td>
+                <td>{{ practiceName(job.practiceId) }}</td>
+                <td class="cell-clinic-code">{{ practiceClinicCode(job.practiceId) }}</td>
+                <td>
+                  <span class="status-badge" [style.background]="statusColor(job.status) + '18'" [style.color]="statusColor(job.status)">
+                    {{ job.status }}
+                  </span>
+                </td>
+                <td>
+                  @if (job.status === 'processing') {
+                    <div class="progress-bar-container">
+                      <div class="progress-bar-fill" [style.width.%]="progressPercent(job)"></div>
+                    </div>
+                    <span class="progress-text">{{ progressPercent(job) }}%</span>
+                  } @else {
+                    {{ job.processedRows }} / {{ job.totalRows }}
+                  }
+                </td>
+                <td class="cell-count cell-imported">{{ job.importedCount }}</td>
+                <td class="cell-count cell-skipped">{{ job.skippedCount }}</td>
+                <td class="cell-count cell-errors">{{ job.errorCount || 0 }}</td>
+                <td class="cell-date">{{ job.createdAt | date:'short' }}</td>
+                <td>
+                  @if (job.status === 'completed') {
+                    <button class="btn-download" (click)="downloadResults(job.jobId)">
+                      <lucide-icon name="download" class="btn-icon-sm"></lucide-icon>
+                      Results CSV
+                    </button>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+</div>

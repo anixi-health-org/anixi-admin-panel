@@ -30,6 +30,7 @@ const navGroups: NavGroup[] = [
       { name: 'Clinics', icon: 'building-2', path: '/establishments' },
       { name: 'Marketplace partners', icon: 'store', path: '/marketplace-partners' },
       { name: 'Patients / Users', icon: 'users', path: '/users' },
+      { name: 'Patient Import', icon: 'upload', path: '/patient-import' },
     ],
   },
   {

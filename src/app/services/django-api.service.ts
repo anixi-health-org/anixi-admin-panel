@@ -236,6 +236,42 @@ export class DjangoApiService {
     );
   }
 
+  listImportJobs() {
+    return this.request<Array<Record<string, unknown>>>('/api/v1/patients/roster/import-jobs/');
+  }
+
+  async uploadPatientCsv(file: File, practiceId: string): Promise<Record<string, unknown>> {
+    const form = new FormData();
+    form.append('file', file);
+    form.append('practiceId', practiceId);
+
+    const headers: Record<string, string> = { 'X-Client': 'admin-panel' };
+    if (this.accessToken) {
+      headers['Authorization'] = `Bearer ${this.accessToken}`;
+    }
+
+    const res = await fetch(`${environment.apiUrl}/api/v1/patients/roster/import-csv/`, {
+      method: 'POST',
+      headers,
+      body: form,
+    });
+    const json = (await res.json()) as Envelope<Record<string, unknown>>;
+    if (!res.ok || !json.success || !json.data) {
+      throw new Error(
+        typeof json.error === 'string' ? json.error : 'CSV upload failed',
+      );
+    }
+    return json.data;
+  }
+
+  downloadImportResults(jobId: string): void {
+    const url = `${environment.apiUrl}/api/v1/patients/roster/import-jobs/${encodeURIComponent(jobId)}/results.csv`;
+    const link = document.createElement('a');
+    link.href = this.accessToken ? `${url}?access=${encodeURIComponent(this.accessToken)}` : url;
+    link.download = `import-${jobId}-results.csv`;
+    link.click();
+  }
+
   listAdminPosts() {
     return this.request<Array<Record<string, unknown>>>(
       '/api/v1/community/posts/?includeDrafts=true&source=admin_cms',
