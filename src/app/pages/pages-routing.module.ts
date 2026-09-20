@@ -12,6 +12,10 @@ import { EstablishmentsComponent } from './establishments/establishments.compone
 import { NotificationsComponent } from './notifications/notifications.component';
 import { MarketplacePartnersComponent } from './marketplace-partners/marketplace-partners.component';
 import { PatientImportComponent } from './patient-import/patient-import.component';
+import { AnalyticsComponent } from './analytics/analytics.component';
+import { AuditLogComponent } from './audit-log/audit-log.component';
+import { TeamAccessComponent } from './team-access/team-access.component';
+import { PendingActivationsComponent } from './pending-activations/pending-activations.component';
 import { authGuard } from '../guards/auth.guard';
 import { guestGuard } from '../guards/guest.guard';
 
@@ -38,6 +42,10 @@ const routes: Routes = [
       { path: 'certificat-viewer', component: PdfViewerComponent },
       { path: 'users', component: UsersComponent },
       { path: 'notifications', component: NotificationsComponent },
+      { path: 'analytics', component: AnalyticsComponent },
+      { path: 'audit-log', component: AuditLogComponent },
+      { path: 'team-access', component: TeamAccessComponent },
+      { path: 'pending-activations', component: PendingActivationsComponent },
     ],
   },
   { path: '**', redirectTo: 'dashboard' },

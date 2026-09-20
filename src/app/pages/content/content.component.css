@@ -342,3 +342,28 @@ li:hover {
   color: #1d6fa5;
   font-size: 0.875rem;
 }
+
+.content-page .ops-panel table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.content-page .ops-panel thead th {
+  padding: 0.75rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #8b9a90;
+  border-bottom: 1px solid #eef2ef;
+}
+
+.content-page .ops-panel tbody td {
+  padding: 0.85rem 0.5rem;
+  border-bottom: 1px solid #f1f4f2;
+  vertical-align: middle;
+}
+
+.content-page .ops-panel tbody tr:hover {
+  background: #f8faf8;
+}

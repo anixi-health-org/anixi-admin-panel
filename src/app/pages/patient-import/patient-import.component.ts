@@ -38,6 +38,7 @@ export class PatientImportComponent implements OnInit, OnDestroy {
   uploadSuccess = '';
   selectedFile: File | null = null;
   selectedClinicCode = '';
+  isDragOver = false;
   private pollTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor(private api: DjangoApiService) {}
@@ -77,7 +78,38 @@ export class PatientImportComponent implements OnInit, OnDestroy {
 
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
-    this.selectedFile = input.files?.[0] ?? null;
+    this.setSelectedFile(input.files?.[0] ?? null);
+  }
+
+  onPracticeChange(): void {
+    this.selectedClinicCode =
+      this.practices.find((practice) => practice.id === this.selectedPracticeId)?.clinicCode ?? '';
+  }
+
+  onDragOver(event: DragEvent): void {
+    event.preventDefault();
+    this.isDragOver = true;
+  }
+
+  onDragLeave(event: DragEvent): void {
+    event.preventDefault();
+    this.isDragOver = false;
+  }
+
+  onDrop(event: DragEvent): void {
+    event.preventDefault();
+    this.isDragOver = false;
+    const file = event.dataTransfer?.files?.[0] ?? null;
+    this.setSelectedFile(file);
+  }
+
+  private setSelectedFile(file: File | null): void {
+    if (file && !file.name.toLowerCase().endsWith('.csv')) {
+      this.uploadError = 'Please choose a CSV file.';
+      this.selectedFile = null;
+      return;
+    }
+    this.selectedFile = file;
     this.uploadError = '';
     this.uploadSuccess = '';
   }
@@ -132,12 +164,16 @@ export class PatientImportComponent implements OnInit, OnDestroy {
     return this.practices.find((p) => p.id === practiceId)?.clinicCode ?? '—';
   }
 
-  statusColor(status: string): string {
+  statusBadgeClass(status: string): string {
     switch (status) {
-      case 'completed': return '#10b981';
-      case 'processing': return '#3b82f6';
-      case 'failed': return '#ef4444';
-      default: return '#94a3b8';
+      case 'completed':
+        return 'ops-badge--green';
+      case 'processing':
+        return 'ops-badge--blue';
+      case 'failed':
+        return 'ops-badge--red';
+      default:
+        return 'ops-badge--slate';
     }
   }
 }

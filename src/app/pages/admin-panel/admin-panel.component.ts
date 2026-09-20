@@ -58,18 +58,24 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
+    label: 'CRM',
+    items: [
+      { name: 'Pending activations', icon: 'clock', path: '/pending-activations' },
+      { name: 'Team & access', icon: 'shield', path: '/team-access' },
+    ],
+  },
+  {
     label: 'Platform',
     items: [
       { name: 'Notifications', icon: 'bell', path: '/notifications' },
-      { name: 'Analytics', icon: 'chart-column', comingSoon: true },
+      { name: 'Analytics', icon: 'chart-column', path: '/analytics' },
       { name: 'Settings', icon: 'settings', comingSoon: true },
     ],
   },
   {
     label: 'Governance',
     items: [
-      { name: 'Audit Log', icon: 'scroll-text', comingSoon: true },
-      { name: 'Security / Access', icon: 'shield', comingSoon: true },
+      { name: 'Audit Log', icon: 'scroll-text', path: '/audit-log' },
     ],
   },
 ];

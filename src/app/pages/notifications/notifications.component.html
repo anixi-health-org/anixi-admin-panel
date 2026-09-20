@@ -27,17 +27,24 @@
     </div>
 
     @if (isLoading) {
-      <div class="notifications-loading">
+      <div class="ops-panel__body notifications-loading">
         <nz-spin nzSimple></nz-spin>
       </div>
     } @else if (loadError) {
-      <div class="notifications-empty">
-        <p>{{ loadError }}</p>
+      <div class="ops-empty">
+        <div class="ops-empty__icon" aria-hidden="true">!</div>
+        <p class="ops-empty__title">Could not load notifications</p>
+        <p class="ops-empty__text">{{ loadError }}</p>
       </div>
     } @else if (notifications.length === 0) {
-      <div class="notifications-empty">
-        <p>No notifications yet</p>
-        <span>When a doctor signs up and waits for approval, you’ll see it here.</span>
+      <div class="ops-empty">
+        <div class="ops-empty__icon" aria-hidden="true">
+          <lucide-icon name="bell"></lucide-icon>
+        </div>
+        <p class="ops-empty__title">No notifications yet</p>
+        <p class="ops-empty__text">
+          When a doctor signs up and waits for approval, you'll see it here.
+        </p>
       </div>
     } @else {
       <ul class="notifications-list">

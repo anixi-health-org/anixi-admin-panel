@@ -20,7 +20,6 @@ export type PublishCommunityInput = {
   communities: string[];
   contentType: CommunityContentType;
   status: CommunityContentStatus;
-  /** Shared media URL after successful upload (image or video). */
   mediaDownloadURL?: string;
   mediaKind?: 'image' | 'video';
   scheduledAt?: Date | null;
@@ -33,6 +32,19 @@ export type PublishCommunityResult = {
   status: CommunityContentStatus;
   contentBatchId: string;
 };
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function parseTimestamp(value: unknown): Date {
+  if (!value) return new Date(0);
+  if (value instanceof Date) return value;
+  if (typeof value === 'object' && value && 'toDate' in value) {
+    return (value as { toDate: () => Date }).toDate();
+  }
+  const parsed = new Date(String(value));
+  return Number.isNaN(parsed.getTime()) ? new Date(0) : parsed;
+}
 
 @Injectable({
   providedIn: 'root',
@@ -49,12 +61,14 @@ export class PostService {
 
   private mapDjangoPost(row: Record<string, unknown>): IGroupPost {
     const metadata = (row['metadata'] as Record<string, unknown>) || {};
+    const createdAt = row['createdAt'] ?? row['updatedAt'] ?? new Date().toISOString();
+    const updatedAt = row['updatedAt'] ?? createdAt;
     return {
       id: String(row['id'] ?? ''),
       title: String(row['title'] ?? metadata['title'] ?? ''),
       comments: [],
       userId: String(row['userId'] ?? this.resolveAdminUserId()),
-      userName: 'anixi health',
+      userName: 'Anixi Health',
       firstName: 'admin',
       lastName: 'anixihealth',
       groupName: String(row['groupName'] ?? metadata['groupName'] ?? ''),
@@ -74,14 +88,15 @@ export class PostService {
       scheduledAt: metadata['scheduledAt'] ?? row['publishAt'] ?? null,
       publishedAt: metadata['publishedAt'] ?? null,
       archivedAt: metadata['archivedAt'] ?? null,
+      updatedAt,
       hyperlink: '',
       originalPostId: '',
       repostText: '',
       repostUserId: '',
-      repostTimeStamp: row['createdAt'] ?? new Date(),
-      timeStamp: row['createdAt'] ?? new Date(),
+      repostTimeStamp: createdAt,
+      timeStamp: createdAt,
       visibility: 'Visible to public',
-      reported: false,
+      reported: Boolean(row['reported'] ?? metadata['reported']),
       likes: [],
       taggedFriends: [],
       status: (row['status'] ?? metadata['status'] ?? 'Draft') as CommunityContentStatus,
@@ -89,21 +104,19 @@ export class PostService {
     };
   }
 
-  private buildDjangoPayload(
-    postId: string,
-    data: Partial<IGroupPost>,
-  ): Record<string, unknown> {
+  private buildDjangoPayload(data: Partial<IGroupPost>): Record<string, unknown> {
     const status = String(data.status ?? 'Draft');
+    const scheduled =
+      status === 'Scheduled' && data.scheduledAt
+        ? parseTimestamp(data.scheduledAt).toISOString()
+        : null;
     return {
       title: data.title ?? '',
       body: data.text ?? '',
       text: data.text ?? '',
       status,
       published: status === 'Published',
-      publishAt:
-        status === 'Scheduled' && data.scheduledAt
-          ? new Date(data.scheduledAt as string | Date).toISOString()
-          : null,
+      publishAt: scheduled,
       contentType: data.contentType,
       mediaUrl: data.mediaUrl,
       mediaUrls: data.mediaUrls,
@@ -112,10 +125,19 @@ export class PostService {
       groupName: data.groupName,
       communities: data.communities,
       source: data.source ?? 'admin_cms',
-      scheduledAt:
-        data.scheduledAt instanceof Date
-          ? data.scheduledAt.toISOString()
-          : data.scheduledAt ?? null,
+      scheduledAt: scheduled,
+      publishedAt:
+        status === 'Published'
+          ? (data.publishedAt instanceof Date
+              ? data.publishedAt.toISOString()
+              : data.publishedAt ?? new Date().toISOString())
+          : null,
+      archivedAt:
+        status === 'Archived'
+          ? (data.archivedAt instanceof Date
+              ? data.archivedAt.toISOString()
+              : data.archivedAt ?? new Date().toISOString())
+          : null,
       metadata: {
         contentBatchId: data.contentBatchId,
         contentType: data.contentType,
@@ -127,32 +149,53 @@ export class PostService {
         communities: data.communities,
         source: data.source ?? 'admin_cms',
         status,
-        scheduledAt:
-          data.scheduledAt instanceof Date
-            ? data.scheduledAt.toISOString()
-            : data.scheduledAt ?? null,
+        scheduledAt: scheduled,
+        publishedAt:
+          status === 'Published'
+            ? (data.publishedAt instanceof Date
+                ? data.publishedAt.toISOString()
+                : data.publishedAt ?? new Date().toISOString())
+            : null,
+        archivedAt:
+          status === 'Archived'
+            ? (data.archivedAt instanceof Date
+                ? data.archivedAt.toISOString()
+                : data.archivedAt ?? new Date().toISOString())
+            : null,
         textLower: data.textLower,
         hashtags: data.hashtags,
       },
-      id: postId,
     };
   }
 
-  async saveGroupPost(postId: string, data: Partial<IGroupPost>) {
-    const payload = this.buildDjangoPayload(postId, {
+  private isServerPostId(postId: string | null | undefined): boolean {
+    return Boolean(postId && UUID_RE.test(postId));
+  }
+
+  /** Create or update a post; returns the server-assigned UUID. */
+  async saveGroupPost(postId: string | null, data: Partial<IGroupPost>): Promise<string> {
+    const payload = this.buildDjangoPayload({
       ...data,
       userId: data.userId || this.resolveAdminUserId(),
     });
-    try {
-      await this.djangoApi.patchPost(postId, payload);
-    } catch {
-      await this.djangoApi.createPost(payload);
+
+    if (this.isServerPostId(postId)) {
+      try {
+        const updated = await this.djangoApi.patchPost(postId!, payload);
+        return String(updated['id'] ?? postId);
+      } catch {
+        /* fall through to create if stale id */
+      }
     }
+
+    const created = await this.djangoApi.createPost(payload);
+    const serverId = String(created['id'] ?? '');
+    if (!serverId) {
+      throw new Error('Server did not return a post id.');
+    }
+    return serverId;
   }
 
-  /**
-   * Publishes patient-compatible community content via the Django API.
-   */
   async publishCommunityContent(input: PublishCommunityInput): Promise<PublishCommunityResult> {
     const communities = Array.from(new Set(input.communities.map((c) => c.trim()).filter(Boolean)));
     if (!communities.length) {
@@ -181,29 +224,18 @@ export class PostService {
     ) {
       throw new Error('Upload media before publishing or scheduling.');
     }
-    if (input.contentType === 'video' && input.mediaDownloadURL && input.mediaKind !== 'video') {
-      throw new Error('Video content requires a video file upload.');
-    }
-    if (input.contentType === 'image' && input.mediaDownloadURL && input.mediaKind !== 'image') {
-      throw new Error('Image content requires an image file upload.');
-    }
 
     const caption = buildPatientBody(title, body);
     const textLower = buildSearchText(title, body);
     const hashtags = extractHashtags(`${title}\n${body}`);
     const adminUserId = this.resolveAdminUserId();
-    const baseMs = Date.now();
     const contentBatchId = input.contentBatchId || newContentBatchId();
     const postIds: string[] = [];
     const scheduledAt = input.status === 'Scheduled' ? input.scheduledAt! : null;
 
-    for (let i = 0; i < communities.length; i++) {
-      const groupName = communities[i]!;
-      const postId = `${baseMs}-${i}-${Math.random().toString(36).slice(2, 8)}`;
+    for (const groupName of communities) {
       const mediaFields = this.buildMediaFields(input);
-
-      await this.saveGroupPost(postId, {
-        id: postId,
+      const serverId = await this.saveGroupPost(null, {
         title,
         text: caption,
         bodyHtml: input.bodyHtml || '',
@@ -218,26 +250,22 @@ export class PostService {
         postType: 'Post',
         firstName: 'admin',
         lastName: 'anixihealth',
-        userName: 'anixi health',
+        userName: 'Anixi Health',
         userId: adminUserId,
         scheduledAt: scheduledAt || null,
         publishedAt: input.status === 'Published' ? new Date() : null,
         ...mediaFields,
       });
-      postIds.push(postId);
+      postIds.push(serverId);
     }
 
-    const verified = await this.verifyPublishedDocs(postIds, input.status, {
+    const verified = await this.verifyContentBatch(contentBatchId, input.status, communities, {
       contentType: input.contentType,
       mediaUrl: input.mediaDownloadURL,
     });
     return { postIds, verified, status: input.status, contentBatchId };
   }
 
-  /**
-   * Updates a content batch across all selected communities
-   * (create missing copies, update existing, delete removed).
-   */
   async syncCommunityContentBatch(input: {
     contentBatchId: string;
     existingPosts: IGroupPost[];
@@ -281,13 +309,9 @@ export class PostService {
 
     for (const groupName of communities) {
       const existing = byCommunity.get(groupName);
-      const postId =
-        existing?.id ||
-        `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      keepIds.add(postId);
+      const existingId = this.isServerPostId(existing?.id) ? existing!.id : null;
 
       const patch: Partial<IGroupPost> = {
-        id: postId,
         title,
         text: caption,
         bodyHtml: input.bodyHtml || '',
@@ -302,7 +326,7 @@ export class PostService {
         postType: 'Post',
         firstName: 'admin',
         lastName: 'anixihealth',
-        userName: 'anixi health',
+        userName: 'Anixi Health',
         scheduledAt: scheduledAt || null,
         lastEditAt: new Date(),
         ...mediaFields,
@@ -314,17 +338,18 @@ export class PostService {
         patch.archivedAt = new Date();
       }
 
-      await this.saveGroupPost(postId, patch);
-      postIds.push(postId);
+      const serverId = await this.saveGroupPost(existingId, patch);
+      keepIds.add(serverId);
+      postIds.push(serverId);
     }
 
     for (const post of input.existingPosts) {
-      if (post.id && !keepIds.has(post.id)) {
+      if (post.id && this.isServerPostId(post.id) && !keepIds.has(post.id)) {
         await this.deleteGroupPost(post.id);
       }
     }
 
-    const verified = await this.verifyPublishedDocs(postIds, input.status, {
+    const verified = await this.verifyContentBatch(input.contentBatchId, input.status, communities, {
       contentType: input.contentType,
       mediaUrl: input.mediaDownloadURL,
     });
@@ -367,13 +392,21 @@ export class PostService {
     };
   }
 
-  private async verifyPublishedDocs(
-    postIds: string[],
+  private async verifyContentBatch(
+    contentBatchId: string,
     expectedStatus: CommunityContentStatus,
+    communities: string[],
     expected?: { contentType: CommunityContentType; mediaUrl?: string },
   ): Promise<boolean> {
-    for (const id of postIds) {
-      const post = await this.getPostById(id);
+    const rows = await this.djangoApi.listPostsByBatch(contentBatchId);
+    if (rows.length < communities.length) return false;
+
+    const byCommunity = new Map(
+      rows.map((row) => [String(row['groupName'] ?? ''), this.mapDjangoPost(row)] as const),
+    );
+
+    for (const community of communities) {
+      const post = byCommunity.get(community);
       if (!post) return false;
       if (post.status !== expectedStatus) return false;
       if (!post.text?.trim()) return false;
@@ -392,7 +425,7 @@ export class PostService {
   }
 
   async editPost(postId: string, data: Partial<IGroupPost>) {
-    await this.djangoApi.patchPost(postId, this.buildDjangoPayload(postId, data));
+    await this.djangoApi.patchPost(postId, this.buildDjangoPayload(data));
   }
 
   async setContentStatus(
@@ -420,18 +453,27 @@ export class PostService {
   }
 
   async getPostById(postId: string): Promise<IGroupPost | null> {
+    if (this.isServerPostId(postId)) {
+      try {
+        const row = await this.djangoApi.getPost(postId);
+        return this.mapDjangoPost(row);
+      } catch {
+        return null;
+      }
+    }
     const rows = await this.djangoApi.listAdminPosts();
     const match = rows.find((row) => String(row['id']) === postId);
     return match ? this.mapDjangoPost(match) : null;
   }
 
-  /** All admin CMS posts (not limited to the signed-in author). */
-  fetchAdminPost(_adminId?: string): Observable<{ data: any[]; loading: boolean }> {
+  fetchAdminPost(_adminId?: string): Observable<{ data: IGroupPost[]; loading: boolean }> {
     return interval(30_000).pipe(
       startWith(0),
       switchMap(() => from(this.djangoApi.listAdminPosts())),
       map((rows) => ({
-        data: rows.map((row) => this.mapDjangoPost(row)),
+        data: rows
+          .map((row) => this.mapDjangoPost(row))
+          .sort((a, b) => parseTimestamp(b.timeStamp).getTime() - parseTimestamp(a.timeStamp).getTime()),
         loading: false,
       })),
     );

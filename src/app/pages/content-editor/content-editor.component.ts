@@ -447,7 +447,7 @@ export class ContentEditorComponent implements OnInit, OnDestroy {
 
       if (!result.verified) {
         throw new Error(
-          'Content was written but backend verification failed. Check Firestore and retry.'
+          'Content was written but backend verification failed. Refresh the library and retry.'
         );
       }
 

@@ -487,6 +487,41 @@ export class FirestoreService {
     });
   }
 
+  async updateUserContact(
+    userId: string,
+    patch: { displayName?: string; email?: string; phoneNumber?: string },
+  ): Promise<void> {
+    await this.djangoApi.patchUser(userId, patch);
+  }
+
+  listAdminTeam() {
+    return from(this.djangoApi.listAdminTeam());
+  }
+
+  inviteAdminTeamMember(payload: {
+    email: string;
+    displayName?: string;
+    opsRole: string;
+  }) {
+    return from(this.djangoApi.inviteAdminTeamMember(payload));
+  }
+
+  patchAdminTeamMember(userId: string, patch: Record<string, unknown>) {
+    return from(this.djangoApi.patchAdminTeamMember(userId, patch));
+  }
+
+  listPendingActivations(params?: { practiceId?: string; limit?: number }) {
+    return from(this.djangoApi.listPendingActivations(params));
+  }
+
+  remindPendingActivations(payload: {
+    patientIds?: string[];
+    all?: boolean;
+    practiceId?: string;
+  }) {
+    return from(this.djangoApi.remindPendingActivations(payload));
+  }
+
   getDoctorsById(id: string): Observable<any | null> {
     return interval(15_000).pipe(
       startWith(0),
@@ -563,6 +598,20 @@ export class FirestoreService {
   }
 
   getEmployers(): Observable<Array<Record<string, unknown> & { id: string }>> {
-    return of([]);
+    if (!this.djangoApi.enabled) return of([]);
+    return interval(60_000).pipe(
+      startWith(0),
+      switchMap(() =>
+        from(this.djangoApi.listEmployers()).pipe(
+          map((rows) =>
+            rows.map((row) => ({
+              ...row,
+              id: String(row['id']),
+            })),
+          ),
+          catchError(() => of([])),
+        ),
+      ),
+    );
   }
 }
