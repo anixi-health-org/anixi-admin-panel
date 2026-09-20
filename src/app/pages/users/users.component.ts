@@ -16,6 +16,7 @@ import {
   ERROR_NOTIFICATION_BOX_POSITION,
   SUCCESS_NOTIFICATION_BOX_POSITION,
 } from '../../../../const';
+import { AuthService } from '../../services/auth.service';
 import { FirestoreService } from '../../services/firestore.service';
 import {
   formatAccountStatusLabel,
@@ -50,6 +51,11 @@ export class UsersComponent implements OnInit, OnDestroy {
   isLoadingSkeleton = true;
   selectedUser: PlatformUser | null = null;
   isUpdating = false;
+  isEditingContact = false;
+  canEditContact = false;
+  contactDisplayName = '';
+  contactEmail = '';
+  contactPhone = '';
   roleFilter = new FormControl<UserRoleFilter>('all');
   searchQuery = new FormControl('');
   userList$!: Observable<PlatformUser[]>;
@@ -64,11 +70,13 @@ export class UsersComponent implements OnInit, OnDestroy {
 
   constructor(
     private fireStoreService: FirestoreService,
+    private authService: AuthService,
     private route: ActivatedRoute,
     private notification: NzNotificationService
   ) {}
 
   ngOnInit(): void {
+    this.canEditContact = this.authService.hasPermission('editUserContact');
     this.sub.add(
       this.route.queryParamMap.subscribe((params) => {
         const q = params.get('q');
@@ -84,18 +92,13 @@ export class UsersComponent implements OnInit, OnDestroy {
         this.fireStoreService
           .getPracticesForAdmin(users as PlatformUser[], doctors)
           .pipe(
-            map((practices) => {
-              void this.fireStoreService.syncClinicAdminAccounts(
+            map((practices) =>
+              this.fireStoreService.buildUsersWithPracticeContext(
                 users as PlatformUser[],
                 doctors as Array<Record<string, unknown> & { id: string }>,
                 practices
-              );
-              return this.fireStoreService.buildUsersWithPracticeContext(
-                users as PlatformUser[],
-                doctors as Array<Record<string, unknown> & { id: string }>,
-                practices
-              );
-            })
+              )
+            )
           )
       ),
       tap({
@@ -232,10 +235,64 @@ export class UsersComponent implements OnInit, OnDestroy {
 
   selectUser(user: PlatformUser): void {
     this.selectedUser = user;
+    this.isEditingContact = false;
+    this.syncContactForm(user);
   }
 
   clearSelection(): void {
     this.selectedUser = null;
+    this.isEditingContact = false;
+  }
+
+  startContactEdit(): void {
+    if (!this.selectedUser || !this.canEditContact) return;
+    this.syncContactForm(this.selectedUser);
+    this.isEditingContact = true;
+  }
+
+  cancelContactEdit(): void {
+    this.isEditingContact = false;
+    if (this.selectedUser) this.syncContactForm(this.selectedUser);
+  }
+
+  private syncContactForm(user: PlatformUser): void {
+    this.contactDisplayName = getUserDisplayName(user);
+    this.contactEmail = getUserEmail(user);
+    this.contactPhone = getUserPhone(user);
+  }
+
+  async saveContactDetails(): Promise<void> {
+    if (!this.selectedUser || !this.canEditContact || this.isUpdating) return;
+    this.isUpdating = true;
+    try {
+      await this.fireStoreService.updateUserContact(this.selectedUser.id, {
+        displayName: this.contactDisplayName.trim(),
+        email: this.contactEmail.trim(),
+        phoneNumber: this.contactPhone.trim(),
+      });
+      this.selectedUser = {
+        ...this.selectedUser,
+        displayName: this.contactDisplayName.trim(),
+        email: this.contactEmail.trim(),
+        phoneNumber: this.contactPhone.trim(),
+      };
+      this.isEditingContact = false;
+      this.notification.create(
+        'success',
+        'Contact updated',
+        'User contact details were saved.',
+        SUCCESS_NOTIFICATION_BOX_POSITION,
+      );
+    } catch (error) {
+      this.notification.create(
+        'error',
+        'Save failed',
+        error instanceof Error ? error.message : 'Could not update contact details.',
+        ERROR_NOTIFICATION_BOX_POSITION,
+      );
+    } finally {
+      this.isUpdating = false;
+    }
   }
 
   async markAsClinicAdmin(): Promise<void> {

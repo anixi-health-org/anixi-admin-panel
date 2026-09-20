@@ -54,7 +54,7 @@
             </div>
             <div class="flex flex-col mt-4">
                 <p class="text-gray-500">Author: Admin</p>
-                <p class="text-gray-500">Date: {{post.timeStamp.toDate() | date: 'longDate'}}</p>
+                <p class="text-gray-500">Date: {{ postDate(post) | date: 'longDate' }}</p>
             </div>
         </div>
     </ng-container>
@@ -140,9 +140,8 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @if (posts.length) {
-                        @for(post of posts; track post.id) {
-                            @if (postIsVisible(post)) {
+                        @if (visiblePosts().length) {
+                        @for(post of visiblePosts(); track post.id) {
                                  <tr class="border-b-1 border-gray-300">
                                     <td class="text-start font-semibold p-4">
                                       <div class="flex items-center gap-3">
@@ -181,7 +180,7 @@
                                     </td>
                                     <td class="text-gray-500 text-sm">{{ post.userName || 'Admin' }}</td>
                                     <td class="text-gray-500">
-                                      {{post.timeStamp.toDate() | date: 'mediumDate'}}
+                                      {{ postDate(post) | date: 'mediumDate' }}
                                     </td>
                                     <td>
                                         <nz-icon class="cursor-pointer hover:bg-orange-400 h-8 w-8 rounded-lg flex justify-center items-center" nz-dropdown nzTrigger="click" [nzDropdownMenu]="action" nzType="ellipsis" nzTheme="outline"></nz-icon>
@@ -239,20 +238,24 @@
                                         </nz-dropdown-menu>
                                     </td>
                                 </tr>
-                            }
                         }
                         } @else {
                             <tr>
                                 <td colspan="7">
                                   <div class="ops-empty">
                                     <div class="ops-empty__icon" aria-hidden="true">📝</div>
-                                    <p class="ops-empty__title">No community content yet</p>
-                                    <p class="ops-empty__text">
-                                      Create an article, image, or video for the Anixi patient Community.
-                                    </p>
-                                    <button type="button" class="ops-btn ops-btn--primary" (click)="showModal()">
-                                      + Create content
-                                    </button>
+                                    @if (posts.length) {
+                                      <p class="ops-empty__title">No posts match these filters</p>
+                                      <p class="ops-empty__text">Try a different status, type, or community filter.</p>
+                                    } @else {
+                                      <p class="ops-empty__title">No community content yet</p>
+                                      <p class="ops-empty__text">
+                                        Create an article, image, or video for the Anixi patient Community.
+                                      </p>
+                                      <button type="button" class="ops-btn ops-btn--primary" (click)="showModal()">
+                                        + Create content
+                                      </button>
+                                    }
                                   </div>
                                 </td>
                             </tr>

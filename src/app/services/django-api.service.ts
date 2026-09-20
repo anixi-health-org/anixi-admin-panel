@@ -291,6 +291,12 @@ export class DjangoApiService {
     });
   }
 
+  getPost(postId: string) {
+    return this.request<Record<string, unknown>>(
+      `/api/v1/community/posts/${encodeURIComponent(postId)}/`,
+    );
+  }
+
   patchPost(postId: string, data: Record<string, unknown>) {
     return this.request<Record<string, unknown>>(
       `/api/v1/community/posts/${encodeURIComponent(postId)}/`,
@@ -305,6 +311,125 @@ export class DjangoApiService {
     return this.request<{ deleted: boolean }>(
       `/api/v1/community/posts/${encodeURIComponent(postId)}/`,
       { method: 'DELETE' },
+    );
+  }
+
+  listAdminTeam() {
+    return this.request<Array<Record<string, unknown>>>('/api/v1/auth/admin/team/');
+  }
+
+  inviteAdminTeamMember(payload: {
+    email: string;
+    displayName?: string;
+    opsRole: string;
+  }) {
+    return this.request<Record<string, unknown>>('/api/v1/auth/admin/team/invite/', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  patchAdminTeamMember(userId: string, patch: Record<string, unknown>) {
+    return this.request<Record<string, unknown>>(
+      `/api/v1/auth/admin/team/${encodeURIComponent(userId)}/`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify(patch),
+      },
+    );
+  }
+
+  listPendingActivations(params?: { practiceId?: string; limit?: number }) {
+    const qs = new URLSearchParams();
+    if (params?.practiceId) qs.set('practiceId', params.practiceId);
+    if (params?.limit) qs.set('limit', String(params.limit));
+    const suffix = qs.toString() ? `?${qs.toString()}` : '';
+    return this.request<Array<Record<string, unknown>>>(
+      `/api/v1/auth/admin/pending-activations/${suffix}`,
+    );
+  }
+
+  patchPendingActivation(
+    linkId: string,
+    patch: {
+      displayName?: string;
+      contactEmail?: string;
+      phoneNumber?: string;
+      notes?: string;
+      dateOfBirth?: string;
+      mrn?: string;
+    },
+  ) {
+    return this.request<Record<string, unknown>>(
+      `/api/v1/auth/admin/pending-activations/${encodeURIComponent(linkId)}/`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify(patch),
+      },
+    );
+  }
+
+  remindPendingActivations(payload: {
+    patientIds?: string[];
+    all?: boolean;
+    practiceId?: string;
+    templateId?: string;
+  }) {
+    return this.request<{ sent: number; skipped: number; failed: number; templateId?: string }>(
+      '/api/v1/auth/admin/pending-activations/remind/',
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      },
+    );
+  }
+
+  listCrmEmailTemplates(category = 'pending_activation') {
+    return this.request<Array<Record<string, unknown>>>(
+      `/api/v1/auth/admin/email-templates/?category=${encodeURIComponent(category)}`,
+    );
+  }
+
+  createCrmEmailTemplate(payload: {
+    name: string;
+    subject: string;
+    htmlBody: string;
+    textBody?: string;
+    isDefault?: boolean;
+    category?: string;
+  }) {
+    return this.request<Record<string, unknown>>('/api/v1/auth/admin/email-templates/', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  patchCrmEmailTemplate(templateId: string, patch: Record<string, unknown>) {
+    return this.request<Record<string, unknown>>(
+      `/api/v1/auth/admin/email-templates/${encodeURIComponent(templateId)}/`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify(patch),
+      },
+    );
+  }
+
+  deleteCrmEmailTemplate(templateId: string) {
+    return this.request<{ deleted: boolean }>(
+      `/api/v1/auth/admin/email-templates/${encodeURIComponent(templateId)}/`,
+      { method: 'DELETE' },
+    );
+  }
+
+  listAuditEvents(limit = 100) {
+    return this.request<Array<Record<string, unknown>>>(
+      `/api/v1/auth/admin/audit-events/?limit=${limit}`,
+    );
+  }
+
+  listEmployers() {
+    return this.request<Array<Record<string, unknown>>>(
+      '/api/v1/auth/admin/employers/',
     );
   }
 

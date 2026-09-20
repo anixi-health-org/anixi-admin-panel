@@ -1,0 +1,249 @@
+<div class="ops-page pending-page">
+  <header class="ops-page-header">
+    <div class="ops-page-header__copy">
+      <p class="ops-page-header__eyebrow">CRM</p>
+      <h1 class="ops-page-header__title">Pending activations</h1>
+      <p class="ops-page-header__subtitle">
+        Clinic roster patients who have not activated their Anixi account yet. Edit contact details, choose an email template, and send personalised reminders.
+      </p>
+    </div>
+    @if (canRemind) {
+      <div class="header-actions">
+        <button
+          type="button"
+          class="ops-btn ops-btn--secondary"
+          [disabled]="isSending || selectedIds.size === 0"
+          (click)="remindSelected()"
+        >
+          Remind selected ({{ selectedIds.size }})
+        </button>
+        <button
+          type="button"
+          class="ops-btn ops-btn--primary"
+          [disabled]="isSending || remindableCount === 0"
+          (click)="remindAll()"
+        >
+          {{ isSending ? 'Sending…' : 'Remind all (' + remindableCount + ')' }}
+        </button>
+      </div>
+    }
+  </header>
+
+  @if (canRemind) {
+    <section class="ops-panel template-panel">
+      <div class="ops-panel__header template-panel__header">
+        <div>
+          <h2 class="ops-panel__title">Email template</h2>
+          <p class="template-panel__hint">
+            Each recipient gets their own name, clinic code, and signup link. Use placeholders like {{ placeholderHelp }}.
+          </p>
+        </div>
+        <button type="button" class="ops-btn ops-btn--secondary" (click)="openNewTemplate()">
+          New template
+        </button>
+      </div>
+      <div class="template-panel__controls">
+        <label class="field-label" for="template-select">Template for reminders</label>
+        <select
+          id="template-select"
+          class="ops-select"
+          [(ngModel)]="selectedTemplateId"
+        >
+          @for (template of templates; track template.id) {
+            <option [value]="template.id">
+              {{ template.name }}{{ template.isDefault ? ' (default)' : '' }}
+            </option>
+          }
+        </select>
+        @if (selectedTemplate()) {
+          <button
+            type="button"
+            class="ops-btn ops-btn--ghost"
+            (click)="openEditTemplate(selectedTemplate()!)"
+          >
+            Edit template
+          </button>
+        }
+      </div>
+      @if (!templates.length) {
+        <p class="muted">No templates yet. Create one or run backend migration to seed the default invite.</p>
+      }
+    </section>
+  }
+
+  <section class="ops-panel">
+    @if (isLoading) {
+      <p class="muted">Loading pending accounts…</p>
+    } @else if (!rows.length) {
+      <div class="ops-empty">
+        <p class="ops-empty__title">No pending activations</p>
+        <p class="ops-empty__text">Imported roster patients who have not set a password will appear here.</p>
+      </div>
+    } @else {
+      <div class="table-meta">
+        <p class="muted">
+          Showing {{ rows.length }} pending patients.
+          {{ remindableCount }} have a contact email and can receive reminders.
+          @if (remindableCount < rows.length) {
+            Edit rows missing email to enable reminders.
+          }
+        </p>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              @if (canRemind) {
+                <th>
+                  <input
+                    type="checkbox"
+                    [checked]="selectedIds.size > 0 && selectedIds.size === remindableCount"
+                    (change)="toggleAll($any($event.target).checked)"
+                    aria-label="Select all remindable rows"
+                  />
+                </th>
+              }
+              <th>Patient</th>
+              <th>Contact email</th>
+              <th>Phone</th>
+              <th>Clinic</th>
+              <th>Code</th>
+              <th>Last reminded</th>
+              @if (canEdit) {
+                <th></th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of rows; track row.id) {
+              <tr [class.row--missing-email]="!row.contactEmail">
+                @if (canRemind) {
+                  <td>
+                    <input
+                      type="checkbox"
+                      [disabled]="!row.contactEmail"
+                      [checked]="selectedIds.has(row.patientId)"
+                      (change)="toggleRow(row.patientId, $any($event.target).checked)"
+                      [attr.aria-label]="'Select ' + row.displayName"
+                    />
+                  </td>
+                }
+                <td>
+                  <span class="patient-name">{{ row.displayName || 'Patient' }}</span>
+                  @if (row.mrn) {
+                    <span class="patient-meta">MRN {{ row.mrn }}</span>
+                  }
+                </td>
+                <td>
+                  @if (row.contactEmail) {
+                    {{ row.contactEmail }}
+                  } @else {
+                    <span class="missing">No email — edit to add</span>
+                  }
+                </td>
+                <td>{{ row.phoneNumber || '—' }}</td>
+                <td>{{ row.practiceName || '—' }}</td>
+                <td>{{ row.clinicCode || row.activationCode || '—' }}</td>
+                <td>{{ row.lastRemindedAt ? (row.lastRemindedAt | date: 'medium') : 'Never' }}</td>
+                @if (canEdit) {
+                  <td class="actions-cell">
+                    <button type="button" class="ops-btn ops-btn--ghost" (click)="openEdit(row)">
+                      Edit
+                    </button>
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+</div>
+
+<nz-modal
+  [(nzVisible)]="showEditModal"
+  nzTitle="Edit pending patient"
+  nzWidth="640px"
+  [nzMaskClosable]="false"
+  [nzOkLoading]="isSavingEdit"
+  nzOkText="Save"
+  (nzOnCancel)="closeEdit()"
+  (nzOnOk)="saveEdit()"
+>
+  <ng-container *nzModalContent>
+    <div class="form-grid">
+      <label>
+        <span>Display name</span>
+        <input type="text" [(ngModel)]="editDraft.displayName" />
+      </label>
+      <label>
+        <span>Contact email</span>
+        <input
+          type="email"
+          [(ngModel)]="editDraft.contactEmail"
+          placeholder="name@example.com"
+          autocomplete="email"
+        />
+      </label>
+      <label>
+        <span>Phone</span>
+        <input type="tel" [(ngModel)]="editDraft.phoneNumber" />
+      </label>
+      <label>
+        <span>Date of birth</span>
+        <input
+          type="text"
+          [(ngModel)]="editDraft.dateOfBirth"
+          placeholder="YYYY-MM-DD or MM/DD/YYYY"
+        />
+      </label>
+      <label>
+        <span>MRN / chart ID</span>
+        <input type="text" [(ngModel)]="editDraft.mrn" />
+      </label>
+      <label class="full-width">
+        <span>Notes</span>
+        <textarea rows="3" [(ngModel)]="editDraft.notes"></textarea>
+      </label>
+    </div>
+  </ng-container>
+</nz-modal>
+
+<nz-modal
+  [(nzVisible)]="showTemplateModal"
+  [nzTitle]="templateDraft.id ? 'Edit email template' : 'New email template'"
+  [nzOkLoading]="isSavingTemplate"
+  nzOkText="Save template"
+  nzWidth="720px"
+  (nzOnCancel)="closeTemplateModal()"
+  (nzOnOk)="saveTemplate()"
+>
+  <ng-container *nzModalContent>
+    <p class="template-modal__help">
+      Placeholders are replaced per patient when sending: {{ placeholderHelp }}, plus {{ '{{cta_button}}' }} and {{ '{{fallback_link}}' }}.
+    </p>
+    <div class="form-grid">
+      <label>
+        <span>Template name</span>
+        <input type="text" [(ngModel)]="templateDraft.name" />
+      </label>
+      <label class="checkbox-row">
+        <input type="checkbox" [(ngModel)]="templateDraft.isDefault" />
+        <span>Use as default for activation reminders</span>
+      </label>
+      <label class="full-width">
+        <span>Email subject</span>
+        <input type="text" [(ngModel)]="templateDraft.subject" />
+      </label>
+      <label class="full-width">
+        <span>HTML body</span>
+        <textarea rows="8" [(ngModel)]="templateDraft.htmlBody"></textarea>
+      </label>
+      <label class="full-width">
+        <span>Plain text body (optional)</span>
+        <textarea rows="4" [(ngModel)]="templateDraft.textBody"></textarea>
+      </label>
+    </div>
+  </ng-container>
+</nz-modal>

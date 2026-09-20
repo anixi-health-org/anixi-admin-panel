@@ -138,7 +138,36 @@
             </div>
           </div>
 
-          <dl class="users-detail__grid">
+          @if (canEditContact && isEditingContact) {
+            <div class="users-contact-form">
+              <label>
+                <span>Display name</span>
+                <input type="text" [(ngModel)]="contactDisplayName" [ngModelOptions]="{ standalone: true }" />
+              </label>
+              <label>
+                <span>Email</span>
+                <input type="email" [(ngModel)]="contactEmail" [ngModelOptions]="{ standalone: true }" />
+              </label>
+              <label>
+                <span>Phone</span>
+                <input type="tel" [(ngModel)]="contactPhone" [ngModelOptions]="{ standalone: true }" />
+              </label>
+              <div class="users-contact-form__actions">
+                <button type="button" class="ops-btn ops-btn--secondary" (click)="cancelContactEdit()">
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  class="ops-btn ops-btn--primary"
+                  [disabled]="isUpdating"
+                  (click)="saveContactDetails()"
+                >
+                  Save contact
+                </button>
+              </div>
+            </div>
+          } @else {
+            <dl class="users-detail__grid">
             <div>
               <dt>Email</dt>
               <dd>{{ email(selectedUser) }}</dd>
@@ -166,8 +195,19 @@
               <dd class="users-detail__mono">{{ selectedUser.id }}</dd>
             </div>
           </dl>
+          }
 
           <div class="users-detail__actions">
+            @if (canEditContact && !isEditingContact) {
+              <button
+                type="button"
+                class="ops-btn ops-btn--secondary"
+                [disabled]="isUpdating"
+                (click)="startContactEdit()"
+              >
+                Edit contact details
+              </button>
+            }
             @if (isDoctor(selectedUser) && !isClinicAdmin(selectedUser)) {
               <button
                 type="button"

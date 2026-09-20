@@ -1,102 +1,142 @@
-<div class="page-container">
-  <div class="page-header">
-    <div>
-      <h1 class="page-title">Patient Bulk Import</h1>
-      <p class="page-subtitle">Upload a CSV roster to onboard patients for a clinic. All patients use the clinic's shared activation code.</p>
+<div class="ops-page patient-import-page">
+  <header class="ops-page-header">
+    <div class="ops-page-header__copy">
+      <p class="ops-page-header__eyebrow">Clinical operations</p>
+      <h1 class="ops-page-header__title">Patient bulk import</h1>
+      <p class="ops-page-header__subtitle">
+        Upload a CSV roster to onboard patients for a clinic. All patients use the clinic's shared activation code.
+      </p>
     </div>
-  </div>
+  </header>
 
-  <!-- Upload Card -->
-  <div class="upload-card">
-    <div class="upload-card-header">
-      <lucide-icon name="users" class="upload-icon"></lucide-icon>
+  <section class="ops-panel import-upload-panel">
+    <div class="ops-panel__header">
       <div>
-        <h3 class="upload-title">Upload Patient CSV</h3>
-        <p class="upload-description">
-          CSV columns: full_name, email, phone, date_of_birth, gender, chart_id, mrn.
-          Auto-detects common PMS header synonyms. Each row requires a name + at least one of email, phone, MRN, or chart ID.
-        </p>
+        <p class="ops-section-label">Upload</p>
+        <h2 class="ops-panel__title">Upload patient CSV</h2>
       </div>
     </div>
+    <div class="import-upload-body">
+      <p class="ops-note">
+        Required columns: <strong>full_name</strong>, plus at least one of email, phone, MRN, or chart ID.
+        Auto-detects common PMS header synonyms.
+      </p>
 
-    <div class="upload-form">
-      <div class="form-row">
-        <label class="form-label" for="practice-select">Clinic / Practice</label>
+      <label class="ops-field" for="practice-select">
+        <span class="ops-field__label">Clinic / practice</span>
         <select
           id="practice-select"
           [(ngModel)]="selectedPracticeId"
-          class="form-select"
+          class="ops-select"
+          (change)="onPracticeChange()"
         >
           <option value="">Select a practice…</option>
           @for (p of practices; track p.id) {
             <option [value]="p.id">{{ p.name }}</option>
           }
         </select>
-      </div>
+      </label>
 
-      <div class="form-row">
-        <label class="form-label" for="csv-file">CSV File</label>
+      <div
+        class="ops-file-drop"
+        [class.ops-file-drop--active]="isDragOver"
+        (dragover)="onDragOver($event)"
+        (dragleave)="onDragLeave($event)"
+        (drop)="onDrop($event)"
+      >
         <input
           id="csv-file"
           type="file"
           accept=".csv,text/csv"
           (change)="onFileSelected($event)"
-          class="form-file-input"
+          class="ops-file-drop__input"
         />
+        <label for="csv-file" class="ops-file-drop__label">
+          <span class="ops-file-drop__icon" aria-hidden="true">
+            <lucide-icon name="upload"></lucide-icon>
+          </span>
+          <span class="ops-file-drop__title">
+            @if (selectedFile) {
+              {{ selectedFile.name }}
+            } @else {
+              Drop CSV here or click to browse
+            }
+          </span>
+          <span class="ops-file-drop__hint">
+            @if (selectedFile) {
+              {{ (selectedFile.size / 1024).toFixed(1) }} KB selected
+            } @else {
+              UTF-8 CSV up to 20 MB
+            }
+          </span>
+        </label>
       </div>
 
-      @if (selectedFile) {
-        <p class="file-info">
-          Selected: <strong>{{ selectedFile.name }}</strong>
-          ({{ (selectedFile.size / 1024).toFixed(1) }} KB)
-        </p>
-      }
-
-      <button
-        class="btn-primary"
-        [disabled]="isUploading || !selectedFile || !selectedPracticeId"
-        (click)="upload()"
-      >
-        @if (isUploading) {
-          <span class="spinner"></span> Uploading & queuing…
-        } @else {
-          <lucide-icon name="upload" class="btn-icon"></lucide-icon>
-          Upload & Start Import
-        }
-      </button>
+      <div class="import-actions">
+        <button
+          type="button"
+          class="ops-btn ops-btn--primary"
+          [disabled]="isUploading || !selectedFile || !selectedPracticeId"
+          (click)="upload()"
+        >
+          @if (isUploading) {
+            <span class="import-spinner" aria-hidden="true"></span>
+            Uploading & queuing…
+          } @else {
+            <lucide-icon name="upload"></lucide-icon>
+            Upload & start import
+          }
+        </button>
+      </div>
 
       @if (uploadError) {
-        <div class="alert alert-error">{{ uploadError }}</div>
+        <div class="ops-note ops-note--amber">{{ uploadError }}</div>
       }
       @if (uploadSuccess) {
-        <div class="alert alert-success">{{ uploadSuccess }}</div>
+        <div class="ops-note" style="border-color: #c8e8d7; background: #ebf8f1; color: #1f7a4d;">
+          {{ uploadSuccess }}
+        </div>
       }
       @if (selectedClinicCode) {
-        <div class="clinic-code-card">
-          <p class="clinic-code-label">Share this clinic code with patients:</p>
-          <p class="clinic-code-value">{{ selectedClinicCode }}</p>
-          <p class="clinic-code-hint">Patients enter this code + their personal details in the Anixi app to activate their account.</p>
+        <div class="import-clinic-code">
+          <p class="import-clinic-code__label">Share this clinic code with patients</p>
+          <p class="import-clinic-code__value">{{ selectedClinicCode }}</p>
+          <p class="import-clinic-code__hint">
+            Patients enter this code plus their personal details in the Anixi app to activate their account.
+          </p>
         </div>
       }
     </div>
-  </div>
+  </section>
 
-  <!-- Jobs Table -->
-  <div class="jobs-card">
-    <h3 class="jobs-title">Import History</h3>
+  <section class="ops-panel import-history-panel">
+    <div class="ops-panel__header">
+      <div>
+        <p class="ops-section-label">History</p>
+        <h2 class="ops-panel__title">Import jobs</h2>
+      </div>
+    </div>
 
     @if (isLoading) {
-      <nz-skeleton [nzActive]="true" [nzParagraph]="{ rows: 5 }"></nz-skeleton>
+      <div class="ops-panel__body">
+        <nz-skeleton [nzActive]="true" [nzParagraph]="{ rows: 5 }"></nz-skeleton>
+      </div>
     } @else if (jobs.length === 0) {
-      <p class="jobs-empty">No import jobs yet. Upload a CSV to get started.</p>
+      <div class="ops-empty">
+        <div class="ops-empty__icon" aria-hidden="true">
+          <lucide-icon name="users"></lucide-icon>
+        </div>
+        <p class="ops-empty__title">No import jobs yet</p>
+        <p class="ops-empty__text">Upload a CSV above to start onboarding patients for a clinic.</p>
+      </div>
     } @else {
-      <div class="table-wrapper">
-        <table class="jobs-table">
+      <div class="users-table-wrap">
+        <table class="users-table import-jobs-table">
           <thead>
             <tr>
               <th>File</th>
               <th>Practice</th>
-              <th>Clinic Code</th>
+              <th>Clinic code</th>
               <th>Status</th>
               <th>Progress</th>
               <th>Imported</th>
@@ -109,32 +149,34 @@
           <tbody>
             @for (job of jobs; track job.jobId) {
               <tr>
-                <td class="cell-filename">{{ job.fileName }}</td>
+                <td class="import-cell-filename">{{ job.fileName }}</td>
                 <td>{{ practiceName(job.practiceId) }}</td>
-                <td class="cell-clinic-code">{{ practiceClinicCode(job.practiceId) }}</td>
+                <td class="import-cell-code">{{ practiceClinicCode(job.practiceId) }}</td>
                 <td>
-                  <span class="status-badge" [style.background]="statusColor(job.status) + '18'" [style.color]="statusColor(job.status)">
+                  <span class="ops-badge" [class]="statusBadgeClass(job.status)">
                     {{ job.status }}
                   </span>
                 </td>
                 <td>
                   @if (job.status === 'processing') {
-                    <div class="progress-bar-container">
-                      <div class="progress-bar-fill" [style.width.%]="progressPercent(job)"></div>
+                    <div class="import-progress">
+                      <div class="import-progress__bar">
+                        <div class="import-progress__fill" [style.width.%]="progressPercent(job)"></div>
+                      </div>
+                      <span class="import-progress__text">{{ progressPercent(job) }}%</span>
                     </div>
-                    <span class="progress-text">{{ progressPercent(job) }}%</span>
                   } @else {
                     {{ job.processedRows }} / {{ job.totalRows }}
                   }
                 </td>
-                <td class="cell-count cell-imported">{{ job.importedCount }}</td>
-                <td class="cell-count cell-skipped">{{ job.skippedCount }}</td>
-                <td class="cell-count cell-errors">{{ job.errorCount || 0 }}</td>
-                <td class="cell-date">{{ job.createdAt | date:'short' }}</td>
+                <td class="import-count import-count--green">{{ job.importedCount }}</td>
+                <td class="import-count import-count--amber">{{ job.skippedCount }}</td>
+                <td class="import-count import-count--red">{{ job.errorCount || 0 }}</td>
+                <td class="import-cell-date">{{ job.createdAt | date:'short' }}</td>
                 <td>
                   @if (job.status === 'completed') {
-                    <button class="btn-download" (click)="downloadResults(job.jobId)">
-                      <lucide-icon name="download" class="btn-icon-sm"></lucide-icon>
+                    <button type="button" class="ops-btn ops-btn--secondary" (click)="downloadResults(job.jobId)">
+                      <lucide-icon name="download"></lucide-icon>
                       Results CSV
                     </button>
                   }
@@ -145,5 +187,5 @@
         </table>
       </div>
     }
-  </div>
+  </section>
 </div>

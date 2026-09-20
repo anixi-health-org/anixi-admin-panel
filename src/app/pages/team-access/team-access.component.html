@@ -1,0 +1,101 @@
+<div class="ops-page">
+  <header class="ops-page-header">
+    <div class="ops-page-header__copy">
+      <p class="ops-page-header__eyebrow">CRM</p>
+      <h1 class="ops-page-header__title">Team & access</h1>
+      <p class="ops-page-header__subtitle">
+        Invite Anixi ops teammates with scoped privileges. Support can manage user contacts and activation reminders without full admin access.
+      </p>
+    </div>
+  </header>
+
+  @if (canManageTeam) {
+    <section class="ops-panel invite-panel">
+      <div class="ops-panel__header">
+        <h2 class="ops-panel__title">Invite teammate</h2>
+      </div>
+      <form class="invite-form" [formGroup]="inviteForm" (ngSubmit)="inviteMember()">
+        <label>
+          <span>Email</span>
+          <input type="email" formControlName="email" placeholder="support@anixihealth.com" />
+        </label>
+        <label>
+          <span>Display name</span>
+          <input type="text" formControlName="displayName" placeholder="Optional" />
+        </label>
+        <label>
+          <span>Role</span>
+          <select formControlName="opsRole">
+            @for (option of roleOptions; track option.value) {
+              <option [value]="option.value">{{ option.label }} — {{ option.description }}</option>
+            }
+          </select>
+        </label>
+        <button type="submit" class="ops-btn ops-btn--primary" [disabled]="isSaving">
+          {{ isSaving ? 'Sending…' : 'Send invite' }}
+        </button>
+      </form>
+    </section>
+  }
+
+  <section class="ops-panel">
+    <div class="ops-panel__header">
+      <h2 class="ops-panel__title">Ops team</h2>
+    </div>
+    @if (isLoading) {
+      <p class="muted">Loading team…</p>
+    } @else if (!members.length) {
+      <p class="muted">No admin team members yet.</p>
+    } @else {
+      <div class="team-table-wrap">
+        <table class="team-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Status</th>
+              @if (canManageTeam) {
+                <th>Actions</th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (member of members; track member.id) {
+              <tr>
+                <td>{{ member.displayName || '—' }}</td>
+                <td>{{ member.email }}</td>
+                <td>
+                  @if (canManageTeam) {
+                    <select
+                      [value]="member.opsRole"
+                      (change)="updateRole(member, $any($event.target).value)"
+                    >
+                      @for (option of roleOptions; track option.value) {
+                        <option [value]="option.value">{{ option.label }}</option>
+                      }
+                    </select>
+                  } @else {
+                    {{ roleLabel(member.opsRole) }}
+                  }
+                </td>
+                <td>
+                  <span class="ops-badge" [class.ops-badge--green]="member.active" [class.ops-badge--hold]="!member.active">
+                    {{ member.active ? 'Active' : 'Inactive' }}
+                  </span>
+                </td>
+                @if (canManageTeam) {
+                  <td>
+                    <button type="button" class="ops-btn ops-btn--secondary" (click)="toggleActive(member)">
+                      {{ member.active ? 'Deactivate' : 'Reactivate' }}
+                    </button>
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+</div>

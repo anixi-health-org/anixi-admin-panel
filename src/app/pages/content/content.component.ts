@@ -92,9 +92,7 @@ export class ContentComponent implements OnInit, OnDestroy{
       this.publishedCount = data.filter((post) => (post.status ?? 'Published') === 'Published').length;
       this.scheduledCount = data.filter((post) => post.status === 'Scheduled').length;
       this.draftCount = data.filter((post) => post.status === 'Draft').length;
-      this.posts = data.sort((a, b) => {
-        return b.timeStamp.toDate() - a.timeStamp.toDate();
-      });
+      this.posts = data;
       this.isLoadingSkeleton = res.loading;
      });
 
@@ -227,9 +225,14 @@ export class ContentComponent implements OnInit, OnDestroy{
     }
 
     postDate(post: IGroupPost): Date | null {
-      const ts = post.timeStamp;
-      if (ts && typeof ts.toDate === 'function') return ts.toDate();
-      return null;
+      const ts = post.updatedAt ?? post.timeStamp;
+      if (!ts) return null;
+      if (ts instanceof Date) return ts;
+      if (typeof ts === 'object' && ts && 'toDate' in ts) {
+        return (ts as { toDate: () => Date }).toDate();
+      }
+      const parsed = new Date(String(ts));
+      return Number.isNaN(parsed.getTime()) ? null : parsed;
     }
 
     async publishPost(post: IGroupPost): Promise<void> {
@@ -424,21 +427,21 @@ export class ContentComponent implements OnInit, OnDestroy{
         const title = this.articleElement.get('title')?.value;
         const text = this.articleElement.get('content')?.value;
         for (let community of communities) {
-          const postId = Date.now().toString();
           const postData: Partial<IGroupPost> = {
-            id: postId,
             title: title,
-            firstName: "admin",
-            userName: 'anixi health',
+            firstName: 'admin',
+            userName: 'Anixi Health',
             text: text,
             groupName: community.value,
-            lastName: "anixihealth",
-            postType: "Post",
+            lastName: 'anixihealth',
+            postType: 'Post',
             mediaType: this.mediaType || '',
             mediaUrl: this.mediaUrl || '',
-            status: "Published"
-          }
-          await this.postService.saveGroupPost(postId, postData);
+            status: 'Published',
+            source: 'admin_cms',
+            contentType: 'article',
+          };
+          await this.postService.saveGroupPost(null, postData);
         }
         this.isLoading = false;
         this.isVisible = false;

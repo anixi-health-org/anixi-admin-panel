@@ -245,6 +245,55 @@ body.content-modal-open {
   padding: 0.65rem 0.5rem 0.85rem;
 }
 
+/* Shared data tables (users, marketplace, establishments, …) */
+.users-table-wrap {
+  overflow-x: auto;
+  padding: 0.35rem 0.5rem 0.75rem;
+}
+
+.users-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 720px;
+}
+
+.users-table th {
+  text-align: left;
+  padding: 0.65rem 0.75rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8b9a90;
+  border-bottom: 1px solid #eef2ef;
+  white-space: nowrap;
+}
+
+.users-table td {
+  padding: 0.8rem 0.75rem;
+  border-bottom: 1px solid #f1f4f2;
+  font-size: 0.875rem;
+  color: #344256;
+  vertical-align: middle;
+}
+
+.users-table tbody tr:hover {
+  background: #f4f7f5;
+}
+
+.users-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(320px, 1.2fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+@media (max-width: 960px) {
+  .users-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
 .ops-section-label {
   margin: 0 0 0.65rem;
   font-size: 0.6875rem;
@@ -641,4 +690,71 @@ body.content-modal-open {
   border-color: #d0d8f2;
   background: #f4f6fc;
   color: #3a4f8f;
+}
+
+.ops-file-drop {
+  position: relative;
+  border: 1.5px dashed var(--anixi-border-strong);
+  border-radius: var(--anixi-radius);
+  background: #fafbf8;
+  transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ops-file-drop--active,
+.ops-file-drop:focus-within {
+  border-color: #9cb0a4;
+  background: #f3f8f4;
+  box-shadow: var(--focus-ring);
+}
+
+.ops-file-drop__input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.ops-file-drop__label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 9.5rem;
+  padding: 1.25rem 1rem;
+  cursor: pointer;
+  text-align: center;
+}
+
+.ops-file-drop__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 999px;
+  background: var(--anixi-green-soft);
+  color: var(--anixi-green);
+}
+
+.ops-file-drop__title {
+  font-size: 0.9375rem;
+  font-weight: 650;
+  color: var(--anixi-text);
+}
+
+.ops-file-drop__hint {
+  font-size: 0.8125rem;
+  color: var(--anixi-text-secondary);
+}
+
+.ops-chart-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+.ops-chart-card {
+  min-height: 22rem;
+  padding: 0.75rem 0.5rem 0.5rem;
 }

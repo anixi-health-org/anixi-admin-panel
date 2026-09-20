@@ -1,0 +1,47 @@
+.invite-panel {
+  margin-bottom: 1.5rem;
+}
+
+.invite-form {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem 1.25rem 1.25rem;
+}
+
+.invite-form label {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.875rem;
+  color: #65758b;
+}
+
+.invite-form input,
+.invite-form select,
+.team-table select {
+  border: 1px solid #e1e7ef;
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+  font-size: 0.9375rem;
+}
+
+.team-table-wrap {
+  overflow-x: auto;
+}
+
+.team-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.team-table th,
+.team-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #eef2f6;
+  text-align: left;
+  font-size: 0.875rem;
+}
+
+.muted {
+  padding: 1rem 1.25rem;
+  color: #65758b;
+}

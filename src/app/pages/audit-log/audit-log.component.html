@@ -1,0 +1,30 @@
+<section class="page">
+  <header class="page-header">
+    <h1>Audit log</h1>
+    <p>POPIA-relevant platform events from Django audit trail.</p>
+  </header>
+
+  <div *ngIf="isLoading" class="muted">Loading audit events…</div>
+  <div *ngIf="error" class="error">{{ error }}</div>
+
+  <div *ngIf="!isLoading && !error" class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>When</th>
+          <th>Action</th>
+          <th>Resource</th>
+          <th>Actor</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of rows">
+          <td>{{ row.createdAt | date: 'medium' }}</td>
+          <td>{{ row.action }}</td>
+          <td>{{ row.resourceType }} · {{ row.resourceId }}</td>
+          <td>{{ row.actorName || '—' }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>

@@ -35,6 +35,10 @@ import { EstablishmentsComponent } from './establishments/establishments.compone
 import { NotificationsComponent } from './notifications/notifications.component';
 import { MarketplacePartnersComponent } from './marketplace-partners/marketplace-partners.component';
 import { PatientImportComponent } from './patient-import/patient-import.component';
+import { AnalyticsComponent } from './analytics/analytics.component';
+import { AuditLogComponent } from './audit-log/audit-log.component';
+import { TeamAccessComponent } from './team-access/team-access.component';
+import { PendingActivationsComponent } from './pending-activations/pending-activations.component';
 import { RichTextEditorComponent } from '../components/rich-text-editor/rich-text-editor.component';
 
 @NgModule({
@@ -55,6 +59,10 @@ import { RichTextEditorComponent } from '../components/rich-text-editor/rich-tex
     NotificationsComponent,
     MarketplacePartnersComponent,
     PatientImportComponent,
+    AnalyticsComponent,
+    AuditLogComponent,
+    TeamAccessComponent,
+    PendingActivationsComponent,
     AnixiLogoComponent,
     AdminProfileMenuComponent,
     AdminNotificationsMenuComponent,
