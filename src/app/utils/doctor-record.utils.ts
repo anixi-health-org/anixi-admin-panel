@@ -202,13 +202,19 @@ export function getDoctorProfilePhotoUrl(doctor: DoctorRecord): string | null {
 }
 
 export function formatTimestamp(value: unknown): string {
-  if (!value) return '-';
+  if (!value) return '—';
   if (typeof value === 'object' && value !== null && 'toDate' in value) {
     const date = (value as { toDate: () => Date }).toDate?.();
-    return date ? date.toLocaleString() : '-';
+    return date ? date.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
   }
   if (value instanceof Date) {
-    return value.toLocaleString();
+    return value.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' });
   }
-  return String(value);
+  if (typeof value === 'string' || typeof value === 'number') {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime())
+      ? '—'
+      : date.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+  return '—';
 }

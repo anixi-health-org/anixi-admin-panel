@@ -64,6 +64,8 @@
 
   <nz-layout class="admin-main">
     <header class="admin-header">
+      <div class="admin-header__spacer" aria-hidden="true"></div>
+
       <form class="admin-search" (submit)="$event.preventDefault(); onSearchSubmit()">
         <lucide-icon name="search" class="admin-search-icon"></lucide-icon>
         <input
@@ -73,6 +75,7 @@
           placeholder="Search patients, doctors, content…"
           aria-label="Global search"
         />
+        <kbd class="admin-search-kbd" aria-hidden="true">↵</kbd>
       </form>
 
       <div class="admin-header-actions">

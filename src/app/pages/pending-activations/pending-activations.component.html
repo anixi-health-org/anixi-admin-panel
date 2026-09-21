@@ -4,7 +4,7 @@
       <p class="ops-page-header__eyebrow">CRM</p>
       <h1 class="ops-page-header__title">Pending activations</h1>
       <p class="ops-page-header__subtitle">
-        Clinic roster patients who have not activated their Anixi account yet. Edit contact details, choose an email template, and send personalised reminders.
+        Clinic roster patients who have not activated their Anixi account yet. Edit contact details and send reminder emails.
       </p>
     </div>
     @if (canRemind) {
@@ -33,64 +33,64 @@
     <section class="ops-panel template-panel">
       <div class="ops-panel__header template-panel__header">
         <div>
+          <p class="ops-section-label">Reminders</p>
           <h2 class="ops-panel__title">Email template</h2>
-          <p class="template-panel__hint">
-            Each recipient gets their own name, clinic code, and signup link. Use placeholders like {{ placeholderHelp }}.
-          </p>
         </div>
-        <button type="button" class="ops-btn ops-btn--secondary" (click)="openNewTemplate()">
-          New template
-        </button>
       </div>
-      <div class="template-panel__controls">
-        <label class="field-label" for="template-select">Template for reminders</label>
-        <select
-          id="template-select"
-          class="ops-select"
-          [(ngModel)]="selectedTemplateId"
-        >
-          @for (template of templates; track template.id) {
-            <option [value]="template.id">
-              {{ template.name }}{{ template.isDefault ? ' (default)' : '' }}
-            </option>
+      <div class="template-panel__row">
+        <label class="ops-field template-field">
+          <span class="ops-field__label">Template for reminders</span>
+          <select id="template-select" class="ops-select" [(ngModel)]="selectedTemplateId">
+            @for (template of templates; track template.id) {
+              <option [value]="template.id">
+                {{ template.name }}{{ template.isDefault ? ' (default)' : '' }}
+              </option>
+            }
+          </select>
+        </label>
+        <div class="template-panel__actions">
+          @if (selectedTemplate()) {
+            <button type="button" class="ops-btn ops-btn--secondary" (click)="openEditTemplate(selectedTemplate()!)">
+              Edit
+            </button>
           }
-        </select>
-        @if (selectedTemplate()) {
-          <button
-            type="button"
-            class="ops-btn ops-btn--ghost"
-            (click)="openEditTemplate(selectedTemplate()!)"
-          >
-            Edit template
+          <button type="button" class="ops-btn ops-btn--ghost" (click)="openNewTemplate()">
+            New template
           </button>
-        }
+        </div>
       </div>
       @if (!templates.length) {
-        <p class="muted">No templates yet. Create one or run backend migration to seed the default invite.</p>
+        <p class="template-panel__empty">No templates yet. Create one or run the backend migration to seed the default invite.</p>
+      } @else {
+        <p class="ops-note ops-note--info template-panel__note">
+          Each email is personalised with the patient name, clinic, and signup link automatically.
+        </p>
       }
     </section>
   }
 
   <section class="ops-panel">
     @if (isLoading) {
-      <p class="muted">Loading pending accounts…</p>
+      <div class="ops-panel__body">
+        <app-ops-page-skeleton variant="table" [rows]="8"></app-ops-page-skeleton>
+      </div>
     } @else if (!rows.length) {
       <div class="ops-empty">
         <p class="ops-empty__title">No pending activations</p>
         <p class="ops-empty__text">Imported roster patients who have not set a password will appear here.</p>
       </div>
     } @else {
-      <div class="table-meta">
-        <p class="muted">
-          Showing {{ rows.length }} pending patients.
-          {{ remindableCount }} have a contact email and can receive reminders.
+      <div class="ops-table-meta">
+        <p>
+          <strong>{{ rows.length }}</strong> pending patients ·
+          <strong>{{ remindableCount }}</strong> can receive reminders
           @if (remindableCount < rows.length) {
-            Edit rows missing email to enable reminders.
+            · edit rows missing email to enable reminders
           }
         </p>
       </div>
-      <div class="table-wrap">
-        <table>
+      <div class="users-table-wrap">
+        <table class="users-table">
           <thead>
             <tr>
               @if (canRemind) {
@@ -115,7 +115,7 @@
             </tr>
           </thead>
           <tbody>
-            @for (row of rows; track row.id) {
+            @for (row of pagedRows; track row.id) {
               <tr [class.row--missing-email]="!row.contactEmail">
                 @if (canRemind) {
                   <td>
@@ -144,7 +144,7 @@
                 <td>{{ row.phoneNumber || '—' }}</td>
                 <td>{{ row.practiceName || '—' }}</td>
                 <td>{{ row.clinicCode || row.activationCode || '—' }}</td>
-                <td>{{ row.lastRemindedAt ? (row.lastRemindedAt | date: 'medium') : 'Never' }}</td>
+                <td>{{ row.lastRemindedAt ? (row.lastRemindedAt | date: 'mediumDate') : 'Never' }}</td>
                 @if (canEdit) {
                   <td class="actions-cell">
                     <button type="button" class="ops-btn ops-btn--ghost" (click)="openEdit(row)">
@@ -157,6 +157,14 @@
           </tbody>
         </table>
       </div>
+      <app-ops-pagination
+        [total]="rows.length"
+        [pageIndex]="pageIndex"
+        [pageSize]="pageSize"
+        itemLabel="patients"
+        (pageIndexChange)="onPageIndexChange($event)"
+        (pageSizeChange)="onPageSizeChange($event)"
+      ></app-ops-pagination>
     }
   </section>
 </div>
@@ -164,47 +172,70 @@
 <nz-modal
   [(nzVisible)]="showEditModal"
   nzTitle="Edit pending patient"
-  nzWidth="640px"
+  nzWidth="720px"
+  nzClassName="edit-patient-modal"
+  [nzCentered]="true"
   [nzMaskClosable]="false"
   [nzOkLoading]="isSavingEdit"
-  nzOkText="Save"
+  nzOkText="Save changes"
   (nzOnCancel)="closeEdit()"
   (nzOnOk)="saveEdit()"
 >
   <ng-container *nzModalContent>
-    <div class="form-grid">
+    @if (editError) {
+      <div class="modal-alert modal-alert--error" role="alert">
+        {{ editError }}
+      </div>
+    }
+
+    <p class="edit-modal__intro">
+      Update contact details so this patient can receive activation reminders.
+    </p>
+
+    <div class="form-grid edit-modal__grid">
       <label>
         <span>Display name</span>
-        <input type="text" [(ngModel)]="editDraft.displayName" />
+        <input
+          type="text"
+          [(ngModel)]="editDraft.displayName"
+          (input)="clearEditError()"
+        />
       </label>
       <label>
         <span>Contact email</span>
         <input
           type="email"
           [(ngModel)]="editDraft.contactEmail"
+          (input)="clearEditError()"
           placeholder="name@example.com"
           autocomplete="email"
+          [class.input--error]="editError && editError.includes('email')"
         />
       </label>
       <label>
         <span>Phone</span>
-        <input type="tel" [(ngModel)]="editDraft.phoneNumber" />
+        <input
+          type="tel"
+          [(ngModel)]="editDraft.phoneNumber"
+          (input)="clearEditError()"
+        />
       </label>
       <label>
         <span>Date of birth</span>
         <input
           type="text"
           [(ngModel)]="editDraft.dateOfBirth"
+          (input)="clearEditError()"
           placeholder="YYYY-MM-DD or MM/DD/YYYY"
         />
       </label>
       <label>
         <span>MRN / chart ID</span>
-        <input type="text" [(ngModel)]="editDraft.mrn" />
+        <input type="text" [(ngModel)]="editDraft.mrn" (input)="clearEditError()" />
       </label>
       <label class="full-width">
         <span>Notes</span>
-        <textarea rows="3" [(ngModel)]="editDraft.notes"></textarea>
+        <textarea rows="3" [(ngModel)]="editDraft.notes" (input)="clearEditError()"></textarea>
       </label>
     </div>
   </ng-container>
@@ -212,37 +243,80 @@
 
 <nz-modal
   [(nzVisible)]="showTemplateModal"
-  [nzTitle]="templateDraft.id ? 'Edit email template' : 'New email template'"
+  [nzTitle]="templateDraft.id ? 'Edit reminder email' : 'New reminder email'"
   [nzOkLoading]="isSavingTemplate"
   nzOkText="Save template"
-  nzWidth="720px"
+  nzWidth="880px"
+  nzClassName="template-modal"
+  [nzCentered]="true"
+  [nzMaskClosable]="false"
   (nzOnCancel)="closeTemplateModal()"
   (nzOnOk)="saveTemplate()"
 >
   <ng-container *nzModalContent>
-    <p class="template-modal__help">
-      Placeholders are replaced per patient when sending: {{ placeholderHelp }}, plus {{ '{{cta_button}}' }} and {{ '{{fallback_link}}' }}.
-    </p>
-    <div class="form-grid">
-      <label>
-        <span>Template name</span>
-        <input type="text" [(ngModel)]="templateDraft.name" />
+    @if (templateError) {
+      <div class="modal-alert modal-alert--error" role="alert">
+        {{ templateError }}
+      </div>
+    }
+
+    <div class="template-modal__intro">
+      Write a friendly email in plain language. Anixi adds the signup button automatically when sending.
+    </div>
+
+    <div class="template-modal__grid">
+      <label class="ops-field">
+        <span class="ops-field__label">Template name</span>
+        <input
+          class="ops-input"
+          type="text"
+          [(ngModel)]="templateDraft.name"
+          (input)="clearTemplateError()"
+          placeholder="Clinic activation invite"
+        />
       </label>
-      <label class="checkbox-row">
+
+      <label class="ops-field template-modal__subject">
+        <span class="ops-field__label">Email subject</span>
+        <input
+          class="ops-input"
+          type="text"
+          [(ngModel)]="templateDraft.subject"
+          (input)="clearTemplateError()"
+          (focus)="setTemplateFocus('subject')"
+          placeholder="{{ '{{clinic_name}}' }} invited you to Anixi Health"
+        />
+      </label>
+
+      <div class="template-modal__message ops-field">
+        <span class="ops-field__label">Email message</span>
+        <textarea
+          class="template-modal__textarea ops-textarea"
+          rows="7"
+          [(ngModel)]="templateMessage"
+          (input)="clearTemplateError()"
+          (focus)="setTemplateFocus('message')"
+          placeholder="Hello {{ '{{patient_name}}' }}, your clinic {{ '{{clinic_name}}' }} invited you to join Anixi Health."
+        ></textarea>
+        <p class="ops-field__hint">
+          Tap a tag below to insert a personalised detail. Each patient receives their own name, clinic, and code.
+        </p>
+        <div class="template-placeholders">
+          @for (token of placeholderTokens; track token.key) {
+            <button
+              type="button"
+              class="template-chip"
+              (click)="insertPlaceholder(token.key)"
+            >
+              {{ token.label }}
+            </button>
+          }
+        </div>
+      </div>
+
+      <label class="template-modal__default checkbox-row">
         <input type="checkbox" [(ngModel)]="templateDraft.isDefault" />
-        <span>Use as default for activation reminders</span>
-      </label>
-      <label class="full-width">
-        <span>Email subject</span>
-        <input type="text" [(ngModel)]="templateDraft.subject" />
-      </label>
-      <label class="full-width">
-        <span>HTML body</span>
-        <textarea rows="8" [(ngModel)]="templateDraft.htmlBody"></textarea>
-      </label>
-      <label class="full-width">
-        <span>Plain text body (optional)</span>
-        <textarea rows="4" [(ngModel)]="templateDraft.textBody"></textarea>
+        <span>Use as the default template for activation reminders</span>
       </label>
     </div>
   </ng-container>

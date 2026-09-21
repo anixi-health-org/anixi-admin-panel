@@ -21,6 +21,7 @@ import {
   PracticeRecord,
 } from '../../utils/practice-record.utils';
 import { formatUserTimestamp, PlatformUser } from '../../utils/user-record.utils';
+import { paginateItems } from '../../utils/pagination.utils';
 
 @Component({
   selector: 'app-establishments',
@@ -32,6 +33,8 @@ export class EstablishmentsComponent implements OnInit {
   isLoadingSkeleton = true;
   selectedPractice: PracticeRecord | null = null;
   searchQuery = new FormControl('');
+  pageIndex = 1;
+  pageSize = 25;
   clinicList$!: Observable<PracticeRecord[]>;
   filteredClinics$!: Observable<PracticeRecord[]>;
   members$!: Observable<PracticeMemberRecord[]>;
@@ -70,6 +73,23 @@ export class EstablishmentsComponent implements OnInit {
     this.clinicCount$ = this.clinicList$.pipe(map((items) => items.length));
 
     this.members$ = of([]);
+
+    this.searchQuery.valueChanges.pipe(startWith(this.searchQuery.value)).subscribe(() => {
+      this.pageIndex = 1;
+    });
+  }
+
+  pageItems(practices: PracticeRecord[] | null): PracticeRecord[] {
+    return paginateItems(practices ?? [], this.pageIndex, this.pageSize);
+  }
+
+  onPageIndexChange(page: number): void {
+    this.pageIndex = page;
+  }
+
+  onPageSizeChange(size: number): void {
+    this.pageSize = size;
+    this.pageIndex = 1;
   }
 
   name(practice: PracticeRecord): string {

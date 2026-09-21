@@ -1,0 +1,61 @@
+@switch (variant) {
+  @case ('metrics') {
+    <div class="ops-skeleton-metrics">
+      @for (item of metricItems(); track item) {
+        <div class="ops-skeleton-card">
+          <nz-skeleton [nzActive]="true" [nzTitle]="false" [nzParagraph]="{ rows: 2 }"></nz-skeleton>
+        </div>
+      }
+    </div>
+  }
+  @case ('list') {
+    <div class="ops-skeleton-list">
+      @for (item of rowItems(); track item) {
+        <div class="ops-skeleton-list__row">
+          <nz-skeleton [nzActive]="true" [nzAvatar]="true" [nzTitle]="{ width: '40%' }" [nzParagraph]="{ rows: 1, width: '65%' }"></nz-skeleton>
+        </div>
+      }
+    </div>
+  }
+  @case ('split') {
+    <div class="ops-skeleton-split">
+      <div class="ops-skeleton-card ops-skeleton-split__pane">
+        <nz-skeleton [nzActive]="true" [nzParagraph]="{ rows: 10 }"></nz-skeleton>
+      </div>
+      <div class="ops-skeleton-card ops-skeleton-split__pane">
+        <nz-skeleton [nzActive]="true" [nzParagraph]="{ rows: 8 }"></nz-skeleton>
+      </div>
+    </div>
+  }
+  @case ('cards') {
+    <div class="ops-skeleton-cards">
+      @for (item of rowItems(); track item) {
+        <div class="ops-skeleton-card">
+          <nz-skeleton [nzActive]="true" [nzParagraph]="{ rows: 3 }"></nz-skeleton>
+        </div>
+      }
+    </div>
+  }
+  @case ('timeline') {
+    <div class="ops-skeleton-timeline">
+      @for (item of rowItems(); track item) {
+        <div class="ops-skeleton-timeline__row">
+          <span class="ops-skeleton-timeline__dot" aria-hidden="true"></span>
+          <nz-skeleton [nzActive]="true" [nzTitle]="{ width: '30%' }" [nzParagraph]="{ rows: 1, width: '55%' }"></nz-skeleton>
+        </div>
+      }
+    </div>
+  }
+  @default {
+    <div class="ops-skeleton-table">
+      <div class="ops-skeleton-table__head">
+        <nz-skeleton [nzActive]="true" [nzTitle]="false" [nzParagraph]="{ rows: 1, width: '100%' }"></nz-skeleton>
+      </div>
+      @for (item of rowItems(); track item) {
+        <div class="ops-skeleton-table__row">
+          <nz-skeleton [nzActive]="true" [nzTitle]="false" [nzParagraph]="{ rows: 1, width: '100%' }"></nz-skeleton>
+        </div>
+      }
+    </div>
+  }
+}

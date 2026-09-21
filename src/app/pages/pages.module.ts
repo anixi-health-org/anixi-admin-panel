@@ -40,6 +40,8 @@ import { AuditLogComponent } from './audit-log/audit-log.component';
 import { TeamAccessComponent } from './team-access/team-access.component';
 import { PendingActivationsComponent } from './pending-activations/pending-activations.component';
 import { RichTextEditorComponent } from '../components/rich-text-editor/rich-text-editor.component';
+import { OpsPaginationComponent } from '../components/ops-pagination/ops-pagination.component';
+import { OpsPageSkeletonComponent } from '../components/ops-page-skeleton/ops-page-skeleton.component';
 
 @NgModule({
   declarations: [
@@ -66,7 +68,9 @@ import { RichTextEditorComponent } from '../components/rich-text-editor/rich-tex
     AnixiLogoComponent,
     AdminProfileMenuComponent,
     AdminNotificationsMenuComponent,
-    RichTextEditorComponent
+    RichTextEditorComponent,
+    OpsPaginationComponent,
+    OpsPageSkeletonComponent,
   ],
   imports: [
     CommonModule,

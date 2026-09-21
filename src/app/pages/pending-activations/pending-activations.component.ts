@@ -7,6 +7,11 @@ import {
 import { CrmEmailTemplate, PendingActivationRow } from '../../models/admin-user';
 import { AuthService } from '../../services/auth.service';
 import { DjangoApiService } from '../../services/django-api.service';
+import { paginateItems } from '../../utils/pagination.utils';
+import {
+  htmlToPlainText,
+  plainTextToEditorHtml,
+} from '../../components/rich-text-editor/rich-text-editor.component';
 
 type EditDraft = {
   displayName: string;
@@ -26,6 +31,11 @@ type TemplateDraft = {
   isDefault: boolean;
 };
 
+type PlaceholderToken = {
+  key: string;
+  label: string;
+};
+
 @Component({
   selector: 'app-pending-activations',
   standalone: false,
@@ -34,6 +44,8 @@ type TemplateDraft = {
 })
 export class PendingActivationsComponent implements OnInit {
   rows: PendingActivationRow[] = [];
+  pageIndex = 1;
+  pageSize = 25;
   templates: CrmEmailTemplate[] = [];
   selectedTemplateId = '';
   selectedIds = new Set<string>();
@@ -45,11 +57,19 @@ export class PendingActivationsComponent implements OnInit {
   canEdit = false;
   showEditModal = false;
   showTemplateModal = false;
+  editError: string | null = null;
+  templateError: string | null = null;
   editingRow: PendingActivationRow | null = null;
   editDraft: EditDraft = this.emptyEditDraft();
   templateDraft: TemplateDraft = this.emptyTemplateDraft();
-  placeholderHelp =
-    '{{patient_name}}, {{clinic_name}}, {{clinic_code}}, {{signup_url}}, {{doctor_name}}, {{contact_email}}';
+  templateMessage = '';
+  templateFocusField: 'subject' | 'message' = 'message';
+  placeholderTokens: PlaceholderToken[] = [
+    { key: 'patient_name', label: 'Patient name' },
+    { key: 'doctor_name', label: 'Doctor name' },
+    { key: 'clinic_name', label: 'Clinic name' },
+    { key: 'clinic_code', label: 'Clinic code' },
+  ];
 
   constructor(
     private djangoApi: DjangoApiService,
@@ -61,6 +81,19 @@ export class PendingActivationsComponent implements OnInit {
     this.canRemind = this.authService.hasPermission('sendActivationReminders');
     this.canEdit = this.authService.hasPermission('editUserContact');
     void this.loadAll();
+  }
+
+  get pagedRows(): PendingActivationRow[] {
+    return paginateItems(this.rows, this.pageIndex, this.pageSize);
+  }
+
+  onPageIndexChange(page: number): void {
+    this.pageIndex = page;
+  }
+
+  onPageSizeChange(size: number): void {
+    this.pageSize = size;
+    this.pageIndex = 1;
   }
 
   private emptyEditDraft(): EditDraft {
@@ -76,14 +109,64 @@ export class PendingActivationsComponent implements OnInit {
 
   private emptyTemplateDraft(): TemplateDraft {
     return {
-      name: '',
+      name: 'Clinic activation invite',
       subject: '{{clinic_name}} invited you to Anixi Health',
-      htmlBody:
-        '<p>Hello {{patient_name}}, your clinic {{clinic_name}} invited you to activate on Anixi Health.</p><p>Clinic code: <strong>{{clinic_code}}</strong></p>{{cta_button}}{{fallback_link}}',
-      textBody:
-        'Hello {{patient_name}}, activate with clinic code {{clinic_code}} at {{signup_url}}',
+      htmlBody: '',
+      textBody: '',
       isDefault: false,
     };
+  }
+
+  private defaultTemplateMessage(): string {
+    return [
+      'Hello {{patient_name}},',
+      '',
+      '{{doctor_name}} added you to the {{clinic_name}} roster on Anixi Health.',
+      '',
+      'Your clinic code is: {{clinic_code}}',
+      '',
+      'Open the Anixi Health app, tap Activate clinic account, and enter your code.',
+    ].join('\n');
+  }
+
+  private toEditableMessage(source: string): string {
+    const raw = source.includes('<') ? htmlToPlainText(source) : source;
+    return raw
+      .replace(/\{\{\s*cta_button\s*\}\}/gi, '')
+      .replace(/\{\{\s*fallback_link\s*\}\}/gi, '')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  }
+
+  private buildTemplatePayload(message: string, subject: string, name: string, isDefault: boolean) {
+    const trimmedMessage = message.trim();
+    const htmlBody = `${plainTextToEditorHtml(trimmedMessage)}\n{{cta_button}}\n{{fallback_link}}`;
+    return {
+      name,
+      subject,
+      htmlBody,
+      textBody: trimmedMessage,
+      isDefault,
+      category: 'pending_activation' as const,
+    };
+  }
+
+  setTemplateFocus(field: 'subject' | 'message'): void {
+    this.templateFocusField = field;
+  }
+
+  insertPlaceholder(key: string): void {
+    const token = `{{${key}}}`;
+    if (this.templateFocusField === 'subject') {
+      this.templateDraft = {
+        ...this.templateDraft,
+        subject: `${this.templateDraft.subject}${this.templateDraft.subject ? ' ' : ''}${token}`.trim(),
+      };
+      return;
+    }
+    this.templateMessage = this.templateMessage
+      ? `${this.templateMessage}${this.templateMessage.endsWith('\n') ? '' : ' '}${token}`
+      : token;
   }
 
   async loadAll(): Promise<void> {
@@ -99,6 +182,7 @@ export class PendingActivationsComponent implements OnInit {
     try {
       const data = await this.djangoApi.listPendingActivations({ limit: 1000 });
       this.rows = (data ?? []).map((row) => this.mapRow(row));
+      this.pageIndex = 1;
       this.selectedIds.clear();
     } catch (error) {
       this.notification.error(
@@ -118,8 +202,6 @@ export class PendingActivationsComponent implements OnInit {
         const defaultTemplate = this.templates.find((template) => template.isDefault);
         this.selectedTemplateId = defaultTemplate?.id ?? this.templates[0]?.id ?? '';
       }
-      const help = this.templates[0]?.placeholderHelp;
-      if (help) this.placeholderHelp = help;
     } catch {
       this.templates = [];
     }
@@ -176,8 +258,31 @@ export class PendingActivationsComponent implements OnInit {
     }
   }
 
+  clearEditError(): void {
+    this.editError = null;
+  }
+
+  clearTemplateError(): void {
+    this.templateError = null;
+  }
+
+  private humanizeError(message: string): string {
+    const normalized = message.trim();
+    if (normalized.includes('Email already in use')) {
+      return 'This email is already linked to another Anixi account. Use a different address.';
+    }
+    if (normalized.includes('Patient has already activated')) {
+      return 'This patient has already activated their account and is no longer pending.';
+    }
+    if (normalized.includes('Pending activation not found')) {
+      return 'This pending patient record could not be found. Refresh the page and try again.';
+    }
+    return normalized || 'Something went wrong. Please try again.';
+  }
+
   openEdit(row: PendingActivationRow): void {
     if (!this.canEdit) return;
+    this.editError = null;
     this.editingRow = row;
     this.editDraft = {
       displayName: row.displayName ?? '',
@@ -193,6 +298,7 @@ export class PendingActivationsComponent implements OnInit {
   closeEdit(): void {
     this.showEditModal = false;
     this.editingRow = null;
+    this.editError = null;
   }
 
   async saveEdit(): Promise<boolean> {
@@ -200,13 +306,11 @@ export class PendingActivationsComponent implements OnInit {
 
     const contactEmail = this.editDraft.contactEmail.trim();
     if (contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) {
-      this.notification.error(
-        'Invalid email',
-        'Enter a valid contact email or leave the field empty.',
-        ERROR_NOTIFICATION_BOX_POSITION,
-      );
+      this.editError = 'Enter a valid contact email or leave the field empty.';
       return false;
     }
+
+    this.editError = null;
 
     this.isSavingEdit = true;
     try {
@@ -227,10 +331,8 @@ export class PendingActivationsComponent implements OnInit {
       this.closeEdit();
       return true;
     } catch (error) {
-      this.notification.error(
-        'Could not save profile',
+      this.editError = this.humanizeError(
         error instanceof Error ? error.message : 'Try again later.',
-        ERROR_NOTIFICATION_BOX_POSITION,
       );
       return false;
     } finally {
@@ -239,11 +341,15 @@ export class PendingActivationsComponent implements OnInit {
   }
 
   openNewTemplate(): void {
+    this.templateError = null;
     this.templateDraft = this.emptyTemplateDraft();
+    this.templateMessage = this.defaultTemplateMessage();
+    this.templateFocusField = 'message';
     this.showTemplateModal = true;
   }
 
   openEditTemplate(template: CrmEmailTemplate): void {
+    this.templateError = null;
     this.templateDraft = {
       id: template.id,
       name: template.name,
@@ -252,39 +358,38 @@ export class PendingActivationsComponent implements OnInit {
       textBody: template.textBody ?? '',
       isDefault: Boolean(template.isDefault),
     };
+    this.templateMessage = this.toEditableMessage(template.textBody || template.htmlBody);
+    this.templateFocusField = 'message';
     this.showTemplateModal = true;
   }
 
   closeTemplateModal(): void {
     this.showTemplateModal = false;
     this.templateDraft = this.emptyTemplateDraft();
+    this.templateMessage = '';
+    this.templateError = null;
   }
 
   async saveTemplate(): Promise<boolean> {
     if (!this.canRemind) return false;
 
-    const name = this.templateDraft.name.trim();
+    const name = this.templateDraft.name.trim() || 'Clinic activation invite';
     const subject = this.templateDraft.subject.trim();
-    const htmlBody = this.templateDraft.htmlBody.trim();
-    if (!name || !subject || !htmlBody) {
-      this.notification.error(
-        'Missing fields',
-        'Template name, subject, and HTML body are required.',
-        ERROR_NOTIFICATION_BOX_POSITION,
-      );
+    const message = this.templateMessage.trim();
+    if (!subject || !message) {
+      this.templateError = 'Add an email subject and message before saving.';
       return false;
     }
 
+    this.templateError = null;
     this.isSavingTemplate = true;
     try {
-      const payload = {
-        name,
+      const payload = this.buildTemplatePayload(
+        message,
         subject,
-        htmlBody,
-        textBody: this.templateDraft.textBody.trim(),
-        isDefault: this.templateDraft.isDefault,
-        category: 'pending_activation',
-      };
+        name,
+        this.templateDraft.isDefault,
+      );
       if (this.templateDraft.id) {
         await this.djangoApi.patchCrmEmailTemplate(this.templateDraft.id, payload);
       } else {
@@ -299,10 +404,8 @@ export class PendingActivationsComponent implements OnInit {
       this.closeTemplateModal();
       return true;
     } catch (error) {
-      this.notification.error(
-        'Could not save template',
+      this.templateError = this.humanizeError(
         error instanceof Error ? error.message : 'Try again later.',
-        ERROR_NOTIFICATION_BOX_POSITION,
       );
       return false;
     } finally {

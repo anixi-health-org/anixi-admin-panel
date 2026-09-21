@@ -1,30 +1,136 @@
-<section class="page">
-  <header class="page-header">
-    <h1>Audit log</h1>
-    <p>POPIA-relevant platform events from Django audit trail.</p>
+<div class="ops-page audit-log-page">
+  <header class="ops-page-header">
+    <div class="ops-page-header__copy">
+      <p class="ops-page-header__eyebrow">Governance</p>
+      <h1 class="ops-page-header__title">Audit log</h1>
+      <p class="ops-page-header__subtitle">
+        A readable history of who accessed patient data and who changed platform settings — kept for POPIA compliance.
+      </p>
+    </div>
+    <div class="ops-page-header__actions">
+      <button type="button" class="ops-btn ops-btn--secondary" [disabled]="isLoading" (click)="load()">
+        Refresh
+      </button>
+    </div>
   </header>
 
-  <div *ngIf="isLoading" class="muted">Loading audit events…</div>
-  <div *ngIf="error" class="error">{{ error }}</div>
+  @if (!isLoading && !error && rows.length) {
+    <section class="ops-metrics audit-metrics" aria-label="Audit summary">
+      <article class="ops-metric">
+        <p class="ops-metric__label">Total events</p>
+        <p class="ops-metric__value">{{ rows.length }}</p>
+        <p class="ops-metric__hint">Latest 200 from Django</p>
+      </article>
+      <article class="ops-metric ops-metric--blue">
+        <p class="ops-metric__label">PHI access</p>
+        <p class="ops-metric__value">{{ phiCount }}</p>
+        <p class="ops-metric__hint">Clinical & patient record views</p>
+      </article>
+      <article class="ops-metric ops-metric--green">
+        <p class="ops-metric__label">Admin actions</p>
+        <p class="ops-metric__value">{{ adminCount }}</p>
+        <p class="ops-metric__hint">Team, templates, reminders</p>
+      </article>
+    </section>
+  }
 
-  <div *ngIf="!isLoading && !error" class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>When</th>
-          <th>Action</th>
-          <th>Resource</th>
-          <th>Actor</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let row of rows">
-          <td>{{ row.createdAt | date: 'medium' }}</td>
-          <td>{{ row.action }}</td>
-          <td>{{ row.resourceType }} · {{ row.resourceId }}</td>
-          <td>{{ row.actorName || '—' }}</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-</section>
+  <section class="ops-panel">
+    <div class="ops-panel__header">
+      <div>
+        <p class="ops-section-label">History</p>
+        <h2 class="ops-panel__title">What happened</h2>
+      </div>
+      @if (!isLoading && !error) {
+        <span class="ops-badge ops-badge--slate">{{ filteredRows.length }} shown</span>
+      }
+    </div>
+
+    @if (!isLoading && !error && rows.length) {
+      <div class="audit-toolbar">
+        <div class="ops-tabs">
+          <div class="ops-filters" role="tablist" aria-label="Filter audit events">
+            @for (filter of categoryFilters; track filter.value) {
+              <button
+                type="button"
+                class="ops-filter"
+                role="tab"
+                [class.ops-filter--active]="activeCategory === filter.value"
+                (click)="onCategoryChange(filter.value)"
+              >
+                {{ filter.label }}
+              </button>
+            }
+          </div>
+        </div>
+        <div class="ops-search audit-search">
+          <lucide-icon name="search" class="audit-search-icon"></lucide-icon>
+          <input
+            type="search"
+            [value]="searchQuery"
+            (input)="onSearchChange($any($event.target).value)"
+            placeholder="Search by person, action, or detail…"
+            aria-label="Search audit log"
+          />
+        </div>
+      </div>
+      <p class="ops-note audit-note">
+        <strong>PHI access</strong> rows mean a clinician or admin opened patient-related data.
+        They do not mean the record was changed — only that it was viewed.
+      </p>
+    }
+
+    @if (isLoading) {
+      <div class="ops-panel__body">
+        <app-ops-page-skeleton variant="table" [rows]="10"></app-ops-page-skeleton>
+      </div>
+    } @else if (error) {
+      <div class="ops-empty">
+        <div class="ops-empty__icon" aria-hidden="true">
+          <lucide-icon name="triangle-alert"></lucide-icon>
+        </div>
+        <p class="ops-empty__title">Could not load audit log</p>
+        <p class="ops-empty__text">{{ error }}</p>
+        <button type="button" class="ops-btn ops-btn--secondary" (click)="load()">Try again</button>
+      </div>
+    } @else if (!rows.length) {
+      <div class="ops-empty">
+        <div class="ops-empty__icon" aria-hidden="true">
+          <lucide-icon name="scroll-text"></lucide-icon>
+        </div>
+        <p class="ops-empty__title">No audit events yet</p>
+        <p class="ops-empty__text">Patient data access and admin changes will appear here automatically.</p>
+      </div>
+    } @else if (!filteredRows.length) {
+      <div class="ops-empty">
+        <p class="ops-empty__title">No events match this filter</p>
+        <p class="ops-empty__text">Try another category or clear the search.</p>
+      </div>
+    } @else {
+      <div class="audit-list">
+        @for (row of pagedRows; track row.id) {
+          <article class="audit-item">
+            <div class="audit-item__main">
+              <div class="audit-item__heading">
+                <span class="ops-badge" [class]="'ops-badge--' + row.tone">{{ row.categoryLabel }}</span>
+                <p class="audit-item__summary">{{ row.summary }}</p>
+              </div>
+              <p class="audit-item__detail">{{ row.detail }}</p>
+            </div>
+            <div class="audit-item__meta">
+              <p class="audit-item__actor">{{ row.actorName || 'System' }}</p>
+              <time class="audit-item__when">{{ row.createdAt | date: 'medium' }}</time>
+            </div>
+          </article>
+        }
+      </div>
+      <app-ops-pagination
+        [total]="filteredRows.length"
+        [pageIndex]="pageIndex"
+        [pageSize]="pageSize"
+        itemLabel="events"
+        (pageIndexChange)="onPageIndexChange($event)"
+        (pageSizeChange)="onPageSizeChange($event)"
+      ></app-ops-pagination>
+    }
+  </section>
+</div>

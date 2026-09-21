@@ -10,22 +10,25 @@ import { registerLocaleData } from '@angular/common';
 import en from '@angular/common/locales/en';
 import { NgxEchartsModule } from 'ngx-echarts';
 import * as echarts from 'echarts/core';
-import { BarChart, LineChart } from 'echarts/charts';
+import { BarChart, LineChart, PieChart } from 'echarts/charts';
 import {
   DatasetComponent,
   GridComponent,
   LegendComponent,
+  TitleComponent,
   TooltipComponent,
 } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 
 echarts.use([
   BarChart,
+  LineChart,
+  PieChart,
   GridComponent,
   CanvasRenderer,
   TooltipComponent,
   LegendComponent,
-  LineChart,
+  TitleComponent,
   DatasetComponent,
 ]);
 

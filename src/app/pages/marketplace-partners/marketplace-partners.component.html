@@ -1,66 +1,104 @@
-<div class="ops-page">
+<div class="ops-page marketplace-page">
   <header class="ops-page-header">
     <div class="ops-page-header__copy">
-      <p class="ops-page-header__eyebrow">Marketplace</p>
-      <h1 class="ops-page-header__title">Partners</h1>
+      <p class="ops-page-header__eyebrow">Clinical operations</p>
+      <h1 class="ops-page-header__title">Marketplace partners</h1>
       <p class="ops-page-header__subtitle">
         Onboard wellness providers and pharmacies for the patient Market tab. Publish only after verification.
       </p>
     </div>
   </header>
 
-  <div class="marketplace-tabs">
-    <button
-      type="button"
-      class="ops-btn"
-      [class.ops-btn--primary]="tab === 'wellness'"
-      [class.ops-btn--secondary]="tab !== 'wellness'"
-      (click)="setTab('wellness')"
-    >
-      Wellness
-    </button>
-    <button
-      type="button"
-      class="ops-btn"
-      [class.ops-btn--primary]="tab === 'pharmacies'"
-      [class.ops-btn--secondary]="tab !== 'pharmacies'"
-      (click)="setTab('pharmacies')"
-    >
-      Pharmacies
-    </button>
+  <div class="marketplace-tabs ops-tabs">
+    <div class="ops-filters" role="tablist" aria-label="Partner type">
+      <button
+        type="button"
+        class="ops-filter"
+        role="tab"
+        [class.ops-filter--active]="tab === 'wellness'"
+        [attr.aria-selected]="tab === 'wellness'"
+        (click)="setTab('wellness')"
+      >
+        Wellness
+      </button>
+      <button
+        type="button"
+        class="ops-filter"
+        role="tab"
+        [class.ops-filter--active]="tab === 'pharmacies'"
+        [attr.aria-selected]="tab === 'pharmacies'"
+        (click)="setTab('pharmacies')"
+      >
+        Pharmacies
+      </button>
+    </div>
   </div>
 
   @if (message) {
-    <p class="marketplace-flash marketplace-flash--ok">{{ message }}</p>
+    <p class="ops-flash ops-flash--ok">{{ message }}</p>
   }
   @if (error) {
-    <p class="marketplace-flash marketplace-flash--err">{{ error }}</p>
+    <p class="ops-flash ops-flash--error">{{ error }}</p>
   }
 
   @if (tab === 'wellness') {
     <div class="users-layout">
       <section class="ops-panel">
         <div class="ops-panel__header">
-          <h2 class="ops-panel__title">{{ editingId ? 'Edit' : 'Add' }} wellness partner</h2>
+          <div>
+            <p class="ops-section-label">Form</p>
+            <h2 class="ops-panel__title">{{ editingId ? 'Edit' : 'Add' }} wellness partner</h2>
+          </div>
         </div>
         <form class="marketplace-form" [formGroup]="wellnessForm" (ngSubmit)="saveWellness()">
-          <label>Name<input formControlName="name" /></label>
-          <label>Category
-            <select formControlName="category">
+          <label class="ops-field">
+            <span class="ops-field__label">Name</span>
+            <input class="ops-input" formControlName="name" />
+          </label>
+          <label class="ops-field">
+            <span class="ops-field__label">Category</span>
+            <select class="ops-select" formControlName="category">
               @for (cat of wellnessCategories; track cat) {
                 <option [value]="cat">{{ cat }}</option>
               }
             </select>
           </label>
-          <label>Tagline<input formControlName="tagline" /></label>
-          <label>Description<textarea formControlName="description" rows="3"></textarea></label>
-          <label>Email<input formControlName="email" type="email" /></label>
-          <label>Phone<input formControlName="phone" /></label>
-          <label>City<input formControlName="city" /></label>
-          <label>Province<input formControlName="province" /></label>
-          <label>Services (comma-separated)<input formControlName="services" /></label>
-          <label class="marketplace-check"><input type="checkbox" formControlName="verified" /> Verified</label>
-          <label class="marketplace-check"><input type="checkbox" formControlName="published" /> Published in app</label>
+          <label class="ops-field">
+            <span class="ops-field__label">Tagline</span>
+            <input class="ops-input" formControlName="tagline" />
+          </label>
+          <label class="ops-field">
+            <span class="ops-field__label">Description</span>
+            <textarea class="ops-textarea" formControlName="description" rows="3"></textarea>
+          </label>
+          <label class="ops-field">
+            <span class="ops-field__label">Email</span>
+            <input class="ops-input" formControlName="email" type="email" />
+          </label>
+          <label class="ops-field">
+            <span class="ops-field__label">Phone</span>
+            <input class="ops-input" formControlName="phone" />
+          </label>
+          <label class="ops-field">
+            <span class="ops-field__label">City</span>
+            <input class="ops-input" formControlName="city" />
+          </label>
+          <label class="ops-field">
+            <span class="ops-field__label">Province</span>
+            <input class="ops-input" formControlName="province" />
+          </label>
+          <label class="ops-field">
+            <span class="ops-field__label">Services (comma-separated)</span>
+            <input class="ops-input" formControlName="services" />
+          </label>
+          <label class="marketplace-check">
+            <input type="checkbox" formControlName="verified" />
+            <span>Verified</span>
+          </label>
+          <label class="marketplace-check">
+            <input type="checkbox" formControlName="published" />
+            <span>Published in app</span>
+          </label>
           <div class="marketplace-actions">
             <button type="submit" class="ops-btn ops-btn--primary" [disabled]="isSaving || wellnessForm.invalid">
               {{ isSaving ? 'Saving…' : 'Save partner' }}
@@ -73,30 +111,60 @@
       </section>
 
       <section class="ops-panel">
-        <div class="ops-panel__header"><h2 class="ops-panel__title">Directory ({{ wellnessRows.length }})</h2></div>
-        <div class="users-table-wrap">
-          <table class="users-table">
-            <thead><tr><th>Name</th><th>Category</th><th>Status</th><th></th></tr></thead>
-            <tbody>
-              @for (row of wellnessRows; track row.id) {
-                <tr>
-                  <td>{{ row['name'] }}</td>
-                  <td>{{ row['category'] }}</td>
-                  <td>
-                    @if (row['published']) { <span class="ops-badge ops-badge--green">Live</span> }
-                    @else { <span class="ops-badge ops-badge--slate">Draft</span> }
-                  </td>
-                  <td class="marketplace-row-actions">
-                    <button type="button" class="ops-btn ops-btn--secondary" (click)="editWellness(row)">Edit</button>
-                    @if (row['published']) {
-                      <button type="button" class="ops-btn ops-btn--secondary" (click)="unpublishWellness(row.id)">Unpublish</button>
-                    }
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
+        <div class="ops-panel__header">
+          <div>
+            <p class="ops-section-label">Directory</p>
+            <h2 class="ops-panel__title">Wellness partners</h2>
+          </div>
+          @if (!isLoading) {
+            <span class="ops-badge ops-badge--slate">{{ wellnessRows.length }}</span>
+          }
         </div>
+        @if (isLoading) {
+          <div class="ops-panel__body">
+            <app-ops-page-skeleton variant="table" [rows]="6"></app-ops-page-skeleton>
+          </div>
+        } @else if (!wellnessRows.length) {
+          <div class="ops-empty">
+            <div class="ops-empty__icon" aria-hidden="true">
+              <lucide-icon name="store"></lucide-icon>
+            </div>
+            <p class="ops-empty__title">No wellness partners yet</p>
+            <p class="ops-empty__text">Add your first partner using the form on the left.</p>
+          </div>
+        } @else {
+          <div class="users-table-wrap">
+            <table class="users-table">
+              <thead><tr><th>Name</th><th>Category</th><th>Status</th><th></th></tr></thead>
+              <tbody>
+                @for (row of pagedWellnessRows; track row.id) {
+                  <tr>
+                    <td>{{ row['name'] }}</td>
+                    <td>{{ row['category'] }}</td>
+                    <td>
+                      @if (row['published']) { <span class="ops-badge ops-badge--green">Live</span> }
+                      @else { <span class="ops-badge ops-badge--slate">Draft</span> }
+                    </td>
+                    <td class="marketplace-row-actions">
+                      <button type="button" class="ops-btn ops-btn--secondary" (click)="editWellness(row)">Edit</button>
+                      @if (row['published']) {
+                        <button type="button" class="ops-btn ops-btn--secondary" (click)="unpublishWellness(row.id)">Unpublish</button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          <app-ops-pagination
+            [total]="wellnessRows.length"
+            [pageIndex]="wellnessPageIndex"
+            [pageSize]="pageSize"
+            itemLabel="partners"
+            (pageIndexChange)="onWellnessPageIndexChange($event)"
+            (pageSizeChange)="onPageSizeChange($event)"
+          ></app-ops-pagination>
+        }
       </section>
     </div>
   }
@@ -105,18 +173,48 @@
     <div class="users-layout">
       <section class="ops-panel">
         <div class="ops-panel__header">
-          <h2 class="ops-panel__title">{{ editingId ? 'Edit' : 'Add' }} pharmacy</h2>
+          <div>
+            <p class="ops-section-label">Form</p>
+            <h2 class="ops-panel__title">{{ editingId ? 'Edit' : 'Add' }} pharmacy</h2>
+          </div>
         </div>
         <form class="marketplace-form" [formGroup]="pharmacyForm" (ngSubmit)="savePharmacy()">
-          <label>Name<input formControlName="name" /></label>
-          <label>Email<input formControlName="email" type="email" /></label>
-          <label>Phone<input formControlName="phone" /></label>
-          <label>Address<input formControlName="address" /></label>
-          <label>City<input formControlName="city" /></label>
-          <label>Province<input formControlName="province" /></label>
-          <label class="marketplace-check"><input type="checkbox" formControlName="deliveryAvailable" /> Delivery available</label>
-          <label class="marketplace-check"><input type="checkbox" formControlName="verified" /> Verified</label>
-          <label class="marketplace-check"><input type="checkbox" formControlName="published" /> Published in app</label>
+          <label class="ops-field">
+            <span class="ops-field__label">Name</span>
+            <input class="ops-input" formControlName="name" />
+          </label>
+          <label class="ops-field">
+            <span class="ops-field__label">Email</span>
+            <input class="ops-input" formControlName="email" type="email" />
+          </label>
+          <label class="ops-field">
+            <span class="ops-field__label">Phone</span>
+            <input class="ops-input" formControlName="phone" />
+          </label>
+          <label class="ops-field">
+            <span class="ops-field__label">Address</span>
+            <input class="ops-input" formControlName="address" />
+          </label>
+          <label class="ops-field">
+            <span class="ops-field__label">City</span>
+            <input class="ops-input" formControlName="city" />
+          </label>
+          <label class="ops-field">
+            <span class="ops-field__label">Province</span>
+            <input class="ops-input" formControlName="province" />
+          </label>
+          <label class="marketplace-check">
+            <input type="checkbox" formControlName="deliveryAvailable" />
+            <span>Delivery available</span>
+          </label>
+          <label class="marketplace-check">
+            <input type="checkbox" formControlName="verified" />
+            <span>Verified</span>
+          </label>
+          <label class="marketplace-check">
+            <input type="checkbox" formControlName="published" />
+            <span>Published in app</span>
+          </label>
           <div class="marketplace-actions">
             <button type="submit" class="ops-btn ops-btn--primary" [disabled]="isSaving || pharmacyForm.invalid">
               {{ isSaving ? 'Saving…' : 'Save pharmacy' }}
@@ -129,30 +227,60 @@
       </section>
 
       <section class="ops-panel">
-        <div class="ops-panel__header"><h2 class="ops-panel__title">Directory ({{ pharmacyRows.length }})</h2></div>
-        <div class="users-table-wrap">
-          <table class="users-table">
-            <thead><tr><th>Name</th><th>Email</th><th>Status</th><th></th></tr></thead>
-            <tbody>
-              @for (row of pharmacyRows; track row.id) {
-                <tr>
-                  <td>{{ row['name'] }}</td>
-                  <td>{{ row['email'] }}</td>
-                  <td>
-                    @if (row['published']) { <span class="ops-badge ops-badge--green">Live</span> }
-                    @else { <span class="ops-badge ops-badge--slate">Draft</span> }
-                  </td>
-                  <td class="marketplace-row-actions">
-                    <button type="button" class="ops-btn ops-btn--secondary" (click)="editPharmacy(row)">Edit</button>
-                    @if (row['published']) {
-                      <button type="button" class="ops-btn ops-btn--secondary" (click)="unpublishPharmacy(row.id)">Unpublish</button>
-                    }
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
+        <div class="ops-panel__header">
+          <div>
+            <p class="ops-section-label">Directory</p>
+            <h2 class="ops-panel__title">Pharmacies</h2>
+          </div>
+          @if (!isLoading) {
+            <span class="ops-badge ops-badge--slate">{{ pharmacyRows.length }}</span>
+          }
         </div>
+        @if (isLoading) {
+          <div class="ops-panel__body">
+            <app-ops-page-skeleton variant="table" [rows]="6"></app-ops-page-skeleton>
+          </div>
+        } @else if (!pharmacyRows.length) {
+          <div class="ops-empty">
+            <div class="ops-empty__icon" aria-hidden="true">
+              <lucide-icon name="store"></lucide-icon>
+            </div>
+            <p class="ops-empty__title">No pharmacies yet</p>
+            <p class="ops-empty__text">Add your first pharmacy using the form on the left.</p>
+          </div>
+        } @else {
+          <div class="users-table-wrap">
+            <table class="users-table">
+              <thead><tr><th>Name</th><th>Email</th><th>Status</th><th></th></tr></thead>
+              <tbody>
+                @for (row of pagedPharmacyRows; track row.id) {
+                  <tr>
+                    <td>{{ row['name'] }}</td>
+                    <td>{{ row['email'] }}</td>
+                    <td>
+                      @if (row['published']) { <span class="ops-badge ops-badge--green">Live</span> }
+                      @else { <span class="ops-badge ops-badge--slate">Draft</span> }
+                    </td>
+                    <td class="marketplace-row-actions">
+                      <button type="button" class="ops-btn ops-btn--secondary" (click)="editPharmacy(row)">Edit</button>
+                      @if (row['published']) {
+                        <button type="button" class="ops-btn ops-btn--secondary" (click)="unpublishPharmacy(row.id)">Unpublish</button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          <app-ops-pagination
+            [total]="pharmacyRows.length"
+            [pageIndex]="pharmacyPageIndex"
+            [pageSize]="pageSize"
+            itemLabel="pharmacies"
+            (pageIndexChange)="onPharmacyPageIndexChange($event)"
+            (pageSizeChange)="onPageSizeChange($event)"
+          ></app-ops-pagination>
+        }
       </section>
     </div>
   }

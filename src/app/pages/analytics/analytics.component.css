@@ -1,4 +1,19 @@
+.analytics-metrics {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 1.25rem;
+}
+
+@media (min-width: 900px) {
+  .analytics-metrics {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
 .analytics-chart {
   width: 100%;
-  min-height: 20rem;
+  min-height: 22rem;
+}
+
+.ops-chart-card {
+  min-height: 24rem;
 }

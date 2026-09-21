@@ -61,7 +61,7 @@ export const SUCCESS_NOTIFICATION_BOX_POSITION = {
 }
 
 export const ERROR_NOTIFICATION_BOX_POSITION = {
-  nzPlacement: <NzNotificationPlacement> 'bottomLeft'
+  nzPlacement: <NzNotificationPlacement> 'topRight',
 }
 
 

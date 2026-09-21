@@ -1,4 +1,4 @@
-<div class="ops-page">
+<div class="ops-page team-access-page">
   <header class="ops-page-header">
     <div class="ops-page-header__copy">
       <p class="ops-page-header__eyebrow">CRM</p>
@@ -12,25 +12,30 @@
   @if (canManageTeam) {
     <section class="ops-panel invite-panel">
       <div class="ops-panel__header">
-        <h2 class="ops-panel__title">Invite teammate</h2>
+        <div>
+          <p class="ops-section-label">Invite</p>
+          <h2 class="ops-panel__title">Invite teammate</h2>
+        </div>
       </div>
       <form class="invite-form" [formGroup]="inviteForm" (ngSubmit)="inviteMember()">
-        <label>
-          <span>Email</span>
-          <input type="email" formControlName="email" placeholder="support@anixihealth.com" />
-        </label>
-        <label>
-          <span>Display name</span>
-          <input type="text" formControlName="displayName" placeholder="Optional" />
-        </label>
-        <label>
-          <span>Role</span>
-          <select formControlName="opsRole">
-            @for (option of roleOptions; track option.value) {
-              <option [value]="option.value">{{ option.label }} — {{ option.description }}</option>
-            }
-          </select>
-        </label>
+        <div class="invite-form__grid">
+          <label class="ops-field">
+            <span class="ops-field__label">Email</span>
+            <input class="ops-input" type="email" formControlName="email" placeholder="support@anixihealth.com" />
+          </label>
+          <label class="ops-field">
+            <span class="ops-field__label">Display name</span>
+            <input class="ops-input" type="text" formControlName="displayName" placeholder="Optional" />
+          </label>
+          <label class="ops-field invite-form__role">
+            <span class="ops-field__label">Role</span>
+            <select class="ops-select" formControlName="opsRole">
+              @for (option of roleOptions; track option.value) {
+                <option [value]="option.value">{{ option.label }} — {{ option.description }}</option>
+              }
+            </select>
+          </label>
+        </div>
         <button type="submit" class="ops-btn ops-btn--primary" [disabled]="isSaving">
           {{ isSaving ? 'Sending…' : 'Send invite' }}
         </button>
@@ -40,15 +45,30 @@
 
   <section class="ops-panel">
     <div class="ops-panel__header">
-      <h2 class="ops-panel__title">Ops team</h2>
+      <div>
+        <p class="ops-section-label">Directory</p>
+        <h2 class="ops-panel__title">Ops team</h2>
+      </div>
+      @if (!isLoading && members.length) {
+        <span class="ops-badge ops-badge--slate">{{ members.length }} members</span>
+      }
     </div>
+
     @if (isLoading) {
-      <p class="muted">Loading team…</p>
+      <div class="ops-panel__body">
+        <app-ops-page-skeleton variant="table" [rows]="6"></app-ops-page-skeleton>
+      </div>
     } @else if (!members.length) {
-      <p class="muted">No admin team members yet.</p>
+      <div class="ops-empty">
+        <div class="ops-empty__icon" aria-hidden="true">
+          <lucide-icon name="shield"></lucide-icon>
+        </div>
+        <p class="ops-empty__title">No admin team members yet</p>
+        <p class="ops-empty__text">Invite your first teammate to share access to the Admin Portal.</p>
+      </div>
     } @else {
-      <div class="team-table-wrap">
-        <table class="team-table">
+      <div class="users-table-wrap">
+        <table class="users-table">
           <thead>
             <tr>
               <th>Name</th>
@@ -61,13 +81,14 @@
             </tr>
           </thead>
           <tbody>
-            @for (member of members; track member.id) {
+            @for (member of pagedMembers; track member.id) {
               <tr>
                 <td>{{ member.displayName || '—' }}</td>
                 <td>{{ member.email }}</td>
                 <td>
                   @if (canManageTeam) {
                     <select
+                      class="ops-select team-role-select"
                       [value]="member.opsRole"
                       (change)="updateRole(member, $any($event.target).value)"
                     >
@@ -96,6 +117,14 @@
           </tbody>
         </table>
       </div>
+      <app-ops-pagination
+        [total]="members.length"
+        [pageIndex]="pageIndex"
+        [pageSize]="pageSize"
+        itemLabel="members"
+        (pageIndexChange)="onPageIndexChange($event)"
+        (pageSizeChange)="onPageSizeChange($event)"
+      ></app-ops-pagination>
     }
   </section>
 </div>

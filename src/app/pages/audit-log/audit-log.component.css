@@ -1,42 +1,110 @@
-.page {
-  padding: 1.5rem;
+.audit-log-page .ops-panel__header {
+  align-items: flex-end;
 }
 
-.page-header h1 {
-  margin: 0 0 0.25rem;
-  color: #1a4d4d;
+.audit-metrics {
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  margin-bottom: 1.25rem;
 }
 
-.page-header p,
-.muted {
-  color: #65758b;
+@media (min-width: 768px) {
+  .audit-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
-.error {
-  color: #b42318;
+.ops-metric--blue .ops-metric__value {
+  color: #3a4f8f;
 }
 
-.table-wrap {
-  overflow-x: auto;
-  background: #fff;
-  border: 1px solid #e1e7ef;
+.audit-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 0.85rem 1rem 0;
+}
+
+.audit-search {
+  max-width: 24rem;
+}
+
+.audit-search-icon {
+  width: 1rem;
+  height: 1rem;
+  color: #8b9a90;
+}
+
+.audit-note {
+  margin: 0.75rem 1rem 0;
+}
+
+.audit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 0.85rem 1rem 0.35rem;
+}
+
+.audit-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 1rem;
+  align-items: start;
+  padding: 0.95rem 1rem;
+  border: 1px solid #e4ebe5;
   border-radius: 12px;
+  background: #fcfdfb;
 }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
+.audit-item__heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+  margin-bottom: 0.35rem;
 }
 
-th,
-td {
-  padding: 0.75rem 1rem;
-  text-align: left;
-  border-bottom: 1px solid #eef2f6;
+.audit-item__summary {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 650;
+  color: var(--anixi-text);
+}
+
+.audit-item__detail {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--anixi-text-secondary);
+}
+
+.audit-item__meta {
+  text-align: right;
+  min-width: 8.5rem;
+}
+
+.audit-item__actor {
+  margin: 0;
   font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--anixi-text);
 }
 
-th {
-  color: #65758b;
-  font-weight: 600;
+.audit-item__when {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: #98a2b3;
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .audit-item {
+    grid-template-columns: 1fr;
+  }
+
+  .audit-item__meta {
+    text-align: left;
+    min-width: 0;
+  }
 }

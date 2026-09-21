@@ -18,6 +18,7 @@ import {
   getUserDisplayName,
   getUserRole,
 } from '../../utils/user-record.utils';
+import { paginateItems } from '../../utils/pagination.utils';
 
 type AttentionItem = {
   id: string;
@@ -28,11 +29,31 @@ type AttentionItem = {
   queryParams?: Record<string, string>;
 };
 
+type MetricCard = {
+  id: string;
+  label: string;
+  value: string | number;
+  hint: string;
+  icon: string;
+  tone?: 'green' | 'amber' | 'slate';
+};
+
+type QuickAction = {
+  id: string;
+  label: string;
+  description: string;
+  icon: string;
+  route: string;
+  queryParams?: Record<string, string>;
+  primary?: boolean;
+};
+
 type ActivityItem = {
   id: string;
   title: string;
   detail: string;
   when: string;
+  whenMs: number;
   tone: 'amber' | 'green' | 'blue' | 'slate';
 };
 
@@ -56,6 +77,44 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   attentionItems: AttentionItem[] = [];
   activityItems: ActivityItem[] = [];
+  activityPageIndex = 1;
+  activityPageSize = 5;
+  metricCards: MetricCard[] = [];
+  quickActions: QuickAction[] = [
+    {
+      id: 'create-content',
+      label: 'Create content',
+      description: 'Publish community articles and updates',
+      icon: 'file-pen',
+      route: '/content/new',
+      primary: true,
+    },
+    {
+      id: 'review-doctors',
+      label: 'Review doctors',
+      description: 'Verify credentials and approve access',
+      icon: 'stethoscope',
+      route: '/doctor-verification',
+      queryParams: { status: 'pending' },
+    },
+    {
+      id: 'manage-users',
+      label: 'Manage users',
+      description: 'Browse patients and platform accounts',
+      icon: 'users',
+      route: '/users',
+    },
+    {
+      id: 'view-reports',
+      label: 'View reports',
+      description: 'Review flagged community content',
+      icon: 'triangle-alert',
+      route: '/content',
+      queryParams: { filter: 'reported' },
+    },
+  ];
+
+  todayLabel = '';
 
   private sub = new Subscription();
 
@@ -68,6 +127,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.setGreeting();
+    this.todayLabel = new Intl.DateTimeFormat('en-ZA', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      timeZone: 'Africa/Johannesburg',
+    }).format(new Date());
     this.sub.add(
       this.authService.adminUser$.subscribe((admin) => {
         this.greetingName = admin?.displayName?.split(' ')[0] || 'Admin';
@@ -101,6 +167,19 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   go(path: string, queryParams?: Record<string, string>): void {
     void this.router.navigate([path], { queryParams });
+  }
+
+  get pagedActivityItems(): ActivityItem[] {
+    return paginateItems(this.activityItems, this.activityPageIndex, this.activityPageSize);
+  }
+
+  onActivityPageIndexChange(page: number): void {
+    this.activityPageIndex = page;
+  }
+
+  onActivityPageSizeChange(size: number): void {
+    this.activityPageSize = size;
+    this.activityPageIndex = 1;
   }
 
   private setGreeting(): void {
@@ -162,28 +241,70 @@ export class DashboardComponent implements OnInit, OnDestroy {
         queryParams: { status: 'suspended' },
       });
     }
-    if (!this.attentionItems.length) {
-      this.attentionItems.push({
-        id: 'all-clear',
-        title: 'No urgent actions right now',
-        detail: 'Verification queue and reported content look clear.',
+    this.metricCards = [
+      {
+        id: 'patients',
+        label: 'Total patients',
+        value: this.totalPatients,
+        hint: 'Registered patient accounts',
+        icon: 'users',
+      },
+      {
+        id: 'verified-doctors',
+        label: 'Verified doctors',
+        value: this.verifiedDoctors,
+        hint: 'Approved to practice',
+        icon: 'shield-check',
         tone: 'green',
-        route: ['/doctor-verification'],
-      });
-    }
+      },
+      {
+        id: 'pending-doctors',
+        label: 'Pending review',
+        value: this.pendingDoctors,
+        hint: 'Awaiting credential verification',
+        icon: 'clock',
+        tone: this.pendingDoctors > 0 ? 'amber' : undefined,
+      },
+      {
+        id: 'appointments',
+        label: 'Appointments today',
+        value: '—',
+        hint: 'Not available in Admin',
+        icon: 'calendar',
+        tone: 'slate',
+      },
+      {
+        id: 'community-posts',
+        label: 'Community posts',
+        value: this.communityPosts,
+        hint: `Across ${this.communities} communities`,
+        icon: 'message-square',
+      },
+      {
+        id: 'open-actions',
+        label: 'Open actions',
+        value: this.openActions,
+        hint: 'Require attention',
+        icon: 'triangle-alert',
+        tone: this.openActions > 0 ? 'amber' : undefined,
+      },
+    ];
 
     const doctorActivity = [...clinicalDoctors]
       .sort((a, b) => this.toMillis(b.verifiedAt ?? b.createdAt) - this.toMillis(a.verifiedAt ?? a.createdAt))
-      .slice(0, 6)
+      .slice(0, 25)
       .map((doctor, index) => {
         const status = normalizeVerificationStatus(doctor.verificationStatus as string);
         const name = getDoctorDisplayName(doctor);
+        const whenSource = doctor.verifiedAt ?? doctor.createdAt;
+        const whenMs = this.toMillis(whenSource);
         if (status === 'approved') {
           return {
             id: `doc-${doctor.id || index}`,
             title: 'Doctor approved',
             detail: `${name} was approved for Anixi practice access.`,
-            when: formatTimestamp(doctor.verifiedAt ?? doctor.createdAt),
+            when: formatTimestamp(whenSource),
+            whenMs,
             tone: 'green' as const,
           };
         }
@@ -192,7 +313,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
             id: `doc-${doctor.id || index}`,
             title: 'Doctor suspended',
             detail: `${name} access was restricted.`,
-            when: formatTimestamp(doctor.verifiedAt ?? doctor.createdAt),
+            when: formatTimestamp(whenSource),
+            whenMs,
             tone: 'slate' as const,
           };
         }
@@ -201,7 +323,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
             id: `doc-${doctor.id || index}`,
             title: 'Application rejected',
             detail: `${name} was not approved.`,
-            when: formatTimestamp(doctor.verifiedAt ?? doctor.createdAt),
+            when: formatTimestamp(whenSource),
+            whenMs,
             tone: 'slate' as const,
           };
         }
@@ -210,35 +333,39 @@ export class DashboardComponent implements OnInit, OnDestroy {
           title: 'Doctor application submitted',
           detail: `${name} is awaiting credential review.`,
           when: formatTimestamp(doctor.createdAt),
+          whenMs: this.toMillis(doctor.createdAt),
           tone: 'amber' as const,
         };
       });
 
     const userActivity = [...users]
       .sort((a, b) => this.toMillis(b.createdAt) - this.toMillis(a.createdAt))
-      .slice(0, 3)
+      .slice(0, 15)
       .map((user, index) => ({
         id: `user-${user.id || index}`,
         title: 'User created',
         detail: `${getUserDisplayName(user)} joined as ${getUserRole(user)}.`,
         when: formatUserTimestamp(user.createdAt),
+        whenMs: this.toMillis(user.createdAt),
         tone: 'blue' as const,
       }));
 
     const postActivity = [...posts]
       .sort((a, b) => this.toMillis(b.timeStamp) - this.toMillis(a.timeStamp))
-      .slice(0, 3)
+      .slice(0, 15)
       .map((post, index) => ({
         id: `post-${post.id || index}`,
         title: 'Community article published',
         detail: `${post.title || 'Untitled article'} · ${post.groupName || 'Community'}`,
         when: formatTimestamp(post.timeStamp),
+        whenMs: this.toMillis(post.timeStamp),
         tone: 'green' as const,
       }));
 
     this.activityItems = [...doctorActivity, ...postActivity, ...userActivity]
-      .sort((a, b) => (a.when < b.when ? 1 : -1))
-      .slice(0, 8);
+      .sort((a, b) => b.whenMs - a.whenMs)
+      .slice(0, 50);
+    this.activityPageIndex = 1;
   }
 
   private toMillis(value: unknown): number {

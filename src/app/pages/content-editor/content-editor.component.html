@@ -60,7 +60,9 @@
 
   @if (isLoadingExisting) {
     <div class="ops-panel editor-loading">
-      <nz-spin nzTip="Loading content…"></nz-spin>
+      <div class="ops-panel__body">
+        <app-ops-page-skeleton variant="split"></app-ops-page-skeleton>
+      </div>
     </div>
   } @else {
     @if (isEditMode && existingPost && (existingPost.status === 'Published' || !existingPost.status)) {

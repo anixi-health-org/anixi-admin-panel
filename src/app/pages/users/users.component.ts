@@ -30,6 +30,7 @@ import {
   userMatchesSearch,
   UserRoleFilter,
 } from '../../utils/user-record.utils';
+import { paginateItems } from '../../utils/pagination.utils';
 
 const roleFilters: { label: string; value: UserRoleFilter }[] = [
   { label: 'All', value: 'all' },
@@ -49,6 +50,8 @@ const roleFilters: { label: string; value: UserRoleFilter }[] = [
 export class UsersComponent implements OnInit, OnDestroy {
   roleFilters = roleFilters;
   isLoadingSkeleton = true;
+  pageIndex = 1;
+  pageSize = 25;
   selectedUser: PlatformUser | null = null;
   isUpdating = false;
   isEditingContact = false;
@@ -81,6 +84,14 @@ export class UsersComponent implements OnInit, OnDestroy {
       this.route.queryParamMap.subscribe((params) => {
         const q = params.get('q');
         if (q) this.searchQuery.setValue(q);
+      })
+    );
+    this.sub.add(
+      combineLatest([
+        this.roleFilter.valueChanges.pipe(startWith(this.roleFilter.value)),
+        this.searchQuery.valueChanges.pipe(startWith(this.searchQuery.value)),
+      ]).subscribe(() => {
+        this.pageIndex = 1;
       })
     );
 
@@ -147,6 +158,19 @@ export class UsersComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.sub.unsubscribe();
+  }
+
+  pageItems(users: PlatformUser[] | null): PlatformUser[] {
+    return paginateItems(users ?? [], this.pageIndex, this.pageSize);
+  }
+
+  onPageIndexChange(page: number): void {
+    this.pageIndex = page;
+  }
+
+  onPageSizeChange(size: number): void {
+    this.pageSize = size;
+    this.pageIndex = 1;
   }
 
   countFor(role: UserRoleFilter): Observable<number> {

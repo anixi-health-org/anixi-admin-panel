@@ -8,6 +8,7 @@ import {
 import { AdminOpsRole, AdminTeamMember } from '../../models/admin-user';
 import { AuthService } from '../../services/auth.service';
 import { FirestoreService } from '../../services/firestore.service';
+import { paginateItems } from '../../utils/pagination.utils';
 
 const ROLE_OPTIONS: { label: string; value: AdminOpsRole; description: string }[] = [
   {
@@ -44,6 +45,12 @@ export class TeamAccessComponent implements OnInit {
   isLoading = true;
   isSaving = false;
   canManageTeam = false;
+  pageIndex = 1;
+  pageSize = 25;
+
+  get pagedMembers(): AdminTeamMember[] {
+    return paginateItems(this.members, this.pageIndex, this.pageSize);
+  }
 
   inviteForm = new FormGroup({
     email: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.email] }),
@@ -89,6 +96,15 @@ export class TeamAccessComponent implements OnInit {
 
   roleLabel(role: AdminOpsRole): string {
     return this.roleOptions.find((option) => option.value === role)?.label ?? role;
+  }
+
+  onPageIndexChange(page: number): void {
+    this.pageIndex = page;
+  }
+
+  onPageSizeChange(size: number): void {
+    this.pageSize = size;
+    this.pageIndex = 1;
   }
 
   async inviteMember(): Promise<void> {

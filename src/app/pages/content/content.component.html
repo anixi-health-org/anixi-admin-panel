@@ -141,7 +141,7 @@
                     </thead>
                     <tbody>
                         @if (visiblePosts().length) {
-                        @for(post of visiblePosts(); track post.id) {
+                        @for(post of pagedVisiblePosts(); track post.id) {
                                  <tr class="border-b-1 border-gray-300">
                                     <td class="text-start font-semibold p-4">
                                       <div class="flex items-center gap-3">
@@ -262,12 +262,19 @@
                         }
                     </tbody>
                 </table>
-
             </div>
+            <app-ops-pagination
+              [total]="visiblePosts().length"
+              [pageIndex]="pageIndex"
+              [pageSize]="pageSize"
+              itemLabel="posts"
+              (pageIndexChange)="onPageIndexChange($event)"
+              (pageSizeChange)="onPageSizeChange($event)"
+            ></app-ops-pagination>
         }
         @else {
-            <div class="mt-4">
-                <nz-skeleton [nzTitle]="false" [nzParagraph]="{rows: 20}" [nzActive]="isLoadingSkeleton"></nz-skeleton>
+            <div class="mt-4 ops-panel__body">
+                <app-ops-page-skeleton variant="table" [rows]="10"></app-ops-page-skeleton>
             </div>
         }
     </div>

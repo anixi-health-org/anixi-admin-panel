@@ -119,7 +119,7 @@
 
     @if (isLoading) {
       <div class="ops-panel__body">
-        <nz-skeleton [nzActive]="true" [nzParagraph]="{ rows: 5 }"></nz-skeleton>
+        <app-ops-page-skeleton variant="table" [rows]="5"></app-ops-page-skeleton>
       </div>
     } @else if (jobs.length === 0) {
       <div class="ops-empty">
