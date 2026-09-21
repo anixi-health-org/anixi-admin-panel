@@ -1,5 +1,12 @@
 import { Injectable } from '@angular/core';
-import { interval, Observable, startWith, switchMap } from 'rxjs';
+import {
+  interval,
+  merge,
+  Observable,
+  startWith,
+  Subject,
+  switchMap,
+} from 'rxjs';
 import { AuthService } from './auth.service';
 import { DjangoApiService } from './django-api.service';
 
@@ -18,30 +25,39 @@ export type AdminNotification = {
   providedIn: 'root',
 })
 export class AdminNotificationsService {
+  private readIds = new Set<string>();
+  private readonly refresh$ = new Subject<void>();
+
   constructor(
     private authService: AuthService,
     private djangoApi: DjangoApiService,
   ) {}
 
   listenNotifications(max = 50): Observable<AdminNotification[]> {
-    return interval(60_000).pipe(
-      startWith(0),
+    return merge(interval(60_000).pipe(startWith(0)), this.refresh$).pipe(
       switchMap(async () => {
-        if (!this.authService.getAdminUserId()) {
+        const adminId = this.authService.getAdminUserId();
+        if (!adminId) {
           return [] as AdminNotification[];
         }
+
+        this.loadReadIds(adminId);
+
         try {
           const doctors = await this.djangoApi.listDoctors('pending');
-          return doctors.slice(0, max).map((doctor) => ({
-            id: String(doctor['id'] ?? ''),
-            type: 'doctor_application',
-            title: 'Doctor application pending review',
-            body: String(doctor['displayName'] ?? doctor['email'] ?? 'Unknown doctor'),
-            href: '/doctor-verification',
-            doctorId: String(doctor['id'] ?? ''),
-            createdAt: doctor['createdAt'] ?? null,
-            readBy: [],
-          }));
+          return doctors.slice(0, max).map((doctor) => {
+            const id = String(doctor['id'] ?? '');
+            return {
+              id,
+              type: 'doctor_application',
+              title: 'Doctor application pending review',
+              body: String(doctor['displayName'] ?? doctor['email'] ?? 'Unknown doctor'),
+              href: '/doctor-verification',
+              doctorId: id,
+              createdAt: doctor['createdAt'] ?? null,
+              readBy: this.readIds.has(id) ? [adminId] : [],
+            };
+          });
         } catch {
           return [] as AdminNotification[];
         }
@@ -60,12 +76,22 @@ export class AdminNotificationsService {
     return notifications.filter((n) => this.isUnread(n, adminId)).length;
   }
 
-  async markAsRead(_notificationId: string): Promise<void> {
-    return;
+  async markAsRead(notificationId: string): Promise<void> {
+    const id = notificationId.trim();
+    if (!id) return;
+    this.readIds.add(id);
+    this.persistReadIds();
+    this.refresh$.next();
   }
 
-  async markAllAsRead(_notifications: AdminNotification[]): Promise<void> {
-    return;
+  async markAllAsRead(notifications: AdminNotification[]): Promise<void> {
+    for (const notification of notifications) {
+      if (notification.id) {
+        this.readIds.add(notification.id);
+      }
+    }
+    this.persistReadIds();
+    this.refresh$.next();
   }
 
   formatWhen(value: AdminNotification['createdAt']): string {
@@ -80,5 +106,30 @@ export class AdminNotificationsService {
             : null;
     if (!date || Number.isNaN(date.getTime())) return '';
     return date.toLocaleString();
+  }
+
+  private storageKey(adminId: string): string {
+    return `anixi-admin-read-notification-ids:${adminId}`;
+  }
+
+  private loadReadIds(adminId: string): void {
+    try {
+      const raw = localStorage.getItem(this.storageKey(adminId));
+      const parsed = raw ? JSON.parse(raw) : [];
+      this.readIds = new Set(
+        Array.isArray(parsed) ? parsed.map((value) => String(value)) : [],
+      );
+    } catch {
+      this.readIds = new Set();
+    }
+  }
+
+  private persistReadIds(): void {
+    const adminId = this.authService.getAdminUserId();
+    if (!adminId) return;
+    localStorage.setItem(
+      this.storageKey(adminId),
+      JSON.stringify([...this.readIds]),
+    );
   }
 }

@@ -1,0 +1,47 @@
+@if (total > 0) {
+  <nav class="ops-pagination" aria-label="Pagination">
+    <p class="ops-pagination__summary">
+      Showing <strong>{{ rangeStart }}–{{ rangeEnd }}</strong> of <strong>{{ total }}</strong> {{ itemLabel }}
+    </p>
+
+    <div class="ops-pagination__controls">
+      <label class="ops-pagination__size">
+        <span class="ops-pagination__size-label">Rows</span>
+        <select
+          class="ops-pagination__select"
+          [value]="pageSize"
+          (change)="onPageSizeSelect($event)"
+          aria-label="Rows per page"
+        >
+          @for (size of pageSizeOptions; track size) {
+            <option [value]="size">{{ size }}</option>
+          }
+        </select>
+      </label>
+
+      <div class="ops-pagination__nav">
+        <button
+          type="button"
+          class="ops-pagination__btn"
+          [disabled]="!canGoPrev"
+          (click)="goPrev()"
+          aria-label="Previous page"
+        >
+          ‹
+        </button>
+        <span class="ops-pagination__status">
+          Page {{ pageIndex }} of {{ totalPages }}
+        </span>
+        <button
+          type="button"
+          class="ops-pagination__btn"
+          [disabled]="!canGoNext"
+          (click)="goNext()"
+          aria-label="Next page"
+        >
+          ›
+        </button>
+      </div>
+    </div>
+  </nav>
+}

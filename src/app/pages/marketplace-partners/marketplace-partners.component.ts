@@ -2,6 +2,7 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { FirestoreService } from '../../services/firestore.service';
+import { paginateItems } from '../../utils/pagination.utils';
 
 type PartnerTab = 'wellness' | 'pharmacies';
 
@@ -14,8 +15,12 @@ type PartnerTab = 'wellness' | 'pharmacies';
 export class MarketplacePartnersComponent implements OnInit, OnDestroy {
   tab: PartnerTab = 'wellness';
   isSaving = false;
+  isLoading = true;
   message = '';
   error = '';
+  pageSize = 10;
+  wellnessPageIndex = 1;
+  pharmacyPageIndex = 1;
 
   wellnessRows: Array<Record<string, unknown> & { id: string }> = [];
   pharmacyRows: Array<Record<string, unknown> & { id: string }> = [];
@@ -66,12 +71,35 @@ export class MarketplacePartnersComponent implements OnInit, OnDestroy {
     });
   }
 
+  get pagedWellnessRows(): Array<Record<string, unknown> & { id: string }> {
+    return paginateItems(this.wellnessRows, this.wellnessPageIndex, this.pageSize);
+  }
+
+  get pagedPharmacyRows(): Array<Record<string, unknown> & { id: string }> {
+    return paginateItems(this.pharmacyRows, this.pharmacyPageIndex, this.pageSize);
+  }
+
+  onWellnessPageIndexChange(page: number): void {
+    this.wellnessPageIndex = page;
+  }
+
+  onPharmacyPageIndexChange(page: number): void {
+    this.pharmacyPageIndex = page;
+  }
+
+  onPageSizeChange(size: number): void {
+    this.pageSize = size;
+    this.wellnessPageIndex = 1;
+    this.pharmacyPageIndex = 1;
+  }
+
   ngOnInit(): void {
     this.sub.add(
       this.firestore.getWellnessProviders().subscribe((rows) => {
         this.wellnessRows = rows.sort((a, b) =>
           String(a['name'] ?? '').localeCompare(String(b['name'] ?? ''))
         );
+        this.isLoading = false;
       })
     );
     this.sub.add(
@@ -79,6 +107,7 @@ export class MarketplacePartnersComponent implements OnInit, OnDestroy {
         this.pharmacyRows = rows.sort((a, b) =>
           String(a['name'] ?? '').localeCompare(String(b['name'] ?? ''))
         );
+        this.isLoading = false;
       })
     );
   }

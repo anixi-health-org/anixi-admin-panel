@@ -27,8 +27,8 @@
     </div>
 
     @if (isLoading) {
-      <div class="ops-panel__body notifications-loading">
-        <nz-spin nzSimple></nz-spin>
+      <div class="ops-panel__body">
+        <app-ops-page-skeleton variant="list" [rows]="8"></app-ops-page-skeleton>
       </div>
     } @else if (loadError) {
       <div class="ops-empty">
@@ -48,7 +48,7 @@
       </div>
     } @else {
       <ul class="notifications-list">
-        @for (item of notifications; track item.id) {
+        @for (item of pagedNotifications; track item.id) {
           <li>
             <button
               type="button"
@@ -66,6 +66,14 @@
           </li>
         }
       </ul>
+      <app-ops-pagination
+        [total]="notifications.length"
+        [pageIndex]="pageIndex"
+        [pageSize]="pageSize"
+        itemLabel="notifications"
+        (pageIndexChange)="onPageIndexChange($event)"
+        (pageSizeChange)="onPageSizeChange($event)"
+      ></app-ops-pagination>
     }
   </section>
 </div>

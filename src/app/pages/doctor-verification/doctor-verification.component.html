@@ -46,8 +46,8 @@
         </div>
       </div>
 
-      <div class="users-filters-wrap">
-        <div class="ops-filters">
+      <div class="users-filters-wrap ops-tabs">
+        <div class="ops-filters" role="tablist" aria-label="Filter by verification status">
           @for (input of customInput; track input.value) {
             <button
               type="button"
@@ -63,7 +63,7 @@
 
       @if (!isLoadingSkeleton) {
         <div class="doctor-list">
-          @for (doctor of filteredDoctors$ | async; track doctor.id) {
+          @for (doctor of pageItems(filteredDoctors$ | async); track doctor.id) {
             <button
               type="button"
               class="ops-list-row"
@@ -112,9 +112,19 @@
             </div>
           }
         </div>
+        @if ((filteredDoctors$ | async)?.length) {
+          <app-ops-pagination
+            [total]="(filteredDoctors$ | async)?.length ?? 0"
+            [pageIndex]="pageIndex"
+            [pageSize]="pageSize"
+            itemLabel="applications"
+            (pageIndexChange)="onPageIndexChange($event)"
+            (pageSizeChange)="onPageSizeChange($event)"
+          ></app-ops-pagination>
+        }
       } @else {
         <div class="ops-panel__body">
-          <nz-skeleton [nzParagraph]="{ rows: 10 }" [nzTitle]="false" [nzActive]="true"></nz-skeleton>
+          <app-ops-page-skeleton variant="list" [rows]="8"></app-ops-page-skeleton>
         </div>
       }
     </section>

@@ -152,28 +152,34 @@
   position: sticky;
   top: 0;
   z-index: 10;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 560px) minmax(0, 1fr);
   align-items: center;
-  justify-content: space-between;
   gap: 1rem;
-  min-height: 3.5rem;
-  padding: 0 1.25rem;
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(12px);
+  min-height: 4rem;
+  padding: 0.65rem 1.35rem;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(14px);
   border-bottom: 1px solid #e4ebe5;
+  box-shadow: 0 1px 0 rgb(28 38 33 / 0.03);
+}
+
+.admin-header__spacer {
+  min-width: 0;
 }
 
 .admin-search {
   display: flex;
   align-items: center;
   gap: 0.55rem;
-  flex: 1;
-  max-width: 32rem;
-  min-height: 2.25rem;
-  padding: 0 0.85rem;
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0 0.95rem;
   border: 1px solid #d5ddd8;
   border-radius: 999px;
   background: #ffffff;
+  box-shadow: var(--anixi-shadow);
+  justify-self: center;
 }
 
 .admin-search:focus-within {
@@ -207,14 +213,62 @@
   color: #98a2b3;
 }
 
+.admin-search-kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.35rem;
+  height: 1.35rem;
+  padding: 0 0.25rem;
+  border-radius: 0.35rem;
+  border: 1px solid #dce6df;
+  background: #f8fbf8;
+  color: #8a968e;
+  font-size: 0.6875rem;
+  font-family: var(--font-body);
+}
+
 .admin-header-actions {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  margin-left: auto;
+  justify-content: flex-end;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.admin-header-actions app-admin-notifications-menu,
+.admin-header-actions app-admin-profile-menu {
+  display: flex;
+  align-items: center;
+}
+
+@media (max-width: 900px) {
+  .admin-header {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "search search"
+      "spacer actions";
+  }
+
+  .admin-search {
+    grid-area: search;
+    max-width: none;
+  }
+
+  .admin-header__spacer {
+    grid-area: spacer;
+  }
+
+  .admin-header-actions {
+    grid-area: actions;
+  }
+
+  .admin-search-kbd {
+    display: none;
+  }
 }
 
 .admin-content {
   background: var(--anixi-surface);
-  min-height: calc(100dvh - 3.5rem);
+  min-height: calc(100dvh - 4rem);
 }

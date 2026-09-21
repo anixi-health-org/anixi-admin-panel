@@ -33,7 +33,7 @@
 
       @if (isLoadingSkeleton) {
         <div class="ops-panel__body">
-          <nz-skeleton [nzActive]="true" [nzParagraph]="{ rows: 8 }"></nz-skeleton>
+          <app-ops-page-skeleton variant="table" [rows]="8"></app-ops-page-skeleton>
         </div>
       } @else if ((filteredClinics$ | async)?.length === 0) {
         <div class="ops-empty">
@@ -54,7 +54,7 @@
               </tr>
             </thead>
             <tbody>
-              @for (practice of filteredClinics$ | async; track practice.id) {
+              @for (practice of pageItems(filteredClinics$ | async); track practice.id) {
                 <tr
                   [class.users-table__row--active]="selectedPractice?.id === practice.id"
                   (click)="selectPractice(practice)"
@@ -75,6 +75,14 @@
             </tbody>
           </table>
         </div>
+        <app-ops-pagination
+          [total]="(filteredClinics$ | async)?.length ?? 0"
+          [pageIndex]="pageIndex"
+          [pageSize]="pageSize"
+          itemLabel="clinics"
+          (pageIndexChange)="onPageIndexChange($event)"
+          (pageSizeChange)="onPageSizeChange($event)"
+        ></app-ops-pagination>
       }
     </section>
 

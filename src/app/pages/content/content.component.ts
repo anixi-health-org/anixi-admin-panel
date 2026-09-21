@@ -9,6 +9,7 @@ import { IGroupPost } from '../../../interfaces/IgroupPost';
 import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { AuthService } from '../../services/auth.service';
+import { paginateItems } from '../../utils/pagination.utils';
 
 const contentCards = [
   { index: '0', label: 'Total Posts', value: 0 },
@@ -55,6 +56,8 @@ export class ContentComponent implements OnInit, OnDestroy{
   submitted = false;
   isLoading = false;
   isLoadingSkeleton = true;
+  pageIndex = 1;
+  pageSize = 15;
   totalPost = 0;
   publishedCount = 0;
   scheduledCount = 0;
@@ -135,6 +138,10 @@ export class ContentComponent implements OnInit, OnDestroy{
         this.setMenuItemValue('Reported');
       }
     });
+
+    this.search.valueChanges.subscribe(() => this.resetPagination());
+    this.typeFilter.valueChanges.subscribe(() => this.resetPagination());
+    this.communityFilter.valueChanges.subscribe(() => this.resetPagination());
   }
 
   ngOnDestroy(): void {
@@ -169,6 +176,7 @@ export class ContentComponent implements OnInit, OnDestroy{
   }
    setMenuItemValue(value:string) {
       this.menuItemStatus.setValue(value);
+      this.resetPagination();
     }
 
     postMatchesFilter(post: IGroupPost): boolean {
@@ -222,6 +230,23 @@ export class ContentComponent implements OnInit, OnDestroy{
 
     visiblePosts(): IGroupPost[] {
       return this.posts.filter((post) => this.postIsVisible(post));
+    }
+
+    pagedVisiblePosts(): IGroupPost[] {
+      return paginateItems(this.visiblePosts(), this.pageIndex, this.pageSize);
+    }
+
+    onPageIndexChange(page: number): void {
+      this.pageIndex = page;
+    }
+
+    onPageSizeChange(size: number): void {
+      this.pageSize = size;
+      this.pageIndex = 1;
+    }
+
+    resetPagination(): void {
+      this.pageIndex = 1;
     }
 
     postDate(post: IGroupPost): Date | null {

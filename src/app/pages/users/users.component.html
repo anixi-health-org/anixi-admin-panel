@@ -47,7 +47,7 @@
         </div>
       </div>
 
-      <div class="users-filters-wrap">
+      <div class="users-filters-wrap ops-tabs">
         <div class="ops-filters" role="tablist" aria-label="Filter by role">
           @for (filter of roleFilters; track filter.value) {
             <button
@@ -65,7 +65,7 @@
 
       @if (isLoadingSkeleton) {
         <div class="ops-panel__body">
-          <nz-skeleton [nzActive]="true" [nzParagraph]="{ rows: 8 }"></nz-skeleton>
+          <app-ops-page-skeleton variant="table" [rows]="8"></app-ops-page-skeleton>
         </div>
       } @else {
         @if ((filteredUsers$ | async)?.length === 0) {
@@ -89,7 +89,7 @@
                 </tr>
               </thead>
               <tbody>
-                @for (user of filteredUsers$ | async; track user.id) {
+                @for (user of pageItems(filteredUsers$ | async); track user.id) {
                   <tr
                     [class.users-table__row--active]="selectedUser?.id === user.id"
                     (click)="selectUser(user)"
@@ -115,6 +115,14 @@
               </tbody>
             </table>
           </div>
+          <app-ops-pagination
+            [total]="(filteredUsers$ | async)?.length ?? 0"
+            [pageIndex]="pageIndex"
+            [pageSize]="pageSize"
+            itemLabel="users"
+            (pageIndexChange)="onPageIndexChange($event)"
+            (pageSizeChange)="onPageSizeChange($event)"
+          ></app-ops-pagination>
         }
       }
     </section>

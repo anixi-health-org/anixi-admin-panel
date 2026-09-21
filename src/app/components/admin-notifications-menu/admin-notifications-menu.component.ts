@@ -92,6 +92,17 @@ export class AdminNotificationsMenuComponent implements OnInit, OnDestroy {
 
   async markAllRead(): Promise<void> {
     await this.notificationsService.markAllAsRead(this.notifications);
+    const adminId = this.authService.getAdminUserId();
+    this.notifications = this.notifications.map((item) => {
+      if (!adminId || !item.id) return item;
+      const readBy = new Set(item.readBy ?? []);
+      readBy.add(adminId);
+      return { ...item, readBy: [...readBy] };
+    });
+    this.unreadCount = this.notificationsService.unreadCount(
+      this.notifications,
+      adminId,
+    );
   }
 
   viewAll(): void {

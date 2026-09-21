@@ -496,13 +496,24 @@ body.content-modal-open {
   color: #98a2b3;
 }
 
+.ops-tabs {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.ops-tabs::-webkit-scrollbar {
+  display: none;
+}
+
 .ops-filters {
-  display: flex;
-  flex-wrap: wrap;
+  display: inline-flex;
+  flex-wrap: nowrap;
   gap: 0.25rem;
   padding: 0.2rem;
   background: #eef2ef;
   border-radius: 12px;
+  min-width: min(100%, max-content);
 }
 
 .ops-filter {
@@ -511,9 +522,11 @@ body.content-modal-open {
   color: #5b6b63;
   font-size: 0.8125rem;
   font-weight: 600;
-  padding: 0.4rem 0.7rem;
+  padding: 0.45rem 0.75rem;
   border-radius: 9px;
   cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .ops-filter:focus-visible {
@@ -757,4 +770,74 @@ body.content-modal-open {
 .ops-chart-card {
   min-height: 22rem;
   padding: 0.75rem 0.5rem 0.5rem;
+}
+
+/* Shared pagination footer (also used by app-ops-pagination) */
+.ops-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  padding: 0.85rem 1rem;
+  border-top: 1px solid #eef2ef;
+  background: #fcfdfb;
+}
+
+.ops-panel__footer {
+  border-top: 1px solid #eef2ef;
+  background: #fcfdfb;
+}
+
+.ops-table-meta {
+  padding: 0.65rem 1rem 0;
+  font-size: 0.8125rem;
+  color: var(--anixi-text-secondary);
+}
+
+.ops-table-meta strong {
+  color: var(--anixi-text);
+  font-weight: 650;
+}
+
+.ops-flash {
+  margin: 0 0 1rem;
+  padding: 0.75rem 0.95rem;
+  border-radius: var(--anixi-radius-sm);
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.ops-flash--ok {
+  border: 1px solid #c8e8d7;
+  background: #ebf8f1;
+  color: #1f7a4d;
+}
+
+.ops-flash--error {
+  border: 1px solid #f9d2ce;
+  background: #fef3f2;
+  color: #b42318;
+}
+
+/* Toast notifications — top-right, aligned with admin shell */
+.ant-notification {
+  z-index: 1100;
+}
+
+.ant-notification-notice {
+  border: 1px solid var(--anixi-border);
+  border-radius: var(--anixi-radius-sm);
+  box-shadow: var(--anixi-shadow-md);
+  padding: 0.85rem 1rem;
+}
+
+.ant-notification-notice-message {
+  font-weight: 600;
+  color: var(--anixi-text);
+}
+
+.ant-notification-notice-description {
+  color: var(--anixi-text-secondary);
+  font-size: 0.875rem;
 }

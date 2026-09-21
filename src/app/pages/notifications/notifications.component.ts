@@ -6,6 +6,7 @@ import {
   AdminNotificationsService,
 } from '../../services/admin-notifications.service';
 import { AuthService } from '../../services/auth.service';
+import { paginateItems } from '../../utils/pagination.utils';
 
 @Component({
   selector: 'app-notifications',
@@ -17,6 +18,8 @@ export class NotificationsComponent implements OnInit, OnDestroy {
   notifications: AdminNotification[] = [];
   isLoading = true;
   loadError: string | null = null;
+  pageIndex = 1;
+  pageSize = 20;
   private sub = new Subscription();
 
   constructor(
@@ -45,6 +48,19 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     this.sub.unsubscribe();
   }
 
+  get pagedNotifications(): AdminNotification[] {
+    return paginateItems(this.notifications, this.pageIndex, this.pageSize);
+  }
+
+  onPageIndexChange(page: number): void {
+    this.pageIndex = page;
+  }
+
+  onPageSizeChange(size: number): void {
+    this.pageSize = size;
+    this.pageIndex = 1;
+  }
+
   get unreadCount(): number {
     return this.notificationsService.unreadCount(
       this.notifications,
@@ -71,5 +87,12 @@ export class NotificationsComponent implements OnInit, OnDestroy {
 
   async markAllRead(): Promise<void> {
     await this.notificationsService.markAllAsRead(this.notifications);
+    this.notifications = this.notifications.map((item) => {
+      const adminId = this.authService.getAdminUserId();
+      if (!adminId || !item.id) return item;
+      const readBy = new Set(item.readBy ?? []);
+      readBy.add(adminId);
+      return { ...item, readBy: [...readBy] };
+    });
   }
 }

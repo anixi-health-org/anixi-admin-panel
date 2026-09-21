@@ -20,6 +20,7 @@ import {
   isDoctorVerificationCandidate,
   normalizeVerificationStatus,
 } from '../../utils/doctor-record.utils';
+import { paginateItems } from '../../utils/pagination.utils';
 
 const statCards = [
   { label: 'Pending Review', status: 'pending', color: '#f69e23' },
@@ -59,6 +60,8 @@ export class DoctorVerificationComponent implements OnInit, OnDestroy {
   suspendedCount$!: Observable<number>;
   onHoldCount$!: Observable<number>;
   isLoadingSkeleton = true;
+  pageIndex = 1;
+  pageSize = 20;
   private sub = new Subscription();
   isResponsive = false;
 
@@ -137,6 +140,28 @@ export class DoctorVerificationComponent implements OnInit, OnDestroy {
         this.isResponsive = result.matches;
       })
     );
+
+    this.sub.add(
+      combineLatest([
+        this.verificationStatus.valueChanges.pipe(startWith(this.verificationStatus.value)),
+        this.searchQuery.valueChanges.pipe(startWith(this.searchQuery.value)),
+      ]).subscribe(() => {
+        this.pageIndex = 1;
+      })
+    );
+  }
+
+  pageItems(doctors: any[] | null): any[] {
+    return paginateItems(doctors ?? [], this.pageIndex, this.pageSize);
+  }
+
+  onPageIndexChange(page: number): void {
+    this.pageIndex = page;
+  }
+
+  onPageSizeChange(size: number): void {
+    this.pageSize = size;
+    this.pageIndex = 1;
   }
 
   ngOnDestroy(): void {

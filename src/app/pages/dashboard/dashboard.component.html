@@ -1,60 +1,39 @@
 <div class="ops-page dashboard-page">
-  <header class="ops-page-header">
-    <div class="ops-page-header__copy">
-      <p class="ops-page-header__eyebrow">Anixi operations</p>
-      <h1 class="ops-page-header__title">{{ greetingLine }}, {{ greetingName }}</h1>
-      <p class="ops-page-header__subtitle">
+  <header class="dashboard-hero">
+    <div class="dashboard-hero__copy">
+      <p class="dashboard-hero__date">{{ todayLabel }}</p>
+      <h1 class="dashboard-hero__title">{{ greetingLine }}, {{ greetingName }}</h1>
+      <p class="dashboard-hero__subtitle">
         Here's what needs your attention across Anixi Health today.
       </p>
     </div>
-    <div class="ops-page-header__actions">
-      <span class="ops-status-pill" title="Platform health">
+    <div class="dashboard-hero__aside">
+      <span class="ops-status-pill dashboard-status-pill" title="Platform health">
         <span class="ops-status-dot" aria-hidden="true"></span>
         Platform status: Operational
       </span>
+      @if (!isLoading && openActions > 0) {
+        <span class="dashboard-hero__badge">{{ openActions }} open action{{ openActions === 1 ? '' : 's' }}</span>
+      }
     </div>
   </header>
 
   @if (isLoading) {
-    <div class="ops-metrics ops-metrics--compact">
-      @for (i of [1, 2, 3, 4, 5, 6]; track i) {
-        <div class="ops-metric">
-          <nz-skeleton [nzActive]="true" [nzTitle]="false" [nzParagraph]="{ rows: 2 }"></nz-skeleton>
-        </div>
-      }
-    </div>
+    <app-ops-page-skeleton variant="metrics" [metrics]="6"></app-ops-page-skeleton>
   } @else {
-    <section class="ops-metrics ops-metrics--compact" aria-label="Key metrics">
-      <article class="ops-metric">
-        <p class="ops-metric__label">Total patients</p>
-        <p class="ops-metric__value">{{ totalPatients }}</p>
-        <p class="ops-metric__hint">Registered patient accounts</p>
-      </article>
-      <article class="ops-metric ops-metric--green">
-        <p class="ops-metric__label">Verified doctors</p>
-        <p class="ops-metric__value">{{ verifiedDoctors }}</p>
-        <p class="ops-metric__hint">Approved to practice</p>
-      </article>
-      <article class="ops-metric ops-metric--amber">
-        <p class="ops-metric__label">Pending review</p>
-        <p class="ops-metric__value">{{ pendingDoctors }}</p>
-        <p class="ops-metric__hint">Awaiting credential verification</p>
-      </article>
-      <article class="ops-metric">
-        <p class="ops-metric__label">Appointments today</p>
-        <p class="ops-metric__value">—</p>
-        <p class="ops-metric__hint">Not available in Admin</p>
-      </article>
-      <article class="ops-metric">
-        <p class="ops-metric__label">Community posts</p>
-        <p class="ops-metric__value">{{ communityPosts }}</p>
-        <p class="ops-metric__hint">Across {{ communities }} communities</p>
-      </article>
-      <article class="ops-metric" [class.ops-metric--amber]="openActions > 0">
-        <p class="ops-metric__label">Open actions</p>
-        <p class="ops-metric__value">{{ openActions }}</p>
-        <p class="ops-metric__hint">Require attention</p>
-      </article>
+    <section class="dashboard-metrics" aria-label="Key metrics">
+      @for (metric of metricCards; track metric.id) {
+        <article class="dashboard-metric" [class.dashboard-metric--tone]="metric.tone" [attr.data-tone]="metric.tone || null">
+          <div class="dashboard-metric__top">
+            <p class="dashboard-metric__label">{{ metric.label }}</p>
+            <span class="dashboard-metric__icon" aria-hidden="true">
+              <lucide-icon [name]="metric.icon"></lucide-icon>
+            </span>
+          </div>
+          <p class="dashboard-metric__value">{{ metric.value }}</p>
+          <p class="dashboard-metric__hint">{{ metric.hint }}</p>
+        </article>
+      }
     </section>
   }
 
@@ -65,30 +44,50 @@
           <p class="ops-section-label">Priority</p>
           <h2 class="ops-panel__title">Attention required</h2>
         </div>
-        <button type="button" class="ops-btn ops-btn--secondary" (click)="go('/doctor-verification', { status: 'pending' })">
-          Review queue
-        </button>
+        @if (attentionItems.length) {
+          <button type="button" class="ops-btn ops-btn--secondary" (click)="go('/doctor-verification', { status: 'pending' })">
+            Review queue
+          </button>
+        }
       </div>
       <div class="attention-list">
-        @if (!attentionItems.length && !isLoading) {
-          <div class="ops-empty" style="padding: 1.75rem 1rem">
-            <p class="ops-empty__title">All clear</p>
-            <p class="ops-empty__text">No open verification actions right now.</p>
+        @if (isLoading) {
+          <app-ops-page-skeleton variant="list" [rows]="3"></app-ops-page-skeleton>
+        } @else if (!attentionItems.length) {
+          <div class="attention-clear">
+            <span class="attention-clear__icon" aria-hidden="true">
+              <lucide-icon name="check-circle"></lucide-icon>
+            </span>
+            <p class="attention-clear__title">All clear</p>
+            <p class="attention-clear__text">
+              No urgent actions right now. Verification queue and reported content look clear.
+            </p>
           </div>
-        }
-        @for (item of attentionItems; track item.id) {
-          <button type="button" class="attention-item attention-item--{{ item.tone }}" (click)="open(item)">
-            <div>
-              <p class="attention-item__title">{{ item.title }}</p>
-              <p class="attention-item__detail">{{ item.detail }}</p>
-            </div>
-            <span class="attention-item__chevron" aria-hidden="true">→</span>
-          </button>
+        } @else {
+          @for (item of attentionItems; track item.id) {
+            <button type="button" class="attention-item attention-item--{{ item.tone }}" (click)="open(item)">
+              <span class="attention-item__icon" aria-hidden="true">
+                @switch (item.tone) {
+                  @case ('amber') { <lucide-icon name="clock"></lucide-icon> }
+                  @case ('red') { <lucide-icon name="triangle-alert"></lucide-icon> }
+                  @case ('blue') { <lucide-icon name="shield"></lucide-icon> }
+                  @default { <lucide-icon name="activity"></lucide-icon> }
+                }
+              </span>
+              <div class="attention-item__copy">
+                <p class="attention-item__title">{{ item.title }}</p>
+                <p class="attention-item__detail">{{ item.detail }}</p>
+              </div>
+              <span class="attention-item__chevron" aria-hidden="true">
+                <lucide-icon name="chevron-down" class="attention-item__chevron-icon"></lucide-icon>
+              </span>
+            </button>
+          }
         }
       </div>
     </section>
 
-    <section class="ops-panel">
+    <section class="ops-panel quick-actions-panel">
       <div class="ops-panel__header">
         <div>
           <p class="ops-section-label">Shortcuts</p>
@@ -96,18 +95,22 @@
         </div>
       </div>
       <div class="quick-actions">
-        <button type="button" class="ops-btn ops-btn--primary" (click)="go('/content/new')">
-          + Create content
-        </button>
-        <button type="button" class="ops-btn ops-btn--secondary" (click)="go('/doctor-verification', { status: 'pending' })">
-          Review doctors
-        </button>
-        <button type="button" class="ops-btn ops-btn--secondary" (click)="go('/users')">
-          Manage users
-        </button>
-        <button type="button" class="ops-btn ops-btn--secondary" (click)="go('/content', { filter: 'reported' })">
-          View reports
-        </button>
+        @for (action of quickActions; track action.id) {
+          <button
+            type="button"
+            class="quick-action"
+            [class.quick-action--primary]="action.primary"
+            (click)="go(action.route, action.queryParams)"
+          >
+            <span class="quick-action__icon" aria-hidden="true">
+              <lucide-icon [name]="action.icon"></lucide-icon>
+            </span>
+            <span class="quick-action__copy">
+              <span class="quick-action__label">{{ action.label }}</span>
+              <span class="quick-action__description">{{ action.description }}</span>
+            </span>
+          </button>
+        }
       </div>
     </section>
   </div>
@@ -118,14 +121,19 @@
         <p class="ops-section-label">Timeline</p>
         <h2 class="ops-panel__title">Recent activity</h2>
       </div>
+      @if (!isLoading && activityItems.length) {
+        <span class="dashboard-activity__count">{{ activityItems.length }} events</span>
+      }
     </div>
     @if (isLoading) {
       <div class="ops-panel__body">
-        <nz-skeleton [nzActive]="true" [nzParagraph]="{ rows: 5 }"></nz-skeleton>
+        <app-ops-page-skeleton variant="timeline" [rows]="6"></app-ops-page-skeleton>
       </div>
     } @else if (!activityItems.length) {
       <div class="ops-empty">
-        <div class="ops-empty__icon" aria-hidden="true">⏱</div>
+        <div class="ops-empty__icon" aria-hidden="true">
+          <lucide-icon name="clock"></lucide-icon>
+        </div>
         <p class="ops-empty__title">No recent activity yet</p>
         <p class="ops-empty__text">
           Approvals, applications, and community publishes will appear here as they happen.
@@ -133,9 +141,11 @@
       </div>
     } @else {
       <ul class="activity-list">
-        @for (item of activityItems; track item.id) {
+        @for (item of pagedActivityItems; track item.id) {
           <li class="activity-item">
-            <span class="activity-dot activity-dot--{{ item.tone }}" aria-hidden="true"></span>
+            <span class="activity-rail" aria-hidden="true">
+              <span class="activity-dot activity-dot--{{ item.tone }}"></span>
+            </span>
             <div class="activity-copy">
               <p class="activity-title">{{ item.title }}</p>
               <p class="activity-detail">{{ item.detail }}</p>
@@ -144,10 +154,22 @@
           </li>
         }
       </ul>
+      <app-ops-pagination
+        [total]="activityItems.length"
+        [pageIndex]="activityPageIndex"
+        [pageSize]="activityPageSize"
+        [pageSizeOptions]="[5, 10, 20]"
+        itemLabel="events"
+        (pageIndexChange)="onActivityPageIndexChange($event)"
+        (pageSizeChange)="onActivityPageSizeChange($event)"
+      ></app-ops-pagination>
     }
   </section>
 
-  <p class="dashboard-privacy-note">
-    Patient appointments and medical records are intentionally unavailable in the Admin Portal.
-  </p>
+  <aside class="dashboard-privacy-note" role="note">
+    <lucide-icon name="shield-check" class="dashboard-privacy-note__icon" aria-hidden="true"></lucide-icon>
+    <p>
+      Patient appointments and medical records are intentionally unavailable in the Admin Portal.
+    </p>
+  </aside>
 </div>
