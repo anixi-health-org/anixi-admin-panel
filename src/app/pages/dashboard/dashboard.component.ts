@@ -1,6 +1,7 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import { Subscription, combineLatest } from 'rxjs';
+import { Subscription, combineLatest, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { COMMUNITIES } from '../../../../const';
 import { AuthService } from '../../services/auth.service';
 import { FirestoreService } from '../../services/firestore.service';
@@ -36,6 +37,9 @@ type MetricCard = {
   hint: string;
   icon: string;
   tone?: 'green' | 'amber' | 'slate';
+  route?: string;
+  queryParams?: Record<string, string>;
+  disabled?: boolean;
 };
 
 type QuickAction = {
@@ -57,6 +61,19 @@ type ActivityItem = {
   tone: 'amber' | 'green' | 'blue' | 'slate';
 };
 
+type AdminStats = {
+  totalUsers: number;
+  patients: number;
+  doctors: number;
+  clinicAdmins: number;
+  caregivers: number;
+  admins: number;
+  pendingActivations: number;
+  pendingDoctors: number;
+  verifiedDoctors: number;
+  pendingMarketplacePartners: number;
+};
+
 @Component({
   selector: 'app-dashboard',
   standalone: false,
@@ -72,7 +89,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   verifiedDoctors = 0;
   pendingDoctors = 0;
   communityPosts = 0;
-  openActions = 0;
+  pendingActivations = 0;
+  pendingMarketplacePartners = 0;
   communities = COMMUNITIES.length;
 
   attentionItems: AttentionItem[] = [];
@@ -105,12 +123,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
       route: '/users',
     },
     {
-      id: 'view-reports',
-      label: 'View reports',
-      description: 'Review flagged community content',
-      icon: 'triangle-alert',
-      route: '/content',
-      queryParams: { filter: 'reported' },
+      id: 'pending-activations',
+      label: 'Pending activations',
+      description: 'Roster patients who have not activated yet',
+      icon: 'clipboard-list',
+      route: '/pending-activations',
     },
   ];
 
@@ -141,17 +158,48 @@ export class DashboardComponent implements OnInit, OnDestroy {
     );
 
     this.sub.add(
+      this.firestoreService
+        .getAdminStats()
+        .pipe(
+          catchError(() =>
+            of({
+              totalUsers: 0,
+              patients: 0,
+              doctors: 0,
+              clinicAdmins: 0,
+              caregivers: 0,
+              admins: 0,
+              pendingActivations: 0,
+              pendingDoctors: 0,
+              verifiedDoctors: 0,
+              pendingMarketplacePartners: 0,
+            } satisfies AdminStats)
+          )
+        )
+        .subscribe({
+          next: (stats) => {
+            this.applyStats(stats as AdminStats);
+            this.isLoading = false;
+          },
+          error: () => {
+            this.isLoading = false;
+          },
+        })
+    );
+
+    // Secondary: activity feed + community post count (does not block KPI paint).
+    this.sub.add(
       combineLatest([
-        this.firestoreService.getDoctors(),
-        this.firestoreService.getUsers(),
-        this.postService.fetchAdminPost(),
+        this.firestoreService.getDoctors(undefined, { limit: 40 }),
+        this.firestoreService.getUsers({ limit: 15 }),
+        this.postService.fetchAdminPost().pipe(catchError(() => of({ data: [] }))),
       ]).subscribe({
         next: ([doctors, users, postsRes]) => {
-          this.hydrate(doctors as DoctorRecord[], users as PlatformUser[], postsRes.data || []);
-          this.isLoading = false;
-        },
-        error: () => {
-          this.isLoading = false;
+          this.applyActivity(
+            doctors as DoctorRecord[],
+            users as PlatformUser[],
+            postsRes.data || [],
+          );
         },
       })
     );
@@ -167,6 +215,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   go(path: string, queryParams?: Record<string, string>): void {
     void this.router.navigate([path], { queryParams });
+  }
+
+  openMetric(metric: MetricCard): void {
+    if (metric.disabled || !metric.route) return;
+    this.go(metric.route, metric.queryParams);
   }
 
   get pagedActivityItems(): ActivityItem[] {
@@ -189,40 +242,61 @@ export class DashboardComponent implements OnInit, OnDestroy {
     else this.greetingLine = 'Good evening';
   }
 
-  private hydrate(doctors: DoctorRecord[], users: PlatformUser[], posts: any[]): void {
-    const clinicalDoctors = doctors.filter((d) => isDoctorVerificationCandidate(d));
-    const pending = clinicalDoctors.filter(
-      (d) => normalizeVerificationStatus(d.verificationStatus as string) === 'pending'
-    );
-    const approved = clinicalDoctors.filter(
-      (d) => normalizeVerificationStatus(d.verificationStatus as string) === 'approved'
-    );
-    const suspended = clinicalDoctors.filter(
-      (d) => normalizeVerificationStatus(d.verificationStatus as string) === 'suspended'
-    );
-    const patients = users.filter((u) => getUserRole(u) === 'patient');
-    const reported = posts.filter((p) => p?.reported === true);
-    const published = posts.filter((p) => (p?.status ?? 'Published') === 'Published');
-
-    this.pendingDoctors = pending.length;
-    this.verifiedDoctors = approved.length;
-    this.totalPatients = patients.length;
-    this.communityPosts = published.length;
-    this.openActions = pending.length + reported.length + suspended.length;
+  private applyStats(stats: AdminStats): void {
+    this.pendingDoctors = stats.pendingDoctors ?? 0;
+    this.verifiedDoctors = stats.verifiedDoctors ?? 0;
+    this.totalPatients = stats.patients ?? 0;
+    this.pendingActivations = stats.pendingActivations ?? 0;
+    this.pendingMarketplacePartners = stats.pendingMarketplacePartners ?? 0;
 
     this.attentionItems = [];
-    if (pending.length) {
+    if (this.pendingActivations > 0) {
+      this.attentionItems.push({
+        id: 'pending-activations',
+        title: `${this.pendingActivations.toLocaleString()} patient${this.pendingActivations === 1 ? '' : 's'} pending activation`,
+        detail: 'Imported roster patients who have not activated their Anixi account yet.',
+        tone: 'amber',
+        route: ['/pending-activations'],
+      });
+    }
+    if (this.pendingMarketplacePartners > 0) {
+      this.attentionItems.push({
+        id: 'pending-marketplace',
+        title: `${this.pendingMarketplacePartners} marketplace partner${this.pendingMarketplacePartners === 1 ? '' : 's'} awaiting approval`,
+        detail: 'Review wellness and pharmacy applications before they appear on the patient Market.',
+        tone: 'amber',
+        route: ['/marketplace-partners'],
+        queryParams: { tab: 'applications' },
+      });
+    }
+    if (this.pendingDoctors > 0) {
       this.attentionItems.push({
         id: 'pending-doctors',
-        title: `${pending.length} doctor${pending.length === 1 ? '' : 's'} awaiting verification`,
+        title: `${this.pendingDoctors} doctor${this.pendingDoctors === 1 ? '' : 's'} awaiting verification`,
         detail: 'Review credentials before approving practice access on Anixi.',
         tone: 'amber',
         route: ['/doctor-verification'],
         queryParams: { status: 'pending' },
       });
     }
+    this.rebuildMetricCards();
+  }
+
+  private applyActivity(doctors: DoctorRecord[], users: PlatformUser[], posts: any[]): void {
+    const clinicalDoctors = doctors.filter((d) => isDoctorVerificationCandidate(d));
+    const pending = clinicalDoctors.filter(
+      (d) => normalizeVerificationStatus(d.verificationStatus as string) === 'pending'
+    );
+    const suspended = clinicalDoctors.filter(
+      (d) => normalizeVerificationStatus(d.verificationStatus as string) === 'suspended'
+    );
+    const reported = posts.filter((p) => p?.reported === true);
+    const published = posts.filter((p) => (p?.status ?? 'Published') === 'Published');
+    this.communityPosts = published.length;
+
+    const extras: AttentionItem[] = [];
     if (reported.length) {
-      this.attentionItems.push({
+      extras.push({
         id: 'reported-posts',
         title: `${reported.length} community post${reported.length === 1 ? '' : 's'} reported`,
         detail: 'Review flagged content in Community Content.',
@@ -232,7 +306,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       });
     }
     if (suspended.length) {
-      this.attentionItems.push({
+      extras.push({
         id: 'suspended-doctors',
         title: `${suspended.length} suspended doctor account${suspended.length === 1 ? '' : 's'}`,
         detail: 'Confirm whether access should remain restricted.',
@@ -241,57 +315,28 @@ export class DashboardComponent implements OnInit, OnDestroy {
         queryParams: { status: 'suspended' },
       });
     }
-    this.metricCards = [
-      {
-        id: 'patients',
-        label: 'Total patients',
-        value: this.totalPatients,
-        hint: 'Registered patient accounts',
-        icon: 'users',
-      },
-      {
-        id: 'verified-doctors',
-        label: 'Verified doctors',
-        value: this.verifiedDoctors,
-        hint: 'Approved to practice',
-        icon: 'shield-check',
-        tone: 'green',
-      },
-      {
+    if (pending.length && !this.attentionItems.some((i) => i.id === 'pending-doctors')) {
+      extras.unshift({
         id: 'pending-doctors',
-        label: 'Pending review',
-        value: this.pendingDoctors,
-        hint: 'Awaiting credential verification',
-        icon: 'clock',
-        tone: this.pendingDoctors > 0 ? 'amber' : undefined,
-      },
-      {
-        id: 'appointments',
-        label: 'Appointments today',
-        value: '—',
-        hint: 'Not available in Admin',
-        icon: 'calendar',
-        tone: 'slate',
-      },
-      {
-        id: 'community-posts',
-        label: 'Community posts',
-        value: this.communityPosts,
-        hint: `Across ${this.communities} communities`,
-        icon: 'message-square',
-      },
-      {
-        id: 'open-actions',
-        label: 'Open actions',
-        value: this.openActions,
-        hint: 'Require attention',
-        icon: 'triangle-alert',
-        tone: this.openActions > 0 ? 'amber' : undefined,
-      },
-    ];
+        title: `${pending.length} doctor${pending.length === 1 ? '' : 's'} awaiting verification`,
+        detail: 'Review credentials before approving practice access on Anixi.',
+        tone: 'amber',
+        route: ['/doctor-verification'],
+        queryParams: { status: 'pending' },
+      });
+    }
+    if (extras.length) {
+      this.attentionItems = [
+        ...this.attentionItems.filter((i) => !extras.some((e) => e.id === i.id)),
+        ...extras,
+      ];
+    }
 
     const doctorActivity = [...clinicalDoctors]
-      .sort((a, b) => this.toMillis(b.verifiedAt ?? b.createdAt) - this.toMillis(a.verifiedAt ?? a.createdAt))
+      .sort(
+        (a, b) =>
+          this.toMillis(b.verifiedAt ?? b.createdAt) - this.toMillis(a.verifiedAt ?? a.createdAt)
+      )
       .slice(0, 25)
       .map((doctor, index) => {
         const status = normalizeVerificationStatus(doctor.verificationStatus as string);
@@ -366,6 +411,67 @@ export class DashboardComponent implements OnInit, OnDestroy {
       .sort((a, b) => b.whenMs - a.whenMs)
       .slice(0, 50);
     this.activityPageIndex = 1;
+    this.rebuildMetricCards();
+  }
+
+  private rebuildMetricCards(): void {
+    this.metricCards = [
+      {
+        id: 'patients',
+        label: 'Total patients',
+        value: this.totalPatients,
+        hint: 'Registered patient accounts',
+        icon: 'users',
+        route: '/users',
+        queryParams: { role: 'patient' },
+      },
+      {
+        id: 'verified-doctors',
+        label: 'Verified doctors',
+        value: this.verifiedDoctors,
+        hint: 'Approved to practice',
+        icon: 'shield-check',
+        tone: 'green',
+        route: '/doctor-verification',
+        queryParams: { status: 'approved' },
+      },
+      {
+        id: 'pending-doctors',
+        label: 'Pending review',
+        value: this.pendingDoctors,
+        hint: 'Awaiting credential verification',
+        icon: 'clock',
+        tone: this.pendingDoctors > 0 ? 'amber' : undefined,
+        route: '/doctor-verification',
+        queryParams: { status: 'pending' },
+      },
+      {
+        id: 'appointments',
+        label: 'Appointments today',
+        value: '—',
+        hint: 'Not available in Admin',
+        icon: 'calendar',
+        tone: 'slate',
+        disabled: true,
+      },
+      {
+        id: 'community-posts',
+        label: 'Community posts',
+        value: this.communityPosts,
+        hint: `Across ${this.communities} communities`,
+        icon: 'message-square',
+        route: '/content',
+      },
+      {
+        id: 'pending-activations',
+        label: 'Pending activation',
+        value: this.pendingActivations,
+        hint: 'Patient accounts yet to activate',
+        icon: 'clipboard-list',
+        tone: this.pendingActivations > 0 ? 'amber' : undefined,
+        route: '/pending-activations',
+      },
+    ];
   }
 
   private toMillis(value: unknown): number {

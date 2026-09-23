@@ -69,7 +69,7 @@ const navGroups: NavGroup[] = [
     items: [
       { name: 'Notifications', icon: 'bell', path: '/notifications' },
       { name: 'Analytics', icon: 'chart-column', path: '/analytics' },
-      { name: 'Settings', icon: 'settings', comingSoon: true },
+      { name: 'Orders', icon: 'shopping-bag', path: '/orders' },
     ],
   },
   {

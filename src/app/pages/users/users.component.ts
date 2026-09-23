@@ -3,7 +3,10 @@ import { FormControl } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { NzNotificationService } from 'ng-zorro-antd/notification';
 import {
+  BehaviorSubject,
   combineLatest,
+  debounceTime,
+  distinctUntilChanged,
   map,
   Observable,
   shareReplay,
@@ -27,10 +30,8 @@ import {
   getUserPhone,
   getUserRole,
   PlatformUser,
-  userMatchesSearch,
   UserRoleFilter,
 } from '../../utils/user-record.utils';
-import { paginateItems } from '../../utils/pagination.utils';
 
 const roleFilters: { label: string; value: UserRoleFilter }[] = [
   { label: 'All', value: 'all' },
@@ -40,6 +41,15 @@ const roleFilters: { label: string; value: UserRoleFilter }[] = [
   { label: 'Caregivers', value: 'caregiver' },
   { label: 'Admins', value: 'admin' },
 ];
+
+type AdminUserStats = {
+  totalUsers: number;
+  patients: number;
+  doctors: number;
+  clinicAdmins: number;
+  caregivers: number;
+  admins: number;
+};
 
 @Component({
   selector: 'app-users',
@@ -61,14 +71,17 @@ export class UsersComponent implements OnInit, OnDestroy {
   contactPhone = '';
   roleFilter = new FormControl<UserRoleFilter>('all');
   searchQuery = new FormControl('');
-  userList$!: Observable<PlatformUser[]>;
   filteredUsers$!: Observable<PlatformUser[]>;
+  directoryTotal$!: Observable<number>;
   totalCount$!: Observable<number>;
   patientCount$!: Observable<number>;
   doctorCount$!: Observable<number>;
   clinicAdminCount$!: Observable<number>;
   caregiverCount$!: Observable<number>;
   adminCount$!: Observable<number>;
+  private pageIndex$ = new BehaviorSubject(1);
+  private pageSize$ = new BehaviorSubject(25);
+  private stats$!: Observable<AdminUserStats>;
   private sub = new Subscription();
 
   constructor(
@@ -84,76 +97,95 @@ export class UsersComponent implements OnInit, OnDestroy {
       this.route.queryParamMap.subscribe((params) => {
         const q = params.get('q');
         if (q) this.searchQuery.setValue(q);
-      })
-    );
-    this.sub.add(
-      combineLatest([
-        this.roleFilter.valueChanges.pipe(startWith(this.roleFilter.value)),
-        this.searchQuery.valueChanges.pipe(startWith(this.searchQuery.value)),
-      ]).subscribe(() => {
-        this.pageIndex = 1;
+        const role = params.get('role') as UserRoleFilter | null;
+        if (role && this.roleFilters.some((filter) => filter.value === role)) {
+          this.roleFilter.setValue(role);
+        }
       })
     );
 
-    this.userList$ = combineLatest([
-      this.fireStoreService.getUsers(),
-      this.fireStoreService.getDoctors(),
-    ]).pipe(
-      switchMap(([users, doctors]) =>
-        this.fireStoreService
-          .getPracticesForAdmin(users as PlatformUser[], doctors)
-          .pipe(
-            map((practices) =>
-              this.fireStoreService.buildUsersWithPracticeContext(
-                users as PlatformUser[],
-                doctors as Array<Record<string, unknown> & { id: string }>,
-                practices
-              )
-            )
-          )
+    this.stats$ = this.fireStoreService.getAdminStats().pipe(
+      map(
+        (stats): AdminUserStats => ({
+          totalUsers: stats.totalUsers ?? 0,
+          patients: stats.patients ?? 0,
+          doctors: stats.doctors ?? 0,
+          clinicAdmins: stats.clinicAdmins ?? 0,
+          caregivers: stats.caregivers ?? 0,
+          admins: stats.admins ?? 0,
+        })
       ),
-      tap({
-        next: (users) => {
-          this.isLoadingSkeleton = false;
-          if (this.selectedUser) {
-            this.selectedUser = users.find((u) => u.id === this.selectedUser?.id) ?? this.selectedUser;
-          }
-        },
-        error: () => (this.isLoadingSkeleton = false),
-      }),
       shareReplay(1)
     );
 
-    this.filteredUsers$ = combineLatest([
-      this.userList$,
-      this.roleFilter.valueChanges.pipe(startWith(this.roleFilter.value)),
-      this.searchQuery.valueChanges.pipe(startWith(this.searchQuery.value)),
-    ]).pipe(
-      map(([users, role, query]) =>
-        users.filter((user) => {
-          const userRole = getUserRole(user);
-          const matchesRole = role === 'all' || userRole === role;
-          return matchesRole && userMatchesSearch(user, query || '');
-        })
-      )
+    this.totalCount$ = this.stats$.pipe(map((s) => s.totalUsers));
+    this.patientCount$ = this.stats$.pipe(map((s) => s.patients));
+    this.doctorCount$ = this.stats$.pipe(map((s) => s.doctors));
+    this.clinicAdminCount$ = this.stats$.pipe(map((s) => s.clinicAdmins));
+    this.caregiverCount$ = this.stats$.pipe(map((s) => s.caregivers));
+    this.adminCount$ = this.stats$.pipe(map((s) => s.admins));
+
+    const roleForApi$ = this.roleFilter.valueChanges.pipe(
+      startWith(this.roleFilter.value),
+      map((role) => (role && role !== 'all' ? role : undefined)),
+      distinctUntilChanged()
     );
 
-    this.totalCount$ = this.userList$.pipe(map((users) => users.length));
-    this.patientCount$ = this.userList$.pipe(
-      map((users) => users.filter((u) => getUserRole(u) === 'patient').length)
+    const search$ = this.searchQuery.valueChanges.pipe(
+      debounceTime(250),
+      startWith(this.searchQuery.value),
+      map((q) => (q || '').trim()),
+      distinctUntilChanged()
     );
-    this.doctorCount$ = this.userList$.pipe(
-      map((users) => users.filter((u) => getUserRole(u) === 'doctor').length)
+
+    this.sub.add(
+      combineLatest([roleForApi$, search$]).subscribe(() => {
+        this.pageIndex = 1;
+        this.pageIndex$.next(1);
+      })
     );
-    this.clinicAdminCount$ = this.userList$.pipe(
-      map((users) => users.filter((u) => getUserRole(u) === 'clinic_admin').length)
+
+    const directoryPage$ = combineLatest([
+      roleForApi$,
+      search$,
+      this.pageIndex$,
+      this.pageSize$,
+    ]).pipe(
+      tap(() => {
+        this.isLoadingSkeleton = true;
+      }),
+      switchMap(([role, q, page, pageSize]) =>
+        this.fireStoreService.getUsersPage({
+          role,
+          q: q || undefined,
+          limit: pageSize,
+          offset: (page - 1) * pageSize,
+        })
+      ),
+      tap({
+        next: (page) => {
+          this.isLoadingSkeleton = false;
+          if (this.selectedUser) {
+            this.selectedUser =
+              page.users.find((u) => u.id === this.selectedUser?.id) ?? this.selectedUser;
+          }
+        },
+        error: () => {
+          this.isLoadingSkeleton = false;
+        },
+      }),
+      shareReplay({ bufferSize: 1, refCount: false })
     );
-    this.caregiverCount$ = this.userList$.pipe(
-      map((users) => users.filter((u) => getUserRole(u) === 'caregiver').length)
+
+    // Eager subscribe: template async pipes sit behind the skeleton gate and would
+    // otherwise never start this request (deadlock → infinite skeleton).
+    this.sub.add(directoryPage$.subscribe());
+
+    this.filteredUsers$ = directoryPage$.pipe(
+      map((page) => page.users as PlatformUser[]),
+      shareReplay({ bufferSize: 1, refCount: false })
     );
-    this.adminCount$ = this.userList$.pipe(
-      map((users) => users.filter((u) => getUserRole(u) === 'admin').length)
-    );
+    this.directoryTotal$ = directoryPage$.pipe(map((page) => page.total));
   }
 
   ngOnDestroy(): void {
@@ -161,16 +193,19 @@ export class UsersComponent implements OnInit, OnDestroy {
   }
 
   pageItems(users: PlatformUser[] | null): PlatformUser[] {
-    return paginateItems(users ?? [], this.pageIndex, this.pageSize);
+    return users ?? [];
   }
 
   onPageIndexChange(page: number): void {
     this.pageIndex = page;
+    this.pageIndex$.next(page);
   }
 
   onPageSizeChange(size: number): void {
     this.pageSize = size;
     this.pageIndex = 1;
+    this.pageIndex$.next(1);
+    this.pageSize$.next(size);
   }
 
   countFor(role: UserRoleFilter): Observable<number> {

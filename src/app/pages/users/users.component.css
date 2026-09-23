@@ -181,3 +181,14 @@
   gap: 0.5rem;
   margin-top: 1.1rem;
 }
+
+.users-truncation-note {
+  margin: 0 1rem 0.75rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  background: #f4f7f5;
+  border: 1px solid #e6ebe7;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: #65758b;
+}

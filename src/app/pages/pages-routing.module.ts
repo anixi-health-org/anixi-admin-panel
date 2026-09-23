@@ -16,6 +16,7 @@ import { AnalyticsComponent } from './analytics/analytics.component';
 import { AuditLogComponent } from './audit-log/audit-log.component';
 import { TeamAccessComponent } from './team-access/team-access.component';
 import { PendingActivationsComponent } from './pending-activations/pending-activations.component';
+import { OrdersComponent } from './orders/orders.component';
 import { authGuard } from '../guards/auth.guard';
 import { guestGuard } from '../guards/guest.guard';
 
@@ -43,6 +44,7 @@ const routes: Routes = [
       { path: 'users', component: UsersComponent },
       { path: 'notifications', component: NotificationsComponent },
       { path: 'analytics', component: AnalyticsComponent },
+      { path: 'orders', component: OrdersComponent },
       { path: 'audit-log', component: AuditLogComponent },
       { path: 'team-access', component: TeamAccessComponent },
       { path: 'pending-activations', component: PendingActivationsComponent },

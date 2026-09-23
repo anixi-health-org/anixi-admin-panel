@@ -79,28 +79,31 @@ export function normalizeVerificationStatus(status?: string): VerificationStatus
 
 /** Clinic portal admins are not clinicians and must not appear in doctor verification. */
 export function isClinicAdminAccount(doctor: DoctorRecord): boolean {
-  if (doctor['accountKind'] === 'clinic_admin') return true;
-  if (doctor['requiresClinicalVerification'] === false) return true;
-  if (doctor['joinIntent'] === 'clinic') return true;
+  if (String(doctor['accountKind'] ?? '').toLowerCase() === 'clinic_admin') return true;
+  // Legacy clinic-portal signups that skipped clinical verification without accountKind.
+  if (
+    String(doctor['joinIntent'] ?? '').toLowerCase() === 'clinic' &&
+    doctor['requiresClinicalVerification'] === false
+  ) {
+    return true;
+  }
   return false;
 }
 
 /**
  * Records that belong in Doctor Verification.
- * Excludes clinic admins and incomplete web onboarding drafts
- * (`applicationComplete: false`). Mobile signups historically omitted the
- * flag while still writing `verificationStatus: 'pending'` — treat missing
- * as submitted so they appear in Pending Review.
+ * Excludes clinic portal admins (not clinicians). Incomplete applications still
+ * appear under Pending so admin KPIs and the queue stay aligned.
  */
 export function isDoctorVerificationCandidate(doctor: DoctorRecord): boolean {
-  if (isClinicAdminAccount(doctor)) return false;
+  return !isClinicAdminAccount(doctor);
+}
 
-  const status = normalizeVerificationStatus(doctor.verificationStatus);
-  if (status === 'pending' && doctor['applicationComplete'] === false) {
-    return false;
-  }
-
-  return true;
+export function isIncompleteDoctorApplication(doctor: DoctorRecord): boolean {
+  return (
+    normalizeVerificationStatus(doctor.verificationStatus) === 'pending' &&
+    doctor['applicationComplete'] === false
+  );
 }
 
 export function capitalizeWords(value?: string): string {

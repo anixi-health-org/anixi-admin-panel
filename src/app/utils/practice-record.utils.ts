@@ -28,6 +28,7 @@ export type PracticeMemberRecord = Record<string, unknown> & {
   role?: string;
   status?: string;
   isClinician?: boolean;
+  accountKind?: string;
 };
 
 export function getPracticeName(practice: PracticeRecord): string {
@@ -60,12 +61,26 @@ export function formatPracticeLocations(practice: PracticeRecord): string {
     .join('; ');
 }
 
+export function isClinicAdminMember(member: PracticeMemberRecord): boolean {
+  if (String(member.accountKind ?? '').toLowerCase() === 'clinic_admin') return true;
+  if (member.isClinician === true) return false;
+  const role = String(member.role ?? '').toLowerCase();
+  return (
+    role === 'owner' ||
+    role === 'practice_manager' ||
+    role === 'clinic_admin' ||
+    member.isClinician === false
+  );
+}
+
 export function formatMemberRole(role?: string): string {
   switch (String(role ?? '').toLowerCase()) {
     case 'owner':
       return 'Owner';
     case 'practice_manager':
       return 'Practice manager';
+    case 'clinic_admin':
+      return 'Clinic admin';
     case 'doctor':
       return 'Doctor';
     case 'receptionist':

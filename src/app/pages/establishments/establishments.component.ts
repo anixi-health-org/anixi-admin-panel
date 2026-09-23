@@ -16,6 +16,7 @@ import {
   formatPracticeLocations,
   getPracticeName,
   getPracticeOrgType,
+  isClinicAdminMember,
   practiceMatchesSearch,
   PracticeMemberRecord,
   PracticeRecord,
@@ -44,8 +45,8 @@ export class EstablishmentsComponent implements OnInit {
 
   ngOnInit(): void {
     this.clinicList$ = combineLatest([
-      this.firestoreService.getUsers(),
-      this.firestoreService.getDoctors(),
+      this.firestoreService.getUsers({ role: 'doctor', limit: 100 }),
+      this.firestoreService.getDoctors(undefined, { limit: 100 }),
     ]).pipe(
       switchMap(([users, doctors]) =>
         this.firestoreService.getPracticesForAdmin(
@@ -109,9 +110,17 @@ export class EstablishmentsComponent implements OnInit {
   }
 
   memberKind(member: PracticeMemberRecord): string {
-    if (member.isClinician === false) return 'Administrator';
+    if (isClinicAdminMember(member)) return 'Clinic admin';
     if (member.isClinician === true || member.role === 'doctor') return 'Doctor';
     return formatMemberRole(member.role);
+  }
+
+  clinicAdmins(members: PracticeMemberRecord[] | null): PracticeMemberRecord[] {
+    return (members ?? []).filter((m) => isClinicAdminMember(m));
+  }
+
+  doctors(members: PracticeMemberRecord[] | null): PracticeMemberRecord[] {
+    return (members ?? []).filter((m) => !isClinicAdminMember(m));
   }
 
   selectPractice(practice: PracticeRecord): void {

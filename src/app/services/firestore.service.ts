@@ -45,7 +45,7 @@ export class FirestoreService {
   ) {}
 
   getAllDoctors(): Observable<any[]> {
-    return from(this.djangoApi.listDoctors()).pipe(
+    return from(this.djangoApi.listDoctors(undefined, { limit: 100 })).pipe(
       map((doctors) =>
         doctors.map((d) =>
           this.djangoApi.enrichDoctorMedia({
@@ -57,12 +57,41 @@ export class FirestoreService {
     );
   }
 
-  getUsers(): Observable<any[]> {
-    return interval(30_000).pipe(
-      startWith(0),
-      switchMap(() => from(this.djangoApi.listUsers())),
-      map((users) => users.map((u) => ({ ...u, id: String(u['id'] ?? '') }))),
+  /** Lightweight user directory page (server-paginated). */
+  getUsersPage(options?: {
+    role?: string;
+    q?: string;
+    limit?: number;
+    offset?: number;
+  }): Observable<{ users: any[]; total: number }> {
+    return from(
+      this.djangoApi.listUsersPage({
+        role: options?.role,
+        q: options?.q,
+        limit: options?.limit ?? 25,
+        offset: options?.offset ?? 0,
+      }),
+    ).pipe(
+      map(({ data, metadata }) => ({
+        users: data.map((u) => ({ ...u, id: String(u['id'] ?? '') })),
+        total: Number(metadata?.['total'] ?? data.length),
+      })),
     );
+  }
+
+  /** @deprecated Prefer getUsersPage — kept for dashboard/analytics light loads. */
+  getUsers(options?: { role?: string; limit?: number }): Observable<any[]> {
+    return from(
+      this.djangoApi.listUsers({
+        role: options?.role,
+        limit: options?.limit ?? 25,
+        offset: 0,
+      }),
+    ).pipe(map((users) => users.map((u) => ({ ...u, id: String(u['id'] ?? '') }))));
+  }
+
+  getAdminStats() {
+    return from(this.djangoApi.getAdminStats());
   }
 
   private historyEvent(
@@ -283,10 +312,10 @@ export class FirestoreService {
     return { verified: true };
   }
 
-  getDoctors(): Observable<any[]> {
-    return interval(30_000).pipe(
-      startWith(0),
-      switchMap(() => from(this.djangoApi.listDoctors())),
+  getDoctors(status?: string, options?: { limit?: number }): Observable<any[]> {
+    return from(
+      this.djangoApi.listDoctors(status, { limit: options?.limit ?? 50, offset: 0 }),
+    ).pipe(
       map((doctors) =>
         doctors.map((d) =>
           this.djangoApi.enrichDoctorMedia({
@@ -296,6 +325,29 @@ export class FirestoreService {
           }),
         ),
       ),
+    );
+  }
+
+  getDoctorsPage(
+    status?: string,
+    options?: { limit?: number; offset?: number },
+  ): Observable<{ doctors: any[]; total: number }> {
+    return from(
+      this.djangoApi.listDoctorsPage(status, {
+        limit: options?.limit ?? 50,
+        offset: options?.offset ?? 0,
+      }),
+    ).pipe(
+      map(({ data, metadata }) => ({
+        doctors: data.map((d) =>
+          this.djangoApi.enrichDoctorMedia({
+            ...d,
+            id: String(d['id'] ?? ''),
+            verificationStatus: d['verificationStatus'] ?? d['verification_status'],
+          }),
+        ),
+        total: Number(metadata?.['total'] ?? data.length),
+      })),
     );
   }
 
@@ -542,6 +594,25 @@ export class FirestoreService {
       switchMap(() => from(this.djangoApi.listWellnessProviders())),
       map((rows) => rows.map((row) => ({ ...row, id: String(row['id'] ?? '') }))),
     );
+  }
+
+  getMarketplacePartnerApplications(
+    status?: string,
+  ): Observable<Array<Record<string, unknown> & { id: string }>> {
+    return from(this.djangoApi.listMarketplacePartnerApplications(status)).pipe(
+      map((rows) => rows.map((row) => ({ ...row, id: String(row['id'] ?? '') }))),
+    );
+  }
+
+  async approveMarketplacePartnerApplication(applicationId: string): Promise<void> {
+    await this.djangoApi.approveMarketplacePartnerApplication(applicationId);
+  }
+
+  async rejectMarketplacePartnerApplication(
+    applicationId: string,
+    reason?: string,
+  ): Promise<void> {
+    await this.djangoApi.rejectMarketplacePartnerApplication(applicationId, reason);
   }
 
   async upsertWellnessProvider(

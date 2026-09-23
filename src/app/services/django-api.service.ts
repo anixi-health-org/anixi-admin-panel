@@ -1,7 +1,12 @@
 import { Injectable } from '@angular/core';
 import { environment } from '../../environments/environment';
 
-type Envelope<T> = { success: boolean; data: T; error?: unknown };
+type Envelope<T> = {
+  success: boolean;
+  data: T;
+  error?: unknown;
+  metadata?: Record<string, unknown> | null;
+};
 
 @Injectable({ providedIn: 'root' })
 export class DjangoApiService {
@@ -101,6 +106,47 @@ export class DjangoApiService {
     return json.data;
   }
 
+  private async requestEnvelope<T>(
+    path: string,
+    init: RequestInit = {},
+  ): Promise<{ data: T; metadata: Record<string, unknown> | null }> {
+    const normalizedPath = path.includes('?')
+      ? path.replace(/\?(.*)$/, '/?$1').replace(/\/\/\?/, '/?')
+      : path.endsWith('/')
+        ? path
+        : `${path}/`;
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'X-Client': 'admin-panel',
+      ...(init.headers as Record<string, string> | undefined),
+    };
+    if (this.accessToken) {
+      headers['Authorization'] = `Bearer ${this.accessToken}`;
+    }
+
+    let res: Response;
+    try {
+      res = await fetch(`${environment.apiUrl}${normalizedPath}`, {
+        ...init,
+        headers,
+      });
+    } catch {
+      throw new Error(
+        `Cannot reach the API at ${environment.apiUrl}. Is Django running on port 8000?`,
+      );
+    }
+    const json = (await res.json()) as Envelope<T>;
+    if (!res.ok || !json.success) {
+      const message =
+        typeof json.error === 'string'
+          ? json.error
+          : JSON.stringify(json.error ?? `Request failed (${res.status})`);
+      throw new Error(message);
+    }
+    return { data: json.data, metadata: json.metadata ?? null };
+  }
+
   login(email: string, password: string) {
     return this.request<{ tokens: { access: string; refresh: string }; user: Record<string, unknown> }>(
       '/api/v1/auth/login/',
@@ -115,9 +161,27 @@ export class DjangoApiService {
     return this.request<Record<string, unknown>>('/api/v1/auth/me/');
   }
 
-  listDoctors(status?: string) {
-    const qs = status ? `?status=${encodeURIComponent(status)}` : '';
+  listDoctors(status?: string, options?: { limit?: number; offset?: number }) {
+    const params = new URLSearchParams();
+    if (status) params.set('status', status);
+    if (options?.limit != null) params.set('limit', String(options.limit));
+    if (options?.offset != null) params.set('offset', String(options.offset));
+    const qs = params.toString() ? `?${params.toString()}` : '';
     return this.request<Array<Record<string, unknown>>>(
+      `/api/v1/auth/admin/doctors/${qs}`,
+    );
+  }
+
+  listDoctorsPage(
+    status?: string,
+    options?: { limit?: number; offset?: number },
+  ) {
+    const params = new URLSearchParams();
+    if (status) params.set('status', status);
+    if (options?.limit != null) params.set('limit', String(options.limit));
+    if (options?.offset != null) params.set('offset', String(options.offset));
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    return this.requestEnvelope<Array<Record<string, unknown>>>(
       `/api/v1/auth/admin/doctors/${qs}`,
     );
   }
@@ -151,11 +215,54 @@ export class DjangoApiService {
     );
   }
 
-  listUsers(role?: string) {
-    const qs = role ? `?role=${encodeURIComponent(role)}` : '';
+  listUsers(options?: {
+    role?: string;
+    q?: string;
+    limit?: number;
+    offset?: number;
+  }) {
+    const params = new URLSearchParams();
+    if (options?.role) params.set('role', options.role);
+    if (options?.q) params.set('q', options.q);
+    if (options?.limit != null) params.set('limit', String(options.limit));
+    if (options?.offset != null) params.set('offset', String(options.offset));
+    const qs = params.toString() ? `?${params.toString()}` : '';
     return this.request<Array<Record<string, unknown>>>(
       `/api/v1/auth/admin/users/${qs}`,
     );
+  }
+
+  listUsersPage(options?: {
+    role?: string;
+    q?: string;
+    limit?: number;
+    offset?: number;
+  }) {
+    const params = new URLSearchParams();
+    if (options?.role) params.set('role', options.role);
+    if (options?.q) params.set('q', options.q);
+    if (options?.limit != null) params.set('limit', String(options.limit));
+    if (options?.offset != null) params.set('offset', String(options.offset));
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    return this.requestEnvelope<Array<Record<string, unknown>>>(
+      `/api/v1/auth/admin/users/${qs}`,
+    );
+  }
+
+  getAdminStats() {
+    return this.request<{
+      totalUsers: number;
+      patients: number;
+      doctors: number;
+      clinicAdmins: number;
+      caregivers: number;
+      admins: number;
+      staff?: number;
+      pendingActivations: number;
+      pendingDoctors: number;
+      verifiedDoctors: number;
+      pendingMarketplacePartners?: number;
+    }>('/api/v1/auth/admin/stats/');
   }
 
   patchUser(userId: string, patch: Record<string, unknown>) {
@@ -210,6 +317,64 @@ export class DjangoApiService {
 
   listPharmacies() {
     return this.request<Array<Record<string, unknown>>>('/api/v1/auth/admin/pharmacies/');
+  }
+
+  listMarketplacePartnerApplications(status?: string) {
+    const qs = status ? `?status=${encodeURIComponent(status)}` : '';
+    return this.request<Array<Record<string, unknown>>>(
+      `/api/v1/marketplace/admin/partner-applications/${qs}`,
+    );
+  }
+
+  approveMarketplacePartnerApplication(applicationId: string) {
+    return this.request<Record<string, unknown>>(
+      `/api/v1/marketplace/admin/partner-applications/${encodeURIComponent(applicationId)}/approve/`,
+      { method: 'POST', body: '{}' },
+    );
+  }
+
+  rejectMarketplacePartnerApplication(applicationId: string, reason?: string) {
+    return this.request<Record<string, unknown>>(
+      `/api/v1/marketplace/admin/partner-applications/${encodeURIComponent(applicationId)}/reject/`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason: reason || '' }),
+      },
+    );
+  }
+
+  listMarketplaceOrders(options?: { status?: string; source?: string; q?: string }) {
+    const params = new URLSearchParams();
+    if (options?.status) params.set('status', options.status);
+    if (options?.source) params.set('source', options.source);
+    if (options?.q?.trim()) params.set('q', options.q.trim());
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    return this.requestEnvelope<
+      Array<{
+        id: string;
+        pharmacyId?: string | null;
+        pharmacyName?: string | null;
+        pharmacyEmail?: string | null;
+        status?: string | null;
+        source?: string | null;
+        prescriptionText?: string | null;
+        lineItems?: Array<{
+          name: string;
+          description?: string;
+          price?: string | null;
+          quantity?: number;
+        }>;
+        notes?: string | null;
+        deliveryRequested?: boolean;
+        doctorName?: string | null;
+        doctorEmail?: string | null;
+        patientName?: string | null;
+        patientPhone?: string | null;
+        patientEmail?: string | null;
+        createdAt?: string | null;
+        updatedAt?: string | null;
+      }>
+    >(`/api/v1/marketplace/admin/orders/${qs}`);
   }
 
   createPharmacy(data: Record<string, unknown>) {

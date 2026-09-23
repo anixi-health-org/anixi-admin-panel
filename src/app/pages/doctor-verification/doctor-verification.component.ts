@@ -18,6 +18,7 @@ import {
   getDoctorDisplayName,
   getDoctorProfilePhotoUrl,
   isDoctorVerificationCandidate,
+  isIncompleteDoctorApplication,
   normalizeVerificationStatus,
 } from '../../utils/doctor-record.utils';
 import { paginateItems } from '../../utils/pagination.utils';
@@ -80,7 +81,7 @@ export class DoctorVerificationComponent implements OnInit, OnDestroy {
       }
     });
 
-    this.doctorList$ = this.fireStoreService.getDoctors().pipe(
+    this.doctorList$ = this.fireStoreService.getDoctors(undefined, { limit: 100 }).pipe(
       map((doctors) => doctors.filter((doctor) => isDoctorVerificationCandidate(doctor))),
       tap({
         next: () => (this.isLoadingSkeleton = false),
@@ -199,6 +200,10 @@ export class DoctorVerificationComponent implements OnInit, OnDestroy {
 
   doctorStatus(doctor: any): string {
     return normalizeVerificationStatus(doctor.verificationStatus);
+  }
+
+  isIncomplete(doctor: any): boolean {
+    return isIncompleteDoctorApplication(doctor);
   }
 
   setSelectedDoctor(doctor: any): void {

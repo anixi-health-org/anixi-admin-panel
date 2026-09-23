@@ -123,18 +123,36 @@
             </div>
           </dl>
 
-          <h3 class="establishments-members-title">Doctors and staff</h3>
-          @if ((members$ | async)?.length) {
-            <ul class="establishments-members">
-              @for (member of members$ | async; track member.id) {
-                <li>
-                  <span>{{ member.displayName || member.email || member.id }}</span>
-                  <span class="ops-badge ops-badge--slate">{{ memberKind(member) }}</span>
-                </li>
-              }
-            </ul>
+          @if (members$ | async; as members) {
+            <h3 class="establishments-members-title">Clinic admins</h3>
+            @if (clinicAdmins(members).length) {
+              <ul class="establishments-members">
+                @for (member of clinicAdmins(members); track member.id) {
+                  <li>
+                    <span>{{ member.displayName || member.email || member.id }}</span>
+                    <span class="ops-badge ops-badge--hold">{{ memberKind(member) }}</span>
+                  </li>
+                }
+              </ul>
+            } @else {
+              <p class="users-detail__note">No clinic admins on this practice yet.</p>
+            }
+
+            <h3 class="establishments-members-title">Doctors</h3>
+            @if (doctors(members).length) {
+              <ul class="establishments-members">
+                @for (member of doctors(members); track member.id) {
+                  <li>
+                    <span>{{ member.displayName || member.email || member.id }}</span>
+                    <span class="ops-badge ops-badge--blue">{{ memberKind(member) }}</span>
+                  </li>
+                }
+              </ul>
+            } @else {
+              <p class="users-detail__note">No doctors on this practice yet.</p>
+            }
           } @else {
-            <p class="users-detail__note">No members loaded for this clinic yet.</p>
+            <p class="users-detail__note">Loading members…</p>
           }
         </div>
       </aside>
