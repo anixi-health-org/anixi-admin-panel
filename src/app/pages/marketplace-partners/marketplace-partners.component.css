@@ -6,10 +6,129 @@
   align-items: flex-end;
 }
 
+.application-row {
+  cursor: pointer;
+}
+
+.application-row:hover td {
+  background: #f8faf9;
+}
+
+.application-detail {
+  display: grid;
+  gap: 1.15rem;
+}
+
+.application-detail--modal {
+  max-height: min(70vh, 640px);
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+.application-detail__status {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.application-detail__section h3 {
+  margin: 0 0 0.65rem;
+  font-family: var(--font-heading, inherit);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #8a968e;
+}
+
+.application-detail__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem 1rem;
+  margin: 0;
+}
+
+.application-detail__full {
+  grid-column: 1 / -1;
+}
+
+.application-detail__grid dt {
+  margin: 0 0 0.2rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+.application-detail__grid dd {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #344256;
+  word-break: break-word;
+}
+
+.application-detail__multiline {
+  white-space: pre-wrap;
+  line-height: 1.45;
+}
+
+.application-detail__empty {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #65758b;
+}
+
+.application-offerings {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.application-offerings li {
+  border: 1px solid #e1e7ef;
+  border-radius: 10px;
+  background: #fafcfb;
+  padding: 0.7rem 0.85rem;
+}
+
+.application-offerings__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.application-offerings__name {
+  font-weight: 600;
+  color: #344256;
+}
+
+.application-offerings__price {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--anixi-green, #427160);
+  white-space: nowrap;
+}
+
+.application-offerings p {
+  margin: 0.35rem 0 0;
+  font-size: 0.82rem;
+  color: #65758b;
+  line-height: 1.4;
+}
+
 .marketplace-form {
   display: grid;
   gap: 0.75rem;
   padding: 1rem 1.25rem 1.25rem;
+}
+
+.marketplace-form--modal {
+  padding: 0;
+  max-height: min(60vh, 520px);
+  overflow-y: auto;
 }
 
 .marketplace-form label {

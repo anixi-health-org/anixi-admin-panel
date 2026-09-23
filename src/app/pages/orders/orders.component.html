@@ -1,0 +1,319 @@
+<div class="ops-page orders-page">
+  @if (flash) {
+    <div class="orders-flash" role="status">
+      <div class="orders-flash__body">
+        <p class="orders-flash__title">{{ flash }}</p>
+        <p class="orders-flash__hint">Open Orders to review fulfilment.</p>
+      </div>
+      <button type="button" class="orders-flash__dismiss" (click)="flash = null" aria-label="Dismiss">
+        ×
+      </button>
+    </div>
+  }
+
+  <header class="ops-page-header">
+    <div class="ops-page-header__copy">
+      <p class="ops-page-header__eyebrow">Platform</p>
+      <h1 class="ops-page-header__title">Orders</h1>
+      <p class="ops-page-header__subtitle">
+        Patient Market orders and clinician prescriptions sent to pharmacy partners — open and past.
+      </p>
+    </div>
+    <div class="ops-page-header__actions">
+      <button type="button" class="ops-btn ops-btn--secondary" [disabled]="isLoading" (click)="load()">
+        Refresh
+      </button>
+    </div>
+  </header>
+
+  @if (!isLoading && !error && rows.length) {
+    <section class="ops-metrics orders-metrics" aria-label="Orders summary">
+      <article class="ops-metric">
+        <p class="ops-metric__label">All orders</p>
+        <p class="ops-metric__value">{{ rows.length }}</p>
+        <p class="ops-metric__hint">Latest 300 from Django</p>
+      </article>
+      <article class="ops-metric ops-metric--green">
+        <p class="ops-metric__label">Open</p>
+        <p class="ops-metric__value">{{ openCount }}</p>
+        <p class="ops-metric__hint">Awaiting fulfilment</p>
+      </article>
+      <article class="ops-metric ops-metric--blue">
+        <p class="ops-metric__label">Patient Market</p>
+        <p class="ops-metric__value">{{ marketplaceCount }}</p>
+        <p class="ops-metric__hint">Warrior → pharmacy partner</p>
+      </article>
+      <article class="ops-metric">
+        <p class="ops-metric__label">Clinician scripts</p>
+        <p class="ops-metric__value">{{ prescriptionCount }}</p>
+        <p class="ops-metric__hint">Doctor → pharmacy</p>
+      </article>
+      <article class="ops-metric ops-metric--slate">
+        <p class="ops-metric__label">Past</p>
+        <p class="ops-metric__value">{{ pastCount }}</p>
+        <p class="ops-metric__hint">Dispensed or cancelled</p>
+      </article>
+    </section>
+  }
+
+  <div class="orders-layout" [class.orders-layout--detail]="!!selected">
+    <section class="ops-panel orders-list-panel">
+      <div class="ops-panel__header">
+        <div>
+          <p class="ops-section-label">Inbox</p>
+          <h2 class="ops-panel__title">All partner orders</h2>
+        </div>
+        @if (!isLoading && !error) {
+          <span class="ops-badge ops-badge--slate">{{ filteredRows.length }} shown</span>
+        }
+      </div>
+
+      @if (!isLoading && !error && rows.length) {
+        <div class="orders-toolbar">
+          <div class="ops-filters" role="tablist" aria-label="Filter by source">
+            <button
+              type="button"
+              class="ops-filter"
+              [class.ops-filter--active]="sourceFilter === 'all'"
+              (click)="onSourceChange('all')"
+            >
+              All sources
+            </button>
+            <button
+              type="button"
+              class="ops-filter"
+              [class.ops-filter--active]="sourceFilter === 'marketplace'"
+              (click)="onSourceChange('marketplace')"
+            >
+              Patient Market
+            </button>
+            <button
+              type="button"
+              class="ops-filter"
+              [class.ops-filter--active]="sourceFilter === 'prescription'"
+              (click)="onSourceChange('prescription')"
+            >
+              Clinician scripts
+            </button>
+          </div>
+          <div class="ops-filters" role="tablist" aria-label="Filter by status">
+            <button
+              type="button"
+              class="ops-filter"
+              [class.ops-filter--active]="statusFilter === 'all'"
+              (click)="onStatusChange('all')"
+            >
+              All
+            </button>
+            <button
+              type="button"
+              class="ops-filter"
+              [class.ops-filter--active]="statusFilter === 'open'"
+              (click)="onStatusChange('open')"
+            >
+              Open
+            </button>
+            <button
+              type="button"
+              class="ops-filter"
+              [class.ops-filter--active]="statusFilter === 'past'"
+              (click)="onStatusChange('past')"
+            >
+              Past
+            </button>
+          </div>
+          <div class="ops-search orders-search">
+            <lucide-icon name="search" class="orders-search-icon"></lucide-icon>
+            <input
+              type="search"
+              [value]="searchQuery"
+              (input)="onSearchChange($any($event.target).value)"
+              placeholder="Search patient, pharmacy, doctor…"
+              aria-label="Search orders"
+            />
+          </div>
+        </div>
+      }
+
+      @if (isLoading) {
+        <div class="ops-panel__body">
+          <app-ops-page-skeleton variant="table" [rows]="10"></app-ops-page-skeleton>
+        </div>
+      } @else if (error) {
+        <div class="ops-empty">
+          <div class="ops-empty__icon" aria-hidden="true">
+            <lucide-icon name="triangle-alert"></lucide-icon>
+          </div>
+          <p class="ops-empty__title">Could not load orders</p>
+          <p class="ops-empty__text">{{ error }}</p>
+          <button type="button" class="ops-btn ops-btn--secondary" (click)="load()">Try again</button>
+        </div>
+      } @else if (!rows.length) {
+        <div class="ops-empty">
+          <div class="ops-empty__icon" aria-hidden="true">
+            <lucide-icon name="shopping-bag"></lucide-icon>
+          </div>
+          <p class="ops-empty__title">No orders yet</p>
+          <p class="ops-empty__text">
+            Patient Market baskets and clinician prescriptions to pharmacy partners will appear here.
+          </p>
+        </div>
+      } @else if (!filteredRows.length) {
+        <div class="ops-empty">
+          <p class="ops-empty__title">No orders match this filter</p>
+          <p class="ops-empty__text">Try another source, status, or clear the search.</p>
+        </div>
+      } @else {
+        <div class="orders-table-wrap">
+          <table class="orders-table">
+            <thead>
+              <tr>
+                <th>Patient</th>
+                <th>Partner</th>
+                <th>Source</th>
+                <th>Items</th>
+                <th>Status</th>
+                <th>When</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of pagedRows; track row.id) {
+                <tr
+                  [class.orders-table__row--active]="selectedId === row.id"
+                  (click)="selectOrder(row.id)"
+                >
+                  <td>
+                    <p class="orders-table__primary">{{ row.patientName || 'Patient' }}</p>
+                    <p class="orders-table__secondary">{{ row.patientEmail || row.patientPhone || '—' }}</p>
+                  </td>
+                  <td>
+                    <p class="orders-table__primary">{{ row.pharmacyName || 'Pharmacy' }}</p>
+                    <p class="orders-table__secondary">{{ row.pharmacyEmail || '—' }}</p>
+                  </td>
+                  <td>
+                    <span
+                      class="ops-badge"
+                      [class.ops-badge--green]="(row.source || '') === 'marketplace'"
+                      [class.ops-badge--blue]="(row.source || '') !== 'marketplace'"
+                    >
+                      {{ sourceLabel(row.source) }}
+                    </span>
+                  </td>
+                  <td>
+                    <p class="orders-table__items">{{ lineSummary(row) }}</p>
+                  </td>
+                  <td>
+                    <span class="ops-badge" [class]="'ops-badge--' + statusTone(row.status)">
+                      {{ statusLabel(row.status) }}
+                    </span>
+                  </td>
+                  <td>
+                    <time class="orders-table__when">{{ row.createdAt | date: 'medium' }}</time>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <app-ops-pagination
+          [total]="filteredRows.length"
+          [pageIndex]="pageIndex"
+          [pageSize]="pageSize"
+          itemLabel="orders"
+          (pageIndexChange)="onPageIndexChange($event)"
+          (pageSizeChange)="onPageSizeChange($event)"
+        ></app-ops-pagination>
+      }
+    </section>
+
+    @if (selected) {
+      <aside class="ops-panel orders-detail" aria-label="Order detail">
+        <div class="ops-panel__header">
+          <div>
+            <p class="ops-section-label">Detail</p>
+            <h2 class="ops-panel__title">{{ selected.patientName || 'Patient' }}</h2>
+          </div>
+          <button type="button" class="ops-btn ops-btn--ghost" (click)="clearSelection()">Close</button>
+        </div>
+        <div class="orders-detail__body">
+          <div class="orders-detail__grid">
+            <div>
+              <p class="orders-detail__label">Partner pharmacy</p>
+              <p class="orders-detail__value">{{ selected.pharmacyName || '—' }}</p>
+              @if (selected.pharmacyEmail) {
+                <p class="orders-detail__muted">{{ selected.pharmacyEmail }}</p>
+              }
+            </div>
+            <div>
+              <p class="orders-detail__label">Source</p>
+              <p class="orders-detail__value">{{ sourceLabel(selected.source) }}</p>
+              @if (selected.deliveryRequested) {
+                <p class="orders-detail__muted orders-detail__muted--accent">Delivery requested</p>
+              }
+            </div>
+            <div>
+              <p class="orders-detail__label">Status</p>
+              <p class="orders-detail__value">{{ statusLabel(selected.status) }}</p>
+            </div>
+            <div>
+              <p class="orders-detail__label">Received</p>
+              <p class="orders-detail__value">{{ selected.createdAt | date: 'medium' }}</p>
+            </div>
+          </div>
+
+          @if ((selected.source || '') !== 'marketplace') {
+            <div>
+              <p class="orders-detail__label">Prescriber</p>
+              <p class="orders-detail__value">{{ selected.doctorName || '—' }}</p>
+              @if (selected.doctorEmail) {
+                <p class="orders-detail__muted">{{ selected.doctorEmail }}</p>
+              }
+            </div>
+          }
+
+          <div>
+            <p class="orders-detail__label">Patient contact</p>
+            <p class="orders-detail__value">{{ selected.patientPhone || selected.patientEmail || '—' }}</p>
+          </div>
+
+          @if (selected.lineItems?.length) {
+            <div>
+              <p class="orders-detail__label">Line items</p>
+              <ul class="orders-detail__items">
+                @for (item of selected.lineItems; track item.name + (item.price || '')) {
+                  <li>
+                    <span>
+                      <strong>{{ item.quantity ?? 1 }}× {{ item.name }}</strong>
+                      @if (item.description) {
+                        <span class="orders-detail__muted">{{ item.description }}</span>
+                      }
+                    </span>
+                    @if (item.price) {
+                      <span class="orders-detail__price">{{ item.price }}</span>
+                    }
+                  </li>
+                }
+              </ul>
+            </div>
+          }
+
+          @if (selected.notes) {
+            <div>
+              <p class="orders-detail__label">Patient notes</p>
+              <p class="orders-detail__notes">{{ selected.notes }}</p>
+            </div>
+          }
+
+          <div>
+            <p class="orders-detail__label">
+              {{ (selected.source || '') === 'marketplace' ? 'Order summary' : 'Prescription' }}
+            </p>
+            <pre class="orders-detail__script">{{ selected.prescriptionText || 'No details provided.' }}</pre>
+          </div>
+
+          <p class="orders-detail__id">Order ID {{ selected.id }}</p>
+        </div>
+      </aside>
+    }
+  </div>
+</div>

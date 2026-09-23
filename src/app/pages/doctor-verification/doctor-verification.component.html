@@ -86,10 +86,17 @@
                 <p class="ops-list-row__meta">
                   {{ doctor.medicalSpecialty || doctor.specialty || 'Specialty not set' }}
                   · {{ doctor.practiceCity || 'Location not set' }}
+                  @if (isIncomplete(doctor)) {
+                    · Incomplete application
+                  }
                 </p>
               </div>
               <span class="ops-badge ops-badge--{{ doctorStatus(doctor) }}">
-                {{ utilFunctions.upperCaseFirstLetter(doctorStatus(doctor)) }}
+                @if (isIncomplete(doctor)) {
+                  Incomplete
+                } @else {
+                  {{ utilFunctions.upperCaseFirstLetter(doctorStatus(doctor)) }}
+                }
               </span>
             </button>
           } @empty {

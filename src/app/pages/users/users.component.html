@@ -116,7 +116,7 @@
             </table>
           </div>
           <app-ops-pagination
-            [total]="(filteredUsers$ | async)?.length ?? 0"
+            [total]="(directoryTotal$ | async) ?? 0"
             [pageIndex]="pageIndex"
             [pageSize]="pageSize"
             itemLabel="users"

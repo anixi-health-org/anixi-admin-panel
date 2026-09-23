@@ -7,7 +7,6 @@ import {
   isDoctorVerificationCandidate,
   normalizeVerificationStatus,
 } from '../../utils/doctor-record.utils';
-import { getUserRole } from '../../utils/user-record.utils';
 
 type MetricCard = {
   label: string;
@@ -39,17 +38,19 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.sub.add(
       combineLatest([
-        this.firestoreService.getDoctors(),
-        this.firestoreService.getUsers(),
+        this.firestoreService.getDoctors(undefined, { limit: 100 }),
+        this.firestoreService.getAdminStats(),
         this.postService.fetchAdminPost(),
       ]).subscribe({
-        next: ([doctors, users, postsRes]) => {
+        next: ([doctors, stats, postsRes]) => {
           const posts = postsRes.data ?? [];
-          const roleCounts = users.reduce<Record<string, number>>((acc, user) => {
-            const role = this.formatRole(getUserRole(user) || 'unknown');
-            acc[role] = (acc[role] ?? 0) + 1;
-            return acc;
-          }, {});
+          const roleCounts: Record<string, number> = {
+            Patients: stats.patients ?? 0,
+            Doctors: stats.doctors ?? 0,
+            'Clinic admins': stats.clinicAdmins ?? 0,
+            Caregivers: stats.caregivers ?? 0,
+            Admins: stats.admins ?? 0,
+          };
 
           const doctorStatusCounts = doctors
             .filter((doctor) => isDoctorVerificationCandidate(doctor))
@@ -67,10 +68,10 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
             return acc;
           }, {});
 
-          const totalUsers = users.length;
+          const totalUsers = stats.totalUsers ?? 0;
           const totalDoctors = Object.values(doctorStatusCounts).reduce((sum, n) => sum + n, 0);
           const totalPosts = posts.length;
-          const pendingDoctors = doctorStatusCounts['Pending'] ?? 0;
+          const pendingDoctors = stats.pendingDoctors ?? doctorStatusCounts['Pending'] ?? 0;
 
           this.metrics = [
             {

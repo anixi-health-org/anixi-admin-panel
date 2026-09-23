@@ -69,6 +69,13 @@
   color: #9a6110;
   background: #fbf4ea;
   border: 1px solid #f0d9b0;
+  cursor: pointer;
+  font: inherit;
+}
+
+.dashboard-hero__badge:hover {
+  border-color: #e8c48a;
+  background: #f8eedc;
 }
 
 .dashboard-metrics {
@@ -93,12 +100,38 @@
 .dashboard-metric {
   position: relative;
   overflow: hidden;
+  display: block;
+  width: 100%;
+  text-align: left;
   background: #ffffff;
   border: 1px solid var(--anixi-border);
   border-radius: var(--anixi-radius-sm);
   padding: 0.95rem 1rem 0.9rem;
   box-shadow: var(--anixi-shadow);
   transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  font: inherit;
+  color: inherit;
+  cursor: default;
+}
+
+.dashboard-metric--clickable {
+  cursor: pointer;
+}
+
+.dashboard-metric--clickable:focus-visible {
+  outline: 2px solid var(--anixi-green);
+  outline-offset: 2px;
+}
+
+.dashboard-metric--disabled {
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+
+.dashboard-metric--disabled:hover {
+  transform: none;
+  border-color: var(--anixi-border);
+  box-shadow: var(--anixi-shadow);
 }
 
 .dashboard-metric::before {

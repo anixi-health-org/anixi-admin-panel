@@ -8,7 +8,7 @@ import { DoctorVerificationComponent } from './doctor-verification/doctor-verifi
 import { DashboardComponent } from './dashboard/dashboard.component';
 import { NzLayoutModule } from 'ng-zorro-antd/layout';
 import {NzIconModule} from 'ng-zorro-antd/icon';
-import {Activity, BarChart3, Bell, Building2, Calendar, ChartColumn, CheckCircle, ChevronDown, ClipboardList, Clock, Download, ExternalLink, Eye, FilePen, FileText, LayoutDashboard, LogOut, LucideAngularModule, MessageSquare, ScrollText, Search, Settings, Shield, ShieldCheck, Sparkles, Stethoscope, Store, TriangleAlert, Upload, Users, UserX} from 'lucide-angular';
+import {Activity, BarChart3, Bell, Building2, Calendar, ChartColumn, CheckCircle, ChevronDown, ClipboardList, Clock, Download, ExternalLink, Eye, FilePen, FileText, LayoutDashboard, LogOut, LucideAngularModule, MessageSquare, ScrollText, Search, Shield, ShieldCheck, ShoppingBag, Sparkles, Stethoscope, Store, TriangleAlert, Upload, Users, UserX} from 'lucide-angular';
 import {NzAvatarModule} from 'ng-zorro-antd/avatar';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ApplicationDetailsComponent } from './application-details/application-details.component'
@@ -39,6 +39,7 @@ import { AnalyticsComponent } from './analytics/analytics.component';
 import { AuditLogComponent } from './audit-log/audit-log.component';
 import { TeamAccessComponent } from './team-access/team-access.component';
 import { PendingActivationsComponent } from './pending-activations/pending-activations.component';
+import { OrdersComponent } from './orders/orders.component';
 import { RichTextEditorComponent } from '../components/rich-text-editor/rich-text-editor.component';
 import { OpsPaginationComponent } from '../components/ops-pagination/ops-pagination.component';
 import { OpsPageSkeletonComponent } from '../components/ops-page-skeleton/ops-page-skeleton.component';
@@ -65,6 +66,7 @@ import { OpsPageSkeletonComponent } from '../components/ops-page-skeleton/ops-pa
     AuditLogComponent,
     TeamAccessComponent,
     PendingActivationsComponent,
+    OrdersComponent,
     AnixiLogoComponent,
     AdminProfileMenuComponent,
     AdminNotificationsMenuComponent,
@@ -85,7 +87,7 @@ import { OpsPageSkeletonComponent } from '../components/ops-page-skeleton/ops-pa
       MessageSquare, Bell, UserX, TriangleAlert, ChevronDown, LogOut,
       ShieldCheck, Sparkles, Download, ExternalLink, Search, Calendar,
       ClipboardList, CheckCircle, FilePen, Clock, ChartColumn, BarChart3,
-      Settings, ScrollText, Shield, Building2, Store, Upload
+      ScrollText, Shield, Building2, Store, Upload, ShoppingBag
     }),
     NzButtonComponent,
     NgxEchartsDirective,

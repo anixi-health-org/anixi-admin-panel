@@ -45,19 +45,36 @@ export class AdminNotificationsService {
 
         try {
           const doctors = await this.djangoApi.listDoctors('pending');
-          return doctors.slice(0, max).map((doctor) => {
-            const id = String(doctor['id'] ?? '');
-            return {
-              id,
-              type: 'doctor_application',
-              title: 'Doctor application pending review',
-              body: String(doctor['displayName'] ?? doctor['email'] ?? 'Unknown doctor'),
-              href: '/doctor-verification',
-              doctorId: id,
-              createdAt: doctor['createdAt'] ?? null,
-              readBy: this.readIds.has(id) ? [adminId] : [],
-            };
-          });
+          return doctors
+            .filter((doctor) => {
+              if (String(doctor['accountKind'] ?? '').toLowerCase() === 'clinic_admin') {
+                return false;
+              }
+              if (
+                String(doctor['joinIntent'] ?? '').toLowerCase() === 'clinic' &&
+                doctor['requiresClinicalVerification'] === false
+              ) {
+                return false;
+              }
+              return true;
+            })
+            .slice(0, max)
+            .map((doctor) => {
+              const id = String(doctor['id'] ?? '');
+              return {
+                id,
+                type: 'doctor_application',
+                title:
+                  doctor['applicationComplete'] === false
+                    ? 'Incomplete doctor application'
+                    : 'Doctor application pending review',
+                body: String(doctor['displayName'] ?? doctor['email'] ?? 'Unknown doctor'),
+                href: `/doctor-verification?status=pending`,
+                doctorId: id,
+                createdAt: doctor['createdAt'] ?? null,
+                readBy: this.readIds.has(id) ? [adminId] : [],
+              };
+            });
         } catch {
           return [] as AdminNotification[];
         }
