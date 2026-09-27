@@ -48,6 +48,7 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
             Patients: stats.patients ?? 0,
             Doctors: stats.doctors ?? 0,
             'Clinic admins': stats.clinicAdmins ?? 0,
+            'Marketplace partners': stats.marketplacePartners ?? 0,
             Caregivers: stats.caregivers ?? 0,
             Admins: stats.admins ?? 0,
           };
@@ -129,6 +130,7 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
       patient: 'Patients',
       doctor: 'Doctors',
       clinic_admin: 'Clinic admins',
+      marketplace_partner: 'Marketplace partners',
       caregiver: 'Caregivers',
       admin: 'Admins',
       unknown: 'Other',

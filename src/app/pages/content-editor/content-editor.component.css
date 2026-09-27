@@ -219,8 +219,20 @@
 .upload-input {
   position: absolute;
   inset: 0;
+  width: 100%;
+  height: 100%;
   opacity: 0;
   cursor: pointer;
+  font-size: 0;
+  color: transparent;
+  z-index: 2;
+}
+
+.upload-placeholder,
+.upload-preview {
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
 }
 
 .upload-placeholder {
@@ -242,6 +254,12 @@
 .upload-preview {
   display: block;
   pointer-events: none;
+}
+
+.upload-preview video {
+  pointer-events: auto;
+  position: relative;
+  z-index: 3;
 }
 
 .upload-preview img,

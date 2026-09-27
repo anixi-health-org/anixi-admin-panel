@@ -4,6 +4,7 @@ import {
   formatUserRoleLabel,
   getUserRole,
   isClinicAdminUser,
+  isMarketplacePartnerUser,
   type PlatformUser,
 } from './user-record.utils';
 
@@ -59,6 +60,27 @@ function run(): void {
   assert(
     getUserRole(user({ accountType: 'staff', role: 'staff' })) === 'clinic_admin',
     'staff accountType is clinic admin'
+  );
+  assert(
+    isMarketplacePartnerUser(
+      user({ accountType: 'staff', role: 'staff', joinIntent: 'market_partner' })
+    ),
+    'market_partner joinIntent is a marketplace partner'
+  );
+  assert(
+    getUserRole(user({ accountType: 'staff', role: 'staff', joinIntent: 'market_partner' })) ===
+      'marketplace_partner',
+    'market partners are not classified as clinic admins'
+  );
+  assert(
+    formatUserRoleLabel('marketplace_partner') === 'Marketplace partner',
+    'marketplace partner label'
+  );
+  assert(
+    !isClinicAdminUser(
+      user({ accountType: 'staff', role: 'staff', joinIntent: 'market_partner' })
+    ),
+    'market partners fail the clinic admin check'
   );
   assert(
     getUserRole(user({ accountType: null, role: null })) === 'patient',
