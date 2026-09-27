@@ -38,6 +38,7 @@ const roleFilters: { label: string; value: UserRoleFilter }[] = [
   { label: 'Patients', value: 'patient' },
   { label: 'Doctors', value: 'doctor' },
   { label: 'Clinic admins', value: 'clinic_admin' },
+  { label: 'Marketplace partners', value: 'marketplace_partner' },
   { label: 'Caregivers', value: 'caregiver' },
   { label: 'Admins', value: 'admin' },
 ];
@@ -47,6 +48,7 @@ type AdminUserStats = {
   patients: number;
   doctors: number;
   clinicAdmins: number;
+  marketplacePartners: number;
   caregivers: number;
   admins: number;
 };
@@ -77,6 +79,7 @@ export class UsersComponent implements OnInit, OnDestroy {
   patientCount$!: Observable<number>;
   doctorCount$!: Observable<number>;
   clinicAdminCount$!: Observable<number>;
+  marketplacePartnerCount$!: Observable<number>;
   caregiverCount$!: Observable<number>;
   adminCount$!: Observable<number>;
   private pageIndex$ = new BehaviorSubject(1);
@@ -111,6 +114,7 @@ export class UsersComponent implements OnInit, OnDestroy {
           patients: stats.patients ?? 0,
           doctors: stats.doctors ?? 0,
           clinicAdmins: stats.clinicAdmins ?? 0,
+          marketplacePartners: stats.marketplacePartners ?? 0,
           caregivers: stats.caregivers ?? 0,
           admins: stats.admins ?? 0,
         })
@@ -122,6 +126,7 @@ export class UsersComponent implements OnInit, OnDestroy {
     this.patientCount$ = this.stats$.pipe(map((s) => s.patients));
     this.doctorCount$ = this.stats$.pipe(map((s) => s.doctors));
     this.clinicAdminCount$ = this.stats$.pipe(map((s) => s.clinicAdmins));
+    this.marketplacePartnerCount$ = this.stats$.pipe(map((s) => s.marketplacePartners));
     this.caregiverCount$ = this.stats$.pipe(map((s) => s.caregivers));
     this.adminCount$ = this.stats$.pipe(map((s) => s.admins));
 
@@ -216,6 +221,8 @@ export class UsersComponent implements OnInit, OnDestroy {
         return this.doctorCount$;
       case 'clinic_admin':
         return this.clinicAdminCount$;
+      case 'marketplace_partner':
+        return this.marketplacePartnerCount$;
       case 'caregiver':
         return this.caregiverCount$;
       case 'admin':
@@ -247,6 +254,7 @@ export class UsersComponent implements OnInit, OnDestroy {
     if (r === 'patient') return 'ops-badge--green';
     if (r === 'caregiver') return 'ops-badge--pending';
     if (r === 'clinic_admin') return 'ops-badge--hold';
+    if (r === 'marketplace_partner') return 'ops-badge--blue';
     if (r === 'admin') return 'ops-badge--slate';
     return 'ops-badge--slate';
   }
@@ -272,8 +280,12 @@ export class UsersComponent implements OnInit, OnDestroy {
     return getUserRole(user) === 'clinic_admin';
   }
 
+  isMarketplacePartner(user: PlatformUser): boolean {
+    return getUserRole(user) === 'marketplace_partner';
+  }
+
   canHoldOrSuspend(user: PlatformUser): boolean {
-    return this.isDoctor(user) || this.isClinicAdmin(user);
+    return this.isDoctor(user) || this.isClinicAdmin(user) || this.isMarketplacePartner(user);
   }
 
   isHeld(user: PlatformUser): boolean {

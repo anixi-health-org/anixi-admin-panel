@@ -30,10 +30,17 @@ export type UserRoleFilter =
   | 'caregiver'
   | 'admin'
   | 'clinic_admin'
+  | 'marketplace_partner'
   | 'unknown';
+
+/** Marketplace pharmacy / wellness partners (doctor portal partner path). */
+export function isMarketplacePartnerUser(user: PlatformUser): boolean {
+  return String(user.joinIntent ?? '').toLowerCase() === 'market_partner';
+}
 
 /** Clinic portal admins manage an establishment; they are not practicing clinicians. */
 export function isClinicAdminUser(user: PlatformUser): boolean {
+  if (isMarketplacePartnerUser(user)) return false;
   const kind = String(user.accountKind ?? '').toLowerCase();
   if (kind === 'clinic_admin') return true;
   if (user.requiresClinicalVerification === false && String(user.joinIntent ?? '').toLowerCase() === 'clinic') {
@@ -80,6 +87,7 @@ export function getUserPhone(user: PlatformUser): string {
 }
 
 export function getUserRole(user: PlatformUser): UserRoleFilter {
+  if (isMarketplacePartnerUser(user)) return 'marketplace_partner';
   if (isClinicAdminUser(user)) return 'clinic_admin';
 
   const raw = String(user.accountType ?? user.role ?? '')
@@ -105,6 +113,8 @@ export function formatUserRoleLabel(role: UserRoleFilter | string): string {
       return 'Admin';
     case 'clinic_admin':
       return 'Clinic admin';
+    case 'marketplace_partner':
+      return 'Marketplace partner';
     case 'all':
       return 'All';
     default:

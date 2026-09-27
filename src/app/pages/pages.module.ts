@@ -8,7 +8,7 @@ import { DoctorVerificationComponent } from './doctor-verification/doctor-verifi
 import { DashboardComponent } from './dashboard/dashboard.component';
 import { NzLayoutModule } from 'ng-zorro-antd/layout';
 import {NzIconModule} from 'ng-zorro-antd/icon';
-import {Activity, BarChart3, Bell, Building2, Calendar, ChartColumn, CheckCircle, ChevronDown, ClipboardList, Clock, Download, ExternalLink, Eye, FilePen, FileText, LayoutDashboard, LogOut, LucideAngularModule, MessageSquare, ScrollText, Search, Shield, ShieldCheck, ShoppingBag, Sparkles, Stethoscope, Store, TriangleAlert, Upload, Users, UserX} from 'lucide-angular';
+import {Activity, BarChart3, Bell, Building2, Calendar, ChartColumn, CheckCircle, ChevronDown, ClipboardList, Clock, Download, ExternalLink, Eye, FilePen, FileText, Heart, LayoutDashboard, LogOut, LucideAngularModule, MessageSquare, ScrollText, Search, Shield, ShieldCheck, ShoppingBag, Sparkles, Stethoscope, Store, TriangleAlert, Upload, Users, UserX} from 'lucide-angular';
 import {NzAvatarModule} from 'ng-zorro-antd/avatar';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ApplicationDetailsComponent } from './application-details/application-details.component'
@@ -87,7 +87,7 @@ import { OpsPageSkeletonComponent } from '../components/ops-page-skeleton/ops-pa
       MessageSquare, Bell, UserX, TriangleAlert, ChevronDown, LogOut,
       ShieldCheck, Sparkles, Download, ExternalLink, Search, Calendar,
       ClipboardList, CheckCircle, FilePen, Clock, ChartColumn, BarChart3,
-      ScrollText, Shield, Building2, Store, Upload, ShoppingBag
+      ScrollText, Shield, Building2, Store, Upload, ShoppingBag, Heart
     }),
     NzButtonComponent,
     NgxEchartsDirective,

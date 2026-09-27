@@ -63,14 +63,18 @@ export class PostService {
     const metadata = (row['metadata'] as Record<string, unknown>) || {};
     const createdAt = row['createdAt'] ?? row['updatedAt'] ?? new Date().toISOString();
     const updatedAt = row['updatedAt'] ?? createdAt;
+    const source = String(row['source'] ?? metadata['source'] ?? 'admin_cms');
+    const userName =
+      String(row['userName'] ?? metadata['userName'] ?? '').trim() ||
+      (source === 'admin_cms' ? 'Anixi Health' : '');
     return {
       id: String(row['id'] ?? ''),
       title: String(row['title'] ?? metadata['title'] ?? ''),
       comments: [],
       userId: String(row['userId'] ?? this.resolveAdminUserId()),
-      userName: 'Anixi Health',
-      firstName: 'admin',
-      lastName: 'anixihealth',
+      userName: userName || 'Anixi Health',
+      firstName: String(row['firstName'] ?? metadata['firstName'] ?? 'Anixi'),
+      lastName: String(row['lastName'] ?? metadata['lastName'] ?? 'Health'),
       groupName: String(row['groupName'] ?? metadata['groupName'] ?? ''),
       text: String(row['text'] ?? row['body'] ?? ''),
       bodyHtml: String(row['bodyHtml'] ?? metadata['bodyHtml'] ?? ''),
@@ -82,9 +86,9 @@ export class PostService {
       textLower: String(metadata['textLower'] ?? ''),
       hashtags: (metadata['hashtags'] as string[]) ?? [],
       contentType: (row['contentType'] ?? metadata['contentType']) as CommunityContentType,
-      source: String(row['source'] ?? metadata['source'] ?? 'admin_cms'),
-      contentBatchId: String(metadata['contentBatchId'] ?? ''),
-      communities: (metadata['communities'] as string[]) ?? [],
+      source,
+      contentBatchId: String(row['contentBatchId'] ?? metadata['contentBatchId'] ?? ''),
+      communities: (row['communities'] as string[]) ?? (metadata['communities'] as string[]) ?? [],
       scheduledAt: metadata['scheduledAt'] ?? row['publishAt'] ?? null,
       publishedAt: metadata['publishedAt'] ?? null,
       archivedAt: metadata['archivedAt'] ?? null,
@@ -110,6 +114,7 @@ export class PostService {
       status === 'Scheduled' && data.scheduledAt
         ? parseTimestamp(data.scheduledAt).toISOString()
         : null;
+    const userName = data.userName || 'Anixi Health';
     return {
       title: data.title ?? '',
       body: data.text ?? '',
@@ -124,7 +129,11 @@ export class PostService {
       bodyHtml: data.bodyHtml,
       groupName: data.groupName,
       communities: data.communities,
+      contentBatchId: data.contentBatchId,
       source: data.source ?? 'admin_cms',
+      userName,
+      firstName: data.firstName || 'Anixi',
+      lastName: data.lastName || 'Health',
       scheduledAt: scheduled,
       publishedAt:
         status === 'Published'
@@ -148,6 +157,9 @@ export class PostService {
         groupName: data.groupName,
         communities: data.communities,
         source: data.source ?? 'admin_cms',
+        userName,
+        firstName: data.firstName || 'Anixi',
+        lastName: data.lastName || 'Health',
         status,
         scheduledAt: scheduled,
         publishedAt:
@@ -248,8 +260,8 @@ export class PostService {
         status: input.status,
         source: 'admin_cms',
         postType: 'Post',
-        firstName: 'admin',
-        lastName: 'anixihealth',
+        firstName: 'Anixi',
+        lastName: 'Health',
         userName: 'Anixi Health',
         userId: adminUserId,
         scheduledAt: scheduledAt || null,
@@ -324,8 +336,8 @@ export class PostService {
         status: input.status,
         source: 'admin_cms',
         postType: 'Post',
-        firstName: 'admin',
-        lastName: 'anixihealth',
+        firstName: 'Anixi',
+        lastName: 'Health',
         userName: 'Anixi Health',
         scheduledAt: scheduledAt || null,
         lastEditAt: new Date(),
@@ -443,12 +455,40 @@ export class PostService {
     if (status === 'Archived') {
       patch['archivedAt'] = new Date().toISOString();
     }
-    await this.djangoApi.patchPost(postId, patch);
+
     const post = await this.getPostById(postId);
-    return { verified: post?.status === status, status: post?.status ?? null };
+    const targets =
+      post?.contentBatchId
+        ? await this.getPostsByBatchId(post.contentBatchId)
+        : post
+          ? [post]
+          : [];
+    if (!targets.length) {
+      await this.djangoApi.patchPost(postId, patch);
+      const refreshed = await this.getPostById(postId);
+      return { verified: refreshed?.status === status, status: refreshed?.status ?? null };
+    }
+
+    for (const sibling of targets) {
+      if (this.isServerPostId(sibling.id)) {
+        await this.djangoApi.patchPost(sibling.id, patch);
+      }
+    }
+    const refreshed = await this.getPostById(targets[0].id);
+    return { verified: refreshed?.status === status, status: refreshed?.status ?? null };
   }
 
   async deleteGroupPost(postId: string) {
+    const post = await this.getPostById(postId);
+    if (post?.contentBatchId) {
+      const batch = await this.getPostsByBatchId(post.contentBatchId);
+      for (const sibling of batch) {
+        if (this.isServerPostId(sibling.id)) {
+          await this.djangoApi.deletePost(sibling.id);
+        }
+      }
+      return;
+    }
     await this.djangoApi.deletePost(postId);
   }
 

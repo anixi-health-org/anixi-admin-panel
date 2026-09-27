@@ -66,6 +66,7 @@ type AdminStats = {
   patients: number;
   doctors: number;
   clinicAdmins: number;
+  marketplacePartners?: number;
   caregivers: number;
   admins: number;
   pendingActivations: number;
@@ -91,6 +92,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   communityPosts = 0;
   pendingActivations = 0;
   pendingMarketplacePartners = 0;
+  marketplacePartners = 0;
   communities = COMMUNITIES.length;
 
   attentionItems: AttentionItem[] = [];
@@ -98,6 +100,22 @@ export class DashboardComponent implements OnInit, OnDestroy {
   activityPageIndex = 1;
   activityPageSize = 5;
   metricCards: MetricCard[] = [];
+
+  get featuredMetric(): MetricCard | null {
+    return this.metricCards.find((m) => m.id === 'patients') ?? null;
+  }
+
+  get endMetric(): MetricCard | null {
+    return this.metricCards.find((m) => m.id === 'marketplace-partners') ?? null;
+  }
+
+  get mosaicMetrics(): MetricCard[] {
+    const exclude = new Set(
+      [this.featuredMetric?.id, this.endMetric?.id].filter(Boolean) as string[],
+    );
+    return this.metricCards.filter((m) => !exclude.has(m.id));
+  }
+
   quickActions: QuickAction[] = [
     {
       id: 'create-content',
@@ -167,6 +185,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
               patients: 0,
               doctors: 0,
               clinicAdmins: 0,
+              marketplacePartners: 0,
               caregivers: 0,
               admins: 0,
               pendingActivations: 0,
@@ -248,6 +267,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.totalPatients = stats.patients ?? 0;
     this.pendingActivations = stats.pendingActivations ?? 0;
     this.pendingMarketplacePartners = stats.pendingMarketplacePartners ?? 0;
+    this.marketplacePartners = stats.marketplacePartners ?? 0;
 
     this.attentionItems = [];
     if (this.pendingActivations > 0) {
@@ -420,7 +440,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         id: 'patients',
         label: 'Total patients',
         value: this.totalPatients,
-        hint: 'Registered patient accounts',
+        hint: 'Registered Warrior accounts on Anixi',
         icon: 'users',
         route: '/users',
         queryParams: { role: 'patient' },
@@ -446,15 +466,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
         queryParams: { status: 'pending' },
       },
       {
-        id: 'appointments',
-        label: 'Appointments today',
-        value: '—',
-        hint: 'Not available in Admin',
-        icon: 'calendar',
-        tone: 'slate',
-        disabled: true,
-      },
-      {
         id: 'community-posts',
         label: 'Community posts',
         value: this.communityPosts,
@@ -470,6 +481,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
         icon: 'clipboard-list',
         tone: this.pendingActivations > 0 ? 'amber' : undefined,
         route: '/pending-activations',
+      },
+      {
+        id: 'marketplace-partners',
+        label: 'Marketplace partners',
+        value: this.marketplacePartners,
+        hint:
+          this.pendingMarketplacePartners > 0
+            ? `${this.pendingMarketplacePartners} awaiting approval`
+            : 'Pharmacy & wellness partners',
+        icon: 'store',
+        tone: this.pendingMarketplacePartners > 0 ? 'amber' : 'slate',
+        route: '/marketplace-partners',
       },
     ];
   }

@@ -62,8 +62,12 @@ export class MediaUploadService {
       .uploadDocument(file, 'community-post')
       .then((result) => {
         onProgress?.({ progress: 100, state: 'success' });
+        // Persist a clean media URL (no JWT query). Preview resolves auth separately.
+        const downloadURL =
+          this.djangoApi.resolveMediaUrl(result.storageKey)?.split('?', 1)[0] ||
+          result.url.split('?', 1)[0];
         return {
-          downloadURL: result.url,
+          downloadURL,
           storagePath: result.storageKey,
           contentType: file.type || (kind === 'video' ? 'video/mp4' : 'image/jpeg'),
           kind,

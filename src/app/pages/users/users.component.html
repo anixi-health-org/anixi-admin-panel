@@ -1,41 +1,156 @@
 <div class="ops-page users-page">
-  <header class="ops-page-header">
-    <div class="ops-page-header__copy">
-      <p class="ops-page-header__eyebrow">Clinical operations</p>
-      <h1 class="ops-page-header__title">Patients / Users</h1>
-      <p class="ops-page-header__subtitle">
-        Search and review platform accounts across patients, doctors, clinic admins, caregivers, and Anixi admins.
+  <header class="users-hero">
+    <div class="users-hero__copy">
+      <p class="users-hero__eyebrow">Clinical operations</p>
+      <h1 class="users-hero__title">Patients / Users</h1>
+      <p class="users-hero__subtitle">
+        Search and review platform accounts across patients, doctors, clinic admins,
+        marketplace partners, caregivers, and Anixi admins.
       </p>
+    </div>
+    <div class="users-hero__aside">
+      <button
+        type="button"
+        class="users-hero__clear"
+        [class.users-hero__clear--visible]="roleFilter.value !== 'all'"
+        (click)="roleFilter.setValue('all')"
+      >
+        Show all roles
+      </button>
     </div>
   </header>
 
-  <section class="ops-metrics users-metrics" aria-label="User counts">
-    <article class="ops-metric">
-      <p class="ops-metric__label">Total users</p>
-      <p class="ops-metric__value">{{ (totalCount$ | async) ?? '—' }}</p>
-    </article>
-    <article class="ops-metric ops-metric--green">
-      <p class="ops-metric__label">Patients</p>
-      <p class="ops-metric__value">{{ (patientCount$ | async) ?? '—' }}</p>
-    </article>
-    <article class="ops-metric ops-metric--slate">
-      <p class="ops-metric__label">Doctors</p>
-      <p class="ops-metric__value">{{ (doctorCount$ | async) ?? '—' }}</p>
-    </article>
-    <article class="ops-metric ops-metric--amber">
-      <p class="ops-metric__label">Clinic admins</p>
-      <p class="ops-metric__value">{{ (clinicAdminCount$ | async) ?? '—' }}</p>
-    </article>
-    <article class="ops-metric ops-metric--amber">
-      <p class="ops-metric__label">Caregivers</p>
-      <p class="ops-metric__value">{{ (caregiverCount$ | async) ?? '—' }}</p>
-    </article>
+  <section class="users-census" aria-label="User counts">
+    <button
+      type="button"
+      class="users-census__total"
+      [class.users-census__total--active]="roleFilter.value === 'all'"
+      (click)="roleFilter.setValue('all')"
+    >
+      <div class="users-census__total-top">
+        <p class="users-census__total-label">Total users</p>
+        <span class="users-census__total-icon" aria-hidden="true">
+          <lucide-icon name="users"></lucide-icon>
+        </span>
+      </div>
+      <p class="users-census__total-value">{{ (totalCount$ | async) ?? '—' }}</p>
+      <p class="users-census__total-hint">
+        Every account across Warriors, clinicians, clinic ops, and market partners
+      </p>
+    </button>
+
+    <div class="users-census__mosaic" role="group" aria-label="Accounts by role">
+      <button
+        type="button"
+        class="users-census__tile"
+        data-tone="green"
+        [class.users-census__tile--active]="roleFilter.value === 'patient'"
+        (click)="roleFilter.setValue('patient')"
+      >
+        <div class="users-census__tile-top">
+          <p class="users-census__tile-label">Patients</p>
+          <span class="users-census__tile-icon" aria-hidden="true">
+            <lucide-icon name="users"></lucide-icon>
+          </span>
+        </div>
+        <p class="users-census__tile-value">{{ (patientCount$ | async) ?? '—' }}</p>
+        <p class="users-census__tile-hint">Registered Warrior accounts</p>
+      </button>
+
+      <button
+        type="button"
+        class="users-census__tile"
+        data-tone="blue"
+        [class.users-census__tile--active]="roleFilter.value === 'doctor'"
+        (click)="roleFilter.setValue('doctor')"
+      >
+        <div class="users-census__tile-top">
+          <p class="users-census__tile-label">Doctors</p>
+          <span class="users-census__tile-icon" aria-hidden="true">
+            <lucide-icon name="stethoscope"></lucide-icon>
+          </span>
+        </div>
+        <p class="users-census__tile-value">{{ (doctorCount$ | async) ?? '—' }}</p>
+        <p class="users-census__tile-hint">Practicing clinicians</p>
+      </button>
+
+      <button
+        type="button"
+        class="users-census__tile"
+        data-tone="amber"
+        [class.users-census__tile--active]="roleFilter.value === 'clinic_admin'"
+        (click)="roleFilter.setValue('clinic_admin')"
+      >
+        <div class="users-census__tile-top">
+          <p class="users-census__tile-label">Clinic admins</p>
+          <span class="users-census__tile-icon" aria-hidden="true">
+            <lucide-icon name="building-2"></lucide-icon>
+          </span>
+        </div>
+        <p class="users-census__tile-value">{{ (clinicAdminCount$ | async) ?? '—' }}</p>
+        <p class="users-census__tile-hint">Practice operators</p>
+      </button>
+
+      <button
+        type="button"
+        class="users-census__tile"
+        data-tone="slate"
+        [class.users-census__tile--active]="roleFilter.value === 'marketplace_partner'"
+        (click)="roleFilter.setValue('marketplace_partner')"
+      >
+        <div class="users-census__tile-top">
+          <p class="users-census__tile-label">Marketplace partners</p>
+          <span class="users-census__tile-icon" aria-hidden="true">
+            <lucide-icon name="store"></lucide-icon>
+          </span>
+        </div>
+        <p class="users-census__tile-value">{{ (marketplacePartnerCount$ | async) ?? '—' }}</p>
+        <p class="users-census__tile-hint">Pharmacy & wellness listings</p>
+      </button>
+
+      <button
+        type="button"
+        class="users-census__tile"
+        data-tone="amber"
+        [class.users-census__tile--active]="roleFilter.value === 'caregiver'"
+        (click)="roleFilter.setValue('caregiver')"
+      >
+        <div class="users-census__tile-top">
+          <p class="users-census__tile-label">Caregivers</p>
+          <span class="users-census__tile-icon" aria-hidden="true">
+            <lucide-icon name="heart"></lucide-icon>
+          </span>
+        </div>
+        <p class="users-census__tile-value">{{ (caregiverCount$ | async) ?? '—' }}</p>
+        <p class="users-census__tile-hint">Linked care supporters</p>
+      </button>
+
+      <button
+        type="button"
+        class="users-census__tile"
+        data-tone="green"
+        [class.users-census__tile--active]="roleFilter.value === 'admin'"
+        (click)="roleFilter.setValue('admin')"
+      >
+        <div class="users-census__tile-top">
+          <p class="users-census__tile-label">Admins</p>
+          <span class="users-census__tile-icon" aria-hidden="true">
+            <lucide-icon name="shield-check"></lucide-icon>
+          </span>
+        </div>
+        <p class="users-census__tile-value">{{ (adminCount$ | async) ?? '—' }}</p>
+        <p class="users-census__tile-hint">Anixi ops console access</p>
+      </button>
+    </div>
   </section>
 
   <div class="users-layout" [class.users-layout--detail]="!!selectedUser">
     <section class="ops-panel users-list-panel">
       <div class="ops-panel__header">
-        <h2 class="ops-panel__title">Directory</h2>
+        <div>
+          <p class="ops-section-label">Directory</p>
+          <h2 class="ops-panel__title">Browse accounts</h2>
+        </div>
         <div class="ops-search">
           <lucide-icon name="search" class="users-search-icon"></lucide-icon>
           <input
@@ -70,7 +185,9 @@
       } @else {
         @if ((filteredUsers$ | async)?.length === 0) {
           <div class="ops-empty">
-            <div class="ops-empty__icon" aria-hidden="true">👤</div>
+            <div class="ops-empty__icon" aria-hidden="true">
+              <lucide-icon name="users"></lucide-icon>
+            </div>
             <p class="ops-empty__title">No users match this view</p>
             <p class="ops-empty__text">
               Try another role filter or clear the search to see the full directory.
@@ -130,7 +247,10 @@
     @if (selectedUser) {
       <aside class="ops-panel users-detail" aria-label="User profile">
         <div class="ops-panel__header">
-          <h2 class="ops-panel__title">Profile</h2>
+          <div>
+            <p class="ops-section-label">Profile</p>
+            <h2 class="ops-panel__title">Account details</h2>
+          </div>
           <button type="button" class="ops-btn ops-btn--secondary" (click)="clearSelection()">
             Close
           </button>
@@ -259,9 +379,14 @@
           </div>
 
           <p class="users-detail__note">
-            Clinic admins manage a clinic establishment and its doctors or patients. They are not
-            practicing clinicians. Use Doctor Verification for credential review of doctors, and
-            Establishments to see registered clinics.
+            @if (isMarketplacePartner(selectedUser)) {
+              Marketplace partners run pharmacy or wellness listings on the patient market.
+              Review applications and published listings under Marketplace partners.
+            } @else {
+              Clinic admins manage a clinic establishment and its doctors or patients. They are not
+              practicing clinicians. Use Doctor Verification for credential review of doctors, and
+              Establishments to see registered clinics.
+            }
           </p>
         </div>
       </aside>

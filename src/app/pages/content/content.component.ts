@@ -91,11 +91,12 @@ export class ContentComponent implements OnInit, OnDestroy{
     this.isLoadingSkeleton = true;
      this.postService.fetchAdminPost(this.authService.getAdminUserId() ?? undefined).subscribe(res => {
       const data = res.data;
-      this.totalPost = data.length;
-      this.publishedCount = data.filter((post) => (post.status ?? 'Published') === 'Published').length;
-      this.scheduledCount = data.filter((post) => post.status === 'Scheduled').length;
-      this.draftCount = data.filter((post) => post.status === 'Draft').length;
       this.posts = data;
+      const library = this.collapseBatches(data);
+      this.totalPost = library.length;
+      this.publishedCount = library.filter((post) => (post.status ?? 'Published') === 'Published').length;
+      this.scheduledCount = library.filter((post) => post.status === 'Scheduled').length;
+      this.draftCount = library.filter((post) => post.status === 'Draft').length;
       this.isLoadingSkeleton = res.loading;
      });
 
@@ -199,7 +200,8 @@ export class ContentComponent implements OnInit, OnDestroy{
     postMatchesCommunity(post: IGroupPost): boolean {
       const filter = this.communityFilter.value;
       if (!filter || filter === 'All') return true;
-      return (post.groupName || '') === filter;
+      const communities = this.communityLabels(post);
+      return communities.includes(filter);
     }
 
     postMatchesSearch(post: IGroupPost): boolean {
@@ -209,12 +211,12 @@ export class ContentComponent implements OnInit, OnDestroy{
       }
       const title = (post.title || '').toLowerCase();
       const text = (post.text || '').toLowerCase();
-      const group = (post.groupName || '').toLowerCase();
+      const communities = this.communityLabels(post).join(' ').toLowerCase();
       const author = (post.userName || '').toLowerCase();
       return (
         title.includes(query) ||
         text.includes(query) ||
-        group.includes(query) ||
+        communities.includes(query) ||
         author.includes(query)
       );
     }
@@ -228,8 +230,53 @@ export class ContentComponent implements OnInit, OnDestroy{
       );
     }
 
+    /** One library row per multi-community publish batch. */
+    collapseBatches(posts: IGroupPost[]): IGroupPost[] {
+      const seen = new Set<string>();
+      const result: IGroupPost[] = [];
+      for (const post of posts) {
+        const batchId = (post.contentBatchId || '').trim();
+        if (!batchId) {
+          result.push({
+            ...post,
+            communities: post.communities?.length
+              ? post.communities
+              : post.groupName
+                ? [post.groupName]
+                : [],
+          });
+          continue;
+        }
+        if (seen.has(batchId)) continue;
+        seen.add(batchId);
+        const siblings = posts.filter((p) => (p.contentBatchId || '').trim() === batchId);
+        const communities = Array.from(
+          new Set(
+            siblings.flatMap((p) =>
+              [
+                ...(Array.isArray(p.communities) ? p.communities : []),
+                p.groupName,
+              ].filter(Boolean),
+            ),
+          ),
+        );
+        result.push({
+          ...post,
+          communities,
+          groupName: communities.length === 1 ? communities[0] : post.groupName,
+          reported: siblings.some((p) => p.reported === true),
+        });
+      }
+      return result;
+    }
+
+    communityLabels(post: IGroupPost): string[] {
+      if (post.communities?.length) return post.communities;
+      return post.groupName ? [post.groupName] : [];
+    }
+
     visiblePosts(): IGroupPost[] {
-      return this.posts.filter((post) => this.postIsVisible(post));
+      return this.collapseBatches(this.posts).filter((post) => this.postIsVisible(post));
     }
 
     pagedVisiblePosts(): IGroupPost[] {

@@ -15,27 +15,72 @@
   @if (isLoading) {
     <app-ops-page-skeleton variant="metrics" [metrics]="6"></app-ops-page-skeleton>
   } @else {
-    <section class="dashboard-metrics" aria-label="Key metrics">
-      @for (metric of metricCards; track metric.id) {
+    <section class="dashboard-census" aria-label="Key metrics">
+      @if (featuredMetric; as featured) {
         <button
           type="button"
-          class="dashboard-metric"
-          [class.dashboard-metric--tone]="metric.tone"
-          [class.dashboard-metric--clickable]="!!metric.route && !metric.disabled"
-          [class.dashboard-metric--disabled]="metric.disabled"
-          [attr.data-tone]="metric.tone || null"
-          [disabled]="metric.disabled"
-          [attr.aria-disabled]="metric.disabled || null"
-          (click)="openMetric(metric)"
+          class="dashboard-census__total"
+          [class.dashboard-census__total--clickable]="!!featured.route && !featured.disabled"
+          [disabled]="featured.disabled"
+          (click)="openMetric(featured)"
         >
-          <div class="dashboard-metric__top">
-            <p class="dashboard-metric__label">{{ metric.label }}</p>
-            <span class="dashboard-metric__icon" aria-hidden="true">
-              <lucide-icon [name]="metric.icon"></lucide-icon>
+          <div class="dashboard-census__total-glow" aria-hidden="true"></div>
+          <div class="dashboard-census__total-top">
+            <p class="dashboard-census__total-label">{{ featured.label }}</p>
+            <span class="dashboard-census__total-icon" aria-hidden="true">
+              <lucide-icon [name]="featured.icon"></lucide-icon>
             </span>
           </div>
-          <p class="dashboard-metric__value">{{ metric.value }}</p>
-          <p class="dashboard-metric__hint">{{ metric.hint }}</p>
+          <div class="dashboard-census__total-body">
+            <p class="dashboard-census__total-value">{{ featured.value }}</p>
+            <p class="dashboard-census__total-hint">{{ featured.hint }}</p>
+          </div>
+        </button>
+      }
+
+      <div class="dashboard-census__mosaic" role="group" aria-label="Supporting metrics">
+        @for (metric of mosaicMetrics; track metric.id) {
+          <button
+            type="button"
+            class="dashboard-census__tile"
+            [attr.data-tone]="metric.tone || null"
+            [class.dashboard-census__tile--clickable]="!!metric.route && !metric.disabled"
+            [class.dashboard-census__tile--disabled]="metric.disabled"
+            [disabled]="metric.disabled"
+            [attr.aria-disabled]="metric.disabled || null"
+            (click)="openMetric(metric)"
+          >
+            <div class="dashboard-census__tile-top">
+              <p class="dashboard-census__tile-label">{{ metric.label }}</p>
+              <span class="dashboard-census__tile-icon" aria-hidden="true">
+                <lucide-icon [name]="metric.icon"></lucide-icon>
+              </span>
+            </div>
+            <p class="dashboard-census__tile-value">{{ metric.value }}</p>
+            <p class="dashboard-census__tile-hint">{{ metric.hint }}</p>
+          </button>
+        }
+      </div>
+
+      @if (endMetric; as end) {
+        <button
+          type="button"
+          class="dashboard-census__end"
+          [attr.data-tone]="end.tone || null"
+          [class.dashboard-census__end--clickable]="!!end.route && !end.disabled"
+          [disabled]="end.disabled"
+          (click)="openMetric(end)"
+        >
+          <div class="dashboard-census__tile-top">
+            <p class="dashboard-census__tile-label">{{ end.label }}</p>
+            <span class="dashboard-census__tile-icon" aria-hidden="true">
+              <lucide-icon [name]="end.icon"></lucide-icon>
+            </span>
+          </div>
+          <div class="dashboard-census__end-body">
+            <p class="dashboard-census__end-value">{{ end.value }}</p>
+            <p class="dashboard-census__tile-hint">{{ end.hint }}</p>
+          </div>
         </button>
       }
     </section>

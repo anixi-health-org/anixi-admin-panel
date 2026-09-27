@@ -39,7 +39,14 @@ export class DjangoApiService {
         resolved = `${environment.apiUrl}${marker}${encodedKey}/`;
       }
     } else if (trimmed.includes(marker)) {
-      resolved = trimmed.split('?', 1)[0];
+      // Always serve media through the configured API host (local vs prod).
+      const path = trimmed.split(marker, 2)[1]?.split('?', 1)[0] ?? '';
+      resolved = `${environment.apiUrl}${marker}${path}`;
+    }
+
+    // Community feed media is publicly readable — avoid stale JWT query params.
+    if (resolved.includes(`${marker}community-posts/`)) {
+      return resolved.split('?', 1)[0] ?? resolved;
     }
 
     if (!resolved.includes(marker) || !this.accessToken) {
@@ -255,6 +262,7 @@ export class DjangoApiService {
       patients: number;
       doctors: number;
       clinicAdmins: number;
+      marketplacePartners?: number;
       caregivers: number;
       admins: number;
       staff?: number;

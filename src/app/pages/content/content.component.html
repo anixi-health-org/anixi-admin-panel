@@ -39,10 +39,12 @@
                     <img [src]="mediaPreviewUrl(post)!" alt="">
                 }
             }
-            <div class="flex flex-row mt-8 gap-2">
-                <div class="rounded-lg border-transparent" style="background-color: #ecf3f2; color: #377b6c">
-                    <p class="text-center text-[11px] font-semibold h-[8px] pl-2 pr-2">{{post.groupName}}</p>
-                </div>
+            <div class="flex flex-row mt-8 gap-2 flex-wrap">
+                @for (community of communityLabels(post); track community) {
+                  <div class="rounded-lg border-transparent" style="background-color: #ecf3f2; color: #377b6c">
+                      <p class="text-center text-[11px] font-semibold h-[8px] pl-2 pr-2">{{community}}</p>
+                  </div>
+                }
                 <div class="rounded-lg border-1" [ngStyle]="{'background-color': getColorByStatus(post.status ?? 'Published').bgColor,
                         'color': getColorByStatus(post.status ?? 'Published').color,
                         'border-color': getColorByStatus(post.status ?? 'Published').color}">
@@ -53,7 +55,7 @@
                 </div>
             </div>
             <div class="flex flex-col mt-4">
-                <p class="text-gray-500">Author: Admin</p>
+                <p class="text-gray-500">Author: {{ post.userName || 'Anixi Health' }}</p>
                 <p class="text-gray-500">Date: {{ postDate(post) | date: 'longDate' }}</p>
             </div>
         </div>
@@ -157,10 +159,20 @@
                                     </td>
                                     <td class="text-start text-gray-600 text-sm">{{contentTypeLabel(post)}}</td>
                                     <td>
-                                       <div class="flex flex-row">
-                                         <div class="rounded-lg border-transparent" style="background-color: #ecf3f2; color: #377b6c">
-                                            <p class="text-center text-[11px] font-semibold h-[8px] pl-2 pr-2">{{post.groupName}}</p>
-                                        </div>
+                                       <div class="flex flex-row flex-wrap gap-1 max-w-[14rem]">
+                                         @for (community of communityLabels(post).slice(0, 3); track community) {
+                                           <div class="rounded-lg border-transparent" style="background-color: #ecf3f2; color: #377b6c">
+                                              <p class="text-center text-[11px] font-semibold h-[8px] pl-2 pr-2">{{ community }}</p>
+                                           </div>
+                                         }
+                                         @if (communityLabels(post).length > 3) {
+                                           <div class="rounded-lg border-transparent" style="background-color: #eef2f0; color: #5b6b63" [title]="communityLabels(post).join(', ')">
+                                              <p class="text-center text-[11px] font-semibold h-[8px] pl-2 pr-2">+{{ communityLabels(post).length - 3 }}</p>
+                                           </div>
+                                         }
+                                         @if (!communityLabels(post).length) {
+                                           <span class="text-gray-400 text-sm">—</span>
+                                         }
                                        </div>
                                     </td>
 

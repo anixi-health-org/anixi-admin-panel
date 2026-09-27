@@ -24,6 +24,7 @@ import {
   MediaUploadResult,
   MediaUploadService,
 } from '../../services/media-upload.service';
+import { DjangoApiService } from '../../services/django-api.service';
 import { PostService } from '../../services/post.service';
 
 @Component({
@@ -67,6 +68,7 @@ export class ContentEditorComponent implements OnInit, OnDestroy {
     private router: Router,
     private postService: PostService,
     private mediaUpload: MediaUploadService,
+    private djangoApi: DjangoApiService,
     private sanitizer: DomSanitizer,
     private notif: NzNotificationService
   ) {}
@@ -199,7 +201,11 @@ export class ContentEditorComponent implements OnInit, OnDestroy {
   }
 
   get previewMediaUrl(): string | null {
-    return this.uploaded?.downloadURL || this.existingMediaUrl() || this.rawObjectUrl;
+    // Prefer the local blob while available so the editor never depends on
+    // authenticated media GETs for immediate preview.
+    if (this.rawObjectUrl) return this.rawObjectUrl;
+    const remote = this.uploaded?.downloadURL || this.existingMediaUrl();
+    return this.djangoApi.resolveMediaUrl(remote) || remote || null;
   }
 
   get previewIsVideo(): boolean {
