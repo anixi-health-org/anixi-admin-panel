@@ -1,0 +1,59 @@
+<section class="page">
+  <header class="page-header">
+    <h1>Medical schemes</h1>
+    <p>Toggle catalog entries without a deploy. Inactive schemes are hidden from patient and portal pickers.</p>
+  </header>
+
+  <p *ngIf="error" class="error">{{ error }}</p>
+  <p *ngIf="loading">Loading catalog…</p>
+
+  <div *ngIf="!loading && !error" class="grid">
+    <div class="card">
+      <h2>Schemes</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Slug</th>
+            <th>Active</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of schemes">
+            <td>{{ row.name }}</td>
+            <td>{{ row.slug }}</td>
+            <td>
+              <button nz-button nzSize="small" (click)="toggleScheme(row)">
+                {{ row.isActive ? 'Active' : 'Inactive' }}
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>Plan options</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Plan</th>
+            <th>Scheme</th>
+            <th>Active</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of plans">
+            <td>{{ row.name }}</td>
+            <td>{{ row.schemeName }}</td>
+            <td>
+              <button nz-button nzSize="small" (click)="togglePlan(row)">
+                {{ row.isActive ? 'Active' : 'Inactive' }}
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>

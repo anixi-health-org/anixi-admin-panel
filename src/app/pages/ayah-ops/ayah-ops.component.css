@@ -1,0 +1,38 @@
+.ayah-ops {
+  max-width: 40rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.ayah-ops h1 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.ayah-ops p {
+  margin: 0.25rem 0 0;
+  color: #475569;
+}
+
+.ayah-ops form,
+.ayah-ops .preview {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  background: #fff;
+}
+
+.ayah-ops button {
+  justify-self: start;
+  border: 0;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.9rem;
+  background: #0f172a;
+  color: #fff;
+}
+
+.ayah-ops button:disabled {
+  opacity: 0.5;
+}

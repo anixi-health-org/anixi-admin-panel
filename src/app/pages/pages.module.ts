@@ -35,6 +35,7 @@ import { EstablishmentsComponent } from './establishments/establishments.compone
 import { NotificationsComponent } from './notifications/notifications.component';
 import { MarketplacePartnersComponent } from './marketplace-partners/marketplace-partners.component';
 import { PatientImportComponent } from './patient-import/patient-import.component';
+import { AyahOpsComponent } from './ayah-ops/ayah-ops.component';
 import { AnalyticsComponent } from './analytics/analytics.component';
 import { AuditLogComponent } from './audit-log/audit-log.component';
 import { TeamAccessComponent } from './team-access/team-access.component';
@@ -43,6 +44,7 @@ import { OrdersComponent } from './orders/orders.component';
 import { RichTextEditorComponent } from '../components/rich-text-editor/rich-text-editor.component';
 import { OpsPaginationComponent } from '../components/ops-pagination/ops-pagination.component';
 import { OpsPageSkeletonComponent } from '../components/ops-page-skeleton/ops-page-skeleton.component';
+import { MedicalSchemesComponent } from './medical-schemes/medical-schemes.component';
 
 @NgModule({
   declarations: [
@@ -62,6 +64,7 @@ import { OpsPageSkeletonComponent } from '../components/ops-page-skeleton/ops-pa
     NotificationsComponent,
     MarketplacePartnersComponent,
     PatientImportComponent,
+    AyahOpsComponent,
     AnalyticsComponent,
     AuditLogComponent,
     TeamAccessComponent,
@@ -73,6 +76,7 @@ import { OpsPageSkeletonComponent } from '../components/ops-page-skeleton/ops-pa
     RichTextEditorComponent,
     OpsPaginationComponent,
     OpsPageSkeletonComponent,
+    MedicalSchemesComponent,
   ],
   imports: [
     CommonModule,

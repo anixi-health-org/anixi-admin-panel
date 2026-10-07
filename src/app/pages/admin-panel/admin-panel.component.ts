@@ -31,6 +31,7 @@ const navGroups: NavGroup[] = [
       { name: 'Marketplace partners', icon: 'store', path: '/marketplace-partners' },
       { name: 'Patients / Users', icon: 'users', path: '/users' },
       { name: 'Patient Import', icon: 'upload', path: '/patient-import' },
+      { name: 'Ayah', icon: 'sparkles', path: '/ayah' },
     ],
   },
   {
@@ -70,6 +71,7 @@ const navGroups: NavGroup[] = [
       { name: 'Notifications', icon: 'bell', path: '/notifications' },
       { name: 'Analytics', icon: 'chart-column', path: '/analytics' },
       { name: 'Orders', icon: 'shopping-bag', path: '/orders' },
+      { name: 'Medical schemes', icon: 'heart', path: '/medical-schemes' },
     ],
   },
   {

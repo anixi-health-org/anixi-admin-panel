@@ -606,6 +606,69 @@ export class DjangoApiService {
     );
   }
 
+  listAdminMedicalSchemes() {
+    return this.request<
+      Array<{
+        id: string;
+        slug: string;
+        name: string;
+        isActive: boolean;
+        sortOrder: number;
+      }>
+    >('/api/v1/auth/admin/medical-schemes/');
+  }
+
+  patchAdminMedicalScheme(
+    id: string,
+    body: { isActive?: boolean; sortOrder?: number },
+  ) {
+    return this.request<{
+      id: string;
+      slug: string;
+      name: string;
+      isActive: boolean;
+      sortOrder: number;
+    }>('/api/v1/auth/admin/medical-schemes/', {
+      method: 'PATCH',
+      body: JSON.stringify({ id, ...body }),
+    });
+  }
+
+  listAdminMedicalSchemePlans(schemeSlug?: string) {
+    const qs = schemeSlug
+      ? `?schemeSlug=${encodeURIComponent(schemeSlug)}`
+      : '';
+    return this.request<
+      Array<{
+        id: string;
+        slug: string;
+        name: string;
+        schemeSlug: string;
+        schemeName: string;
+        isActive: boolean;
+        sortOrder: number;
+      }>
+    >(`/api/v1/auth/admin/medical-scheme-plans/${qs}`);
+  }
+
+  patchAdminMedicalSchemePlan(
+    id: string,
+    body: { isActive?: boolean; sortOrder?: number },
+  ) {
+    return this.request<{
+      id: string;
+      slug: string;
+      name: string;
+      schemeSlug: string;
+      schemeName: string;
+      isActive: boolean;
+      sortOrder: number;
+    }>('/api/v1/auth/admin/medical-scheme-plans/', {
+      method: 'PATCH',
+      body: JSON.stringify({ id, ...body }),
+    });
+  }
+
   async uploadDocument(file: File, purpose: string): Promise<{ url: string; storageKey: string }> {
     const form = new FormData();
     form.append('file', file);
@@ -632,5 +695,113 @@ export class DjangoApiService {
       );
     }
     return json.data;
+  }
+
+  async previewUnichart(file: File): Promise<{
+    previewId: string;
+    status: string;
+    patient: { id: string; displayName: string } | null;
+    fills: string[];
+    chart: { patientName: string; dateOfBirth: string; idNumber: string; chartId: string };
+  }> {
+    const form = new FormData();
+    form.append('file', file, file.name);
+    const headers: Record<string, string> = { 'X-Client': 'admin-panel' };
+    if (this.accessToken) headers['Authorization'] = `Bearer ${this.accessToken}`;
+    const res = await fetch(`${environment.apiUrl}/api/v1/patients/unichart/preview/`, {
+      method: 'POST',
+      headers,
+      body: form,
+    });
+    const json = (await res.json()) as Envelope<{
+      previewId: string;
+      status: string;
+      patient: { id: string; displayName: string } | null;
+      fills: string[];
+      chart: { patientName: string; dateOfBirth: string; idNumber: string; chartId: string };
+    }>;
+    if (!res.ok || !json.success || !json.data) {
+      throw new Error(typeof json.error === 'string' ? json.error : 'Chart preview failed');
+    }
+    return json.data;
+  }
+
+  applyUnichart(previewId: string) {
+    return this.request<{ status: string; patientId?: string; filled?: string[] }>(
+      '/api/v1/patients/unichart/apply/',
+      { method: 'POST', body: JSON.stringify({ previewId }) },
+    );
+  }
+
+  async startUnichartPdfImport(file: File, practiceId: string): Promise<{ jobId: string }> {
+    const form = new FormData();
+    form.append('file', file, file.name);
+    form.append('practiceId', practiceId);
+    form.append('async', 'true');
+    const headers: Record<string, string> = { 'X-Client': 'admin-panel' };
+    if (this.accessToken) headers['Authorization'] = `Bearer ${this.accessToken}`;
+    const res = await fetch(`${environment.apiUrl}/api/v1/patients/unichart/batch-apply/`, {
+      method: 'POST',
+      headers,
+      body: form,
+    });
+    const json = (await res.json()) as Envelope<{ jobId: string }>;
+    if (!res.ok || !json.success || !json.data?.jobId) {
+      throw new Error(typeof json.error === 'string' ? json.error : 'UniCharts import failed');
+    }
+    return { jobId: json.data.jobId };
+  }
+
+  getImportJobStatus(jobId: string) {
+    return this.request<{
+      jobId: string;
+      jobKind?: string;
+      status: string;
+      totalRows: number;
+      processedRows: number;
+      importedCount: number;
+      skippedCount: number;
+      errorCount: number;
+    }>(`/api/v1/patients/roster/import-jobs/${encodeURIComponent(jobId)}/`);
+  }
+
+  async streamCompanion(message: string, agentId: string): Promise<string> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'X-Client': 'admin-panel',
+    };
+    if (this.accessToken) headers['Authorization'] = `Bearer ${this.accessToken}`;
+    const res = await fetch(`${environment.apiUrl}/api/v1/companion/stream/`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ message, agentId }),
+    });
+    if (!res.ok || !res.body) {
+      throw new Error('Ayah is unavailable right now.');
+    }
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let text = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const parts = buffer.split('\n');
+      buffer = parts.pop() ?? '';
+      for (const line of parts) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith('data:')) continue;
+        const payload = trimmed.slice(5).trim();
+        if (!payload || payload === '[DONE]') continue;
+        try {
+          const event = JSON.parse(payload) as { type?: string; delta?: string; text?: string };
+          text += event.delta || event.text || '';
+        } catch {
+          text += payload;
+        }
+      }
+    }
+    return text;
   }
 }
