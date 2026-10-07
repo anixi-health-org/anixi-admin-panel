@@ -1,0 +1,45 @@
+<section class="ayah-ops">
+  <header>
+    <h1>Ayah</h1>
+    <p>
+      For a <strong>clinic export</strong> PDF (name like <code>Clinic_*.pdf</code>), use
+      <strong>Bulk UniCharts PDF import</strong> with the target <code>practiceId</code> — not single-chart preview.
+      Single-chart preview is for one patient chart only (up to 50MB bulk) —
+      OCR runs in the background, creates missing roster patients, and fills empty fields on matches.
+    </p>
+  </header>
+
+  <form (submit)="$event.preventDefault(); runBulkImport()">
+    <label for="practice-id">Practice ID (clinic UUID)</label>
+    <input id="practice-id" type="text" [(ngModel)]="practiceId" name="practiceId" />
+    <button type="button" [disabled]="!file || !practiceId.trim() || bulkBusy" (click)="runBulkImport()">
+      {{ bulkBusy ? 'Import running…' : 'Bulk UniCharts PDF import' }}
+    </button>
+  </form>
+
+  <form (submit)="$event.preventDefault(); previewChart()">
+    <label for="unichart-file">UniCharts PDF</label>
+    <input id="unichart-file" type="file" accept="application/pdf" (change)="onFile($event)" />
+    <button type="submit" [disabled]="!file || busy">{{ busy ? 'Reading chart…' : 'Preview missing fields' }}</button>
+  </form>
+
+  <p *ngIf="status">{{ status }}</p>
+
+  <div *ngIf="preview?.status === 'matched'" class="preview">
+    <p>Patient in Anixi: <strong>{{ preview?.patient?.displayName }}</strong></p>
+    <ul>
+      <li *ngIf="!preview?.fills?.length">No empty fields to fill.</li>
+      <li *ngFor="let key of preview?.fills">{{ label(key) }}</li>
+    </ul>
+    <button type="button" [disabled]="busy || !preview?.fills?.length" (click)="confirm()">
+      Confirm and fill empty fields
+    </button>
+  </div>
+
+  <form (submit)="$event.preventDefault(); ask()">
+    <label for="ayah-note">Message Ayah</label>
+    <textarea id="ayah-note" rows="3" [(ngModel)]="note" name="note"></textarea>
+    <button type="submit" [disabled]="busy || !note.trim()">Ask Ayah</button>
+  </form>
+  <p *ngIf="reply">{{ reply }}</p>
+</section>

@@ -12,11 +12,13 @@ import { EstablishmentsComponent } from './establishments/establishments.compone
 import { NotificationsComponent } from './notifications/notifications.component';
 import { MarketplacePartnersComponent } from './marketplace-partners/marketplace-partners.component';
 import { PatientImportComponent } from './patient-import/patient-import.component';
+import { AyahOpsComponent } from './ayah-ops/ayah-ops.component';
 import { AnalyticsComponent } from './analytics/analytics.component';
 import { AuditLogComponent } from './audit-log/audit-log.component';
 import { TeamAccessComponent } from './team-access/team-access.component';
 import { PendingActivationsComponent } from './pending-activations/pending-activations.component';
 import { OrdersComponent } from './orders/orders.component';
+import { MedicalSchemesComponent } from './medical-schemes/medical-schemes.component';
 import { authGuard } from '../guards/auth.guard';
 import { guestGuard } from '../guards/guest.guard';
 
@@ -40,6 +42,7 @@ const routes: Routes = [
       { path: 'establishments', component: EstablishmentsComponent },
       { path: 'marketplace-partners', component: MarketplacePartnersComponent },
       { path: 'patient-import', component: PatientImportComponent },
+      { path: 'ayah', component: AyahOpsComponent },
       { path: 'certificat-viewer', component: PdfViewerComponent },
       { path: 'users', component: UsersComponent },
       { path: 'notifications', component: NotificationsComponent },
@@ -48,6 +51,7 @@ const routes: Routes = [
       { path: 'audit-log', component: AuditLogComponent },
       { path: 'team-access', component: TeamAccessComponent },
       { path: 'pending-activations', component: PendingActivationsComponent },
+      { path: 'medical-schemes', component: MedicalSchemesComponent },
     ],
   },
   { path: '**', redirectTo: 'dashboard' },
