@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
+import { configureLegacyComponentTest } from '../../testing/component-testbed';
 import { DashboardComponent } from './dashboard.component';
 
 describe('DashboardComponent', () => {
@@ -7,10 +8,7 @@ describe('DashboardComponent', () => {
   let fixture: ComponentFixture<DashboardComponent>;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      declarations: [DashboardComponent]
-    })
-    .compileComponents();
+    await configureLegacyComponentTest([DashboardComponent]);
 
     fixture = TestBed.createComponent(DashboardComponent);
     component = fixture.componentInstance;

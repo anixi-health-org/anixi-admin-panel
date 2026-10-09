@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
+import { configureLegacyComponentTest } from '../../testing/component-testbed';
 import { UsersComponent } from './users.component';
 
 describe('UsersComponent', () => {
@@ -7,14 +8,10 @@ describe('UsersComponent', () => {
   let fixture: ComponentFixture<UsersComponent>;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      declarations: [UsersComponent]
-    })
-    .compileComponents();
+    await configureLegacyComponentTest([UsersComponent]);
 
     fixture = TestBed.createComponent(UsersComponent);
     component = fixture.componentInstance;
-    fixture.detectChanges();
   });
 
   it('should create', () => {

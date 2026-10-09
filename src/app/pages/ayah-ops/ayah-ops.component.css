@@ -1,38 +1,57 @@
-.ayah-ops {
-  max-width: 40rem;
-  display: grid;
+.ayah-ops-page {
+  max-width: 42rem;
+}
+
+.ayah-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.ayah-status {
+  margin: 0;
+}
+
+.ayah-status--error {
+  color: #b91c1c;
+}
+
+.ayah-fill-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: #334155;
+}
+
+.ayah-chat-panel .ops-panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: 1rem;
 }
 
-.ayah-ops h1 {
-  margin: 0;
-  font-size: 1.5rem;
+.ayah-sparkle {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: #427160;
+  flex-shrink: 0;
+  margin-top: 0.15rem;
 }
 
-.ayah-ops p {
-  margin: 0.25rem 0 0;
-  color: #475569;
-}
-
-.ayah-ops form,
-.ayah-ops .preview {
-  display: grid;
-  gap: 0.75rem;
+.ayah-reply {
+  margin-top: 0.25rem;
   padding: 1rem;
-  border: 1px solid #e2e8f0;
   border-radius: 0.75rem;
-  background: #fff;
+  border: 1px solid #dbeafe;
+  background: #f8fafc;
+  color: #1e293b;
+  white-space: pre-wrap;
+  line-height: 1.55;
+  font-size: 0.9375rem;
 }
 
-.ayah-ops button {
-  justify-self: start;
-  border: 0;
-  border-radius: 0.5rem;
-  padding: 0.5rem 0.9rem;
-  background: #0f172a;
-  color: #fff;
-}
-
-.ayah-ops button:disabled {
-  opacity: 0.5;
+.ayah-ops-page code {
+  font-size: 0.85em;
+  padding: 0.1em 0.35em;
+  border-radius: 0.25rem;
+  background: #f1f5f9;
 }

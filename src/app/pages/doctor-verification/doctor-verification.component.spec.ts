@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
+import { configureLegacyComponentTest } from '../../testing/component-testbed';
 import { DoctorVerificationComponent } from './doctor-verification.component';
 
 describe('DoctorVerificationComponent', () => {
@@ -7,14 +8,10 @@ describe('DoctorVerificationComponent', () => {
   let fixture: ComponentFixture<DoctorVerificationComponent>;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      declarations: [DoctorVerificationComponent]
-    })
-    .compileComponents();
+    await configureLegacyComponentTest([DoctorVerificationComponent]);
 
     fixture = TestBed.createComponent(DoctorVerificationComponent);
     component = fixture.componentInstance;
-    fixture.detectChanges();
   });
 
   it('should create', () => {

@@ -11,6 +11,10 @@ type Envelope<T> = {
 @Injectable({ providedIn: 'root' })
 export class DjangoApiService {
   private accessToken: string | null = null;
+  private refreshToken: string | null = null;
+  private refreshInflight: Promise<string | null> | null = null;
+  private unauthorizedHandler: (() => void) | null = null;
+  private tokensRefreshedHandler: ((access: string, refresh: string) => void) | null = null;
 
   get enabled(): boolean {
     return Boolean(environment.apiUrl);
@@ -18,6 +22,38 @@ export class DjangoApiService {
 
   setAccessToken(token: string | null): void {
     this.accessToken = token;
+  }
+
+  getAccessToken(): string | null {
+    return this.accessToken;
+  }
+
+  getRefreshToken(): string | null {
+    return this.refreshToken;
+  }
+
+  setSession(access: string | null, refresh: string | null): void {
+    this.accessToken = access;
+    this.refreshToken = refresh;
+  }
+
+  /** Called when refresh fails so the shell can leave the idle page immediately. */
+  setUnauthorizedHandler(handler: () => void): void {
+    this.unauthorizedHandler = handler;
+  }
+
+  setTokensRefreshedHandler(handler: (access: string, refresh: string) => void): void {
+    this.tokensRefreshedHandler = handler;
+  }
+
+  async refreshAccessToken(): Promise<string | null> {
+    if (!this.refreshToken) return null;
+    if (!this.refreshInflight) {
+      this.refreshInflight = this.postRefresh().finally(() => {
+        this.refreshInflight = null;
+      });
+    }
+    return this.refreshInflight;
   }
 
   /** Append JWT so `<img>` tags can load protected Django media URLs. */
@@ -71,6 +107,73 @@ export class DjangoApiService {
     };
   }
 
+  private isExpiringSoon(token: string, skewSeconds = 60): boolean {
+    try {
+      const payloadPart = token.split('.')[1];
+      if (!payloadPart) return true;
+      const payload = JSON.parse(
+        atob(payloadPart.replace(/-/g, '+').replace(/_/g, '/')),
+      ) as { exp?: number };
+      if (!payload.exp) return false;
+      return payload.exp * 1000 <= Date.now() + skewSeconds * 1000;
+    } catch {
+      return true;
+    }
+  }
+
+  private async postRefresh(): Promise<string | null> {
+    if (!this.refreshToken) return null;
+    try {
+      const res = await fetch(`${environment.apiUrl}/api/v1/auth/refresh/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Client': 'admin-panel',
+        },
+        body: JSON.stringify({ refresh: this.refreshToken }),
+      });
+      const json = (await res.json()) as Envelope<{ access?: string; refresh?: string }>;
+      const access = json.data?.access;
+      if (!res.ok || !json.success || !access) return null;
+      const refresh = json.data.refresh || this.refreshToken;
+      this.accessToken = access;
+      this.refreshToken = refresh;
+      this.tokensRefreshedHandler?.(access, refresh);
+      return access;
+    } catch {
+      return null;
+    }
+  }
+
+  private async ensureAccessToken(): Promise<void> {
+    if (this.accessToken && !this.isExpiringSoon(this.accessToken)) return;
+    await this.refreshAccessToken();
+  }
+
+  private failSession(): void {
+    this.accessToken = null;
+    this.refreshToken = null;
+    this.unauthorizedHandler?.();
+  }
+
+  private async authorizedFetch(path: string, init: RequestInit, headers: Record<string, string>): Promise<Response> {
+    await this.ensureAccessToken();
+    if (this.accessToken) {
+      headers['Authorization'] = `Bearer ${this.accessToken}`;
+    }
+    const res = await fetch(`${environment.apiUrl}${path}`, { ...init, headers });
+    if (res.status !== 401 || path.includes('/auth/login') || path.includes('/auth/refresh')) {
+      return res;
+    }
+    const refreshed = await this.refreshAccessToken();
+    if (!refreshed) {
+      this.failSession();
+      return res;
+    }
+    headers['Authorization'] = `Bearer ${refreshed}`;
+    return fetch(`${environment.apiUrl}${path}`, { ...init, headers });
+  }
+
   private async request<T>(
     path: string,
     init: RequestInit = {},
@@ -87,22 +190,20 @@ export class DjangoApiService {
       'X-Client': 'admin-panel',
       ...(init.headers as Record<string, string> | undefined),
     };
-    if (this.accessToken) {
-      headers['Authorization'] = `Bearer ${this.accessToken}`;
-    }
 
     let res: Response;
     try {
-      res = await fetch(`${environment.apiUrl}${normalizedPath}`, {
-        ...init,
-        headers,
-      });
+      res = await this.authorizedFetch(normalizedPath, init, headers);
     } catch {
       throw new Error(
         `Cannot reach the API at ${environment.apiUrl}. Is Django running on port 8000?`,
       );
     }
     const json = (await res.json()) as Envelope<T>;
+    if (res.status === 401 && !normalizedPath.includes('/auth/login')) {
+      this.failSession();
+      throw new Error('Your session expired. Sign in again.');
+    }
     if (!res.ok || !json.success) {
       const message =
         typeof json.error === 'string'
@@ -128,22 +229,20 @@ export class DjangoApiService {
       'X-Client': 'admin-panel',
       ...(init.headers as Record<string, string> | undefined),
     };
-    if (this.accessToken) {
-      headers['Authorization'] = `Bearer ${this.accessToken}`;
-    }
 
     let res: Response;
     try {
-      res = await fetch(`${environment.apiUrl}${normalizedPath}`, {
-        ...init,
-        headers,
-      });
+      res = await this.authorizedFetch(normalizedPath, init, headers);
     } catch {
       throw new Error(
         `Cannot reach the API at ${environment.apiUrl}. Is Django running on port 8000?`,
       );
     }
     const json = (await res.json()) as Envelope<T>;
+    if (res.status === 401) {
+      this.failSession();
+      throw new Error('Your session expired. Sign in again.');
+    }
     if (!res.ok || !json.success) {
       const message =
         typeof json.error === 'string'

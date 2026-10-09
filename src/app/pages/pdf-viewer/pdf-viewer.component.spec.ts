@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
+import { configureLegacyComponentTest } from '../../testing/component-testbed';
 import { PdfViewerComponent } from './pdf-viewer.component';
 
 describe('PdfViewerComponent', () => {
@@ -7,10 +8,7 @@ describe('PdfViewerComponent', () => {
   let fixture: ComponentFixture<PdfViewerComponent>;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      declarations: [PdfViewerComponent]
-    })
-    .compileComponents();
+    await configureLegacyComponentTest([PdfViewerComponent]);
 
     fixture = TestBed.createComponent(PdfViewerComponent);
     component = fixture.componentInstance;

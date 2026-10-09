@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
+import { configureLegacyComponentTest } from '../../testing/component-testbed';
 import { CardComponent } from './card.component';
 
 describe('CardComponent', () => {
@@ -7,13 +8,11 @@ describe('CardComponent', () => {
   let fixture: ComponentFixture<CardComponent>;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      declarations: [CardComponent]
-    })
-    .compileComponents();
+    await configureLegacyComponentTest([CardComponent]);
 
     fixture = TestBed.createComponent(CardComponent);
     component = fixture.componentInstance;
+    component.cardValue = { label: 'Test', value: '0' };
     fixture.detectChanges();
   });
 

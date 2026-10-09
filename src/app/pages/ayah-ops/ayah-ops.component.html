@@ -1,45 +1,148 @@
-<section class="ayah-ops">
-  <header>
-    <h1>Ayah</h1>
-    <p>
-      For a <strong>clinic export</strong> PDF (name like <code>Clinic_*.pdf</code>), use
-      <strong>Bulk UniCharts PDF import</strong> with the target <code>practiceId</code> — not single-chart preview.
-      Single-chart preview is for one patient chart only (up to 50MB bulk) —
-      OCR runs in the background, creates missing roster patients, and fills empty fields on matches.
-    </p>
+<div class="ops-page ayah-ops-page">
+  <header class="ops-page-header">
+    <div class="ops-page-header__copy">
+      <p class="ops-page-header__eyebrow">Clinical operations</p>
+      <h1 class="ops-page-header__title">Ayah · UniCharts</h1>
+      <p class="ops-page-header__subtitle">
+        Import a clinic export PDF (<code>Clinic_*.pdf</code>) into a practice roster, preview a single
+        patient chart, or ask Ayah about a preview before you apply it.
+      </p>
+    </div>
   </header>
 
-  <form (submit)="$event.preventDefault(); runBulkImport()">
-    <label for="practice-id">Practice ID (clinic UUID)</label>
-    <input id="practice-id" type="text" [(ngModel)]="practiceId" name="practiceId" />
-    <button type="button" [disabled]="!file || !practiceId.trim() || bulkBusy" (click)="runBulkImport()">
-      {{ bulkBusy ? 'Import running…' : 'Bulk UniCharts PDF import' }}
+  <section class="ops-panel">
+    <div class="ops-panel__header">
+      <div>
+        <p class="ops-section-label">Setup</p>
+        <h2 class="ops-panel__title">Practice & PDF</h2>
+      </div>
+    </div>
+
+    <label class="ops-field" for="ayah-practice">
+      <span class="ops-field__label">Clinic / practice</span>
+      <select id="ayah-practice" class="ops-select" [(ngModel)]="practiceId" name="practiceId">
+        <option value="">Select a practice…</option>
+        @for (p of practices; track p.id) {
+          <option [value]="p.id">{{ p.name }}</option>
+        }
+      </select>
+    </label>
+
+    <div
+      class="ops-file-drop"
+      [class.ops-file-drop--active]="isDragOver"
+      (dragover)="onDragOver($event)"
+      (dragleave)="onDragLeave($event)"
+      (drop)="onDrop($event)"
+    >
+      <input
+        id="unichart-file"
+        type="file"
+        accept="application/pdf"
+        class="ops-file-drop__input"
+        (change)="onFile($event)"
+      />
+      <label for="unichart-file" class="ops-file-drop__label">
+        <span class="ops-file-drop__icon" aria-hidden="true">
+          <lucide-icon name="upload"></lucide-icon>
+        </span>
+        <span class="ops-file-drop__title">
+          @if (file) {
+            {{ file.name }}
+          } @else {
+            Drop UniCharts PDF here or click to browse
+          }
+        </span>
+        <span class="ops-file-drop__hint">
+          @if (file) {
+            {{ (file.size / (1024 * 1024)).toFixed(2) }} MB · bulk or single-chart actions below
+          } @else {
+            Clinic export or one patient chart · up to 50 MB
+          }
+        </span>
+      </label>
+    </div>
+
+    <div class="ayah-action-row">
+      <button
+        type="button"
+        class="ops-btn ops-btn--primary"
+        [disabled]="!file || !practiceId.trim() || bulkBusy"
+        (click)="runBulkImport()"
+      >
+        {{ bulkBusy ? 'Import running…' : 'Bulk UniCharts PDF import' }}
+      </button>
+      <button
+        type="button"
+        class="ops-btn ops-btn--secondary"
+        [disabled]="!file || chartBusy"
+        (click)="previewChart()"
+      >
+        {{ chartBusy ? 'Reading chart…' : 'Preview missing fields' }}
+      </button>
+    </div>
+
+    @if (status) {
+      <p class="ops-note ayah-status" [class.ayah-status--error]="statusError">{{ status }}</p>
+    }
+  </section>
+
+  @if (preview?.status === 'matched') {
+    <section class="ops-panel ayah-preview-panel">
+      <div class="ops-panel__header">
+        <div>
+          <p class="ops-section-label">Preview</p>
+          <h2 class="ops-panel__title">{{ preview?.patient?.displayName }}</h2>
+        </div>
+      </div>
+      <ul class="ayah-fill-list">
+        @if (!preview?.fills?.length) {
+          <li>No empty fields to fill on this patient.</li>
+        }
+        @for (key of preview?.fills; track key) {
+          <li>{{ label(key) }}</li>
+        }
+      </ul>
+      <button
+        type="button"
+        class="ops-btn ops-btn--primary"
+        [disabled]="chartBusy || !preview?.fills?.length"
+        (click)="confirm()"
+      >
+        Confirm and fill empty fields
+      </button>
+    </section>
+  }
+
+  <section class="ops-panel ayah-chat-panel">
+    <div class="ops-panel__header">
+      <div>
+        <p class="ops-section-label">Assist</p>
+        <h2 class="ops-panel__title">Message Ayah</h2>
+      </div>
+      <lucide-icon name="sparkles" class="ayah-sparkle" aria-hidden="true"></lucide-icon>
+    </div>
+    <label class="ops-field" for="ayah-note">
+      <span class="ops-field__label">Question about this import or preview</span>
+      <textarea
+        id="ayah-note"
+        class="ops-textarea"
+        rows="4"
+        [(ngModel)]="note"
+        name="note"
+        placeholder="e.g. Which patients will this bulk file create vs update?"
+      ></textarea>
+    </label>
+    <button
+      type="button"
+      class="ops-btn ops-btn--primary"
+      [disabled]="ayahBusy || !note.trim()"
+      (click)="ask()"
+    >
+      {{ ayahBusy ? 'Ayah is thinking…' : 'Ask Ayah' }}
     </button>
-  </form>
-
-  <form (submit)="$event.preventDefault(); previewChart()">
-    <label for="unichart-file">UniCharts PDF</label>
-    <input id="unichart-file" type="file" accept="application/pdf" (change)="onFile($event)" />
-    <button type="submit" [disabled]="!file || busy">{{ busy ? 'Reading chart…' : 'Preview missing fields' }}</button>
-  </form>
-
-  <p *ngIf="status">{{ status }}</p>
-
-  <div *ngIf="preview?.status === 'matched'" class="preview">
-    <p>Patient in Anixi: <strong>{{ preview?.patient?.displayName }}</strong></p>
-    <ul>
-      <li *ngIf="!preview?.fills?.length">No empty fields to fill.</li>
-      <li *ngFor="let key of preview?.fills">{{ label(key) }}</li>
-    </ul>
-    <button type="button" [disabled]="busy || !preview?.fills?.length" (click)="confirm()">
-      Confirm and fill empty fields
-    </button>
-  </div>
-
-  <form (submit)="$event.preventDefault(); ask()">
-    <label for="ayah-note">Message Ayah</label>
-    <textarea id="ayah-note" rows="3" [(ngModel)]="note" name="note"></textarea>
-    <button type="submit" [disabled]="busy || !note.trim()">Ask Ayah</button>
-  </form>
-  <p *ngIf="reply">{{ reply }}</p>
-</section>
+    @if (reply) {
+      <div class="ayah-reply">{{ reply }}</div>
+    }
+  </section>
+</div>

@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { DjangoApiService } from '../../services/django-api.service';
 
 type Preview = {
@@ -6,6 +6,11 @@ type Preview = {
   status: string;
   patient: { id: string; displayName: string } | null;
   fills: string[];
+};
+
+type Practice = {
+  id: string;
+  name: string;
 };
 
 const FILL_LABELS: Record<string, string> = {
@@ -33,21 +38,70 @@ const FILL_LABELS: Record<string, string> = {
   templateUrl: './ayah-ops.component.html',
   styleUrl: './ayah-ops.component.css',
 })
-export class AyahOpsComponent {
+export class AyahOpsComponent implements OnInit {
+  practices: Practice[] = [];
   file: File | null = null;
   preview: Preview | null = null;
   status = '';
-  busy = false;
+  statusError = false;
+  chartBusy = false;
   bulkBusy = false;
+  ayahBusy = false;
   practiceId = '';
   note = '';
   reply = '';
+  isDragOver = false;
 
   constructor(private api: DjangoApiService) {}
 
+  ngOnInit(): void {
+    void this.loadPractices();
+  }
+
+  async loadPractices(): Promise<void> {
+    try {
+      const raw = await this.api.listPractices();
+      this.practices = raw.map((p: Record<string, unknown>) => ({
+        id: String(p['id']),
+        name: String(p['name'] || p['practiceName'] || 'Unnamed'),
+      }));
+    } catch {
+      this.practices = [];
+    }
+  }
+
   onFile(event: Event) {
     const input = event.target as HTMLInputElement;
-    this.file = input.files?.[0] ?? null;
+    this.setFile(input.files?.[0] ?? null);
+  }
+
+  onDragOver(event: DragEvent): void {
+    event.preventDefault();
+    this.isDragOver = true;
+  }
+
+  onDragLeave(event: DragEvent): void {
+    event.preventDefault();
+    this.isDragOver = false;
+  }
+
+  onDrop(event: DragEvent): void {
+    event.preventDefault();
+    this.isDragOver = false;
+    const dropped = event.dataTransfer?.files?.[0];
+    if (dropped && dropped.type === 'application/pdf') {
+      this.setFile(dropped);
+    }
+  }
+
+  private setFile(next: File | null) {
+    this.file = next;
+    this.preview = null;
+    this.reply = '';
+    if (next) {
+      this.status = '';
+      this.statusError = false;
+    }
   }
 
   label(key: string): string {
@@ -56,12 +110,13 @@ export class AyahOpsComponent {
 
   async previewChart() {
     if (!this.file) return;
-    this.busy = true;
+    this.chartBusy = true;
     this.status = '';
+    this.statusError = false;
     try {
       this.preview = await this.api.previewUnichart(this.file);
       if (this.preview.status === 'matched') {
-        this.status = `${this.preview.patient?.displayName ?? 'Patient'} matched. Confirm to fill empty fields.`;
+        this.status = `${this.preview.patient?.displayName ?? 'Patient'} matched. Review fields below, then confirm.`;
       } else if (this.preview.status === 'already_applied') {
         this.status = 'This chart was already applied.';
       } else {
@@ -69,8 +124,9 @@ export class AyahOpsComponent {
       }
     } catch (err) {
       this.status = err instanceof Error ? err.message : 'Chart preview failed';
+      this.statusError = true;
     } finally {
-      this.busy = false;
+      this.chartBusy = false;
     }
   }
 
@@ -78,6 +134,7 @@ export class AyahOpsComponent {
     if (!this.file || !this.practiceId.trim()) return;
     this.bulkBusy = true;
     this.status = 'Uploading PDF and starting background OCR…';
+    this.statusError = false;
     try {
       const { jobId } = await this.api.startUnichartPdfImport(this.file, this.practiceId.trim());
       for (;;) {
@@ -91,12 +148,14 @@ export class AyahOpsComponent {
         }
         if (job.status === 'failed') {
           this.status = 'Import job failed.';
+          this.statusError = true;
           break;
         }
         await new Promise((resolve) => setTimeout(resolve, 1500));
       }
     } catch (err) {
       this.status = err instanceof Error ? err.message : 'Bulk import failed';
+      this.statusError = true;
     } finally {
       this.bulkBusy = false;
     }
@@ -104,7 +163,8 @@ export class AyahOpsComponent {
 
   async confirm() {
     if (!this.preview) return;
-    this.busy = true;
+    this.chartBusy = true;
+    this.statusError = false;
     try {
       const result = await this.api.applyUnichart(this.preview.previewId);
       const filled = (result.filled ?? []).map((key) => this.label(key)).join(', ');
@@ -116,15 +176,16 @@ export class AyahOpsComponent {
       this.file = null;
     } catch (err) {
       this.status = err instanceof Error ? err.message : 'Could not apply this chart';
+      this.statusError = true;
     } finally {
-      this.busy = false;
+      this.chartBusy = false;
     }
   }
 
   async ask() {
     const message = this.note.trim();
     if (!message) return;
-    this.busy = true;
+    this.ayahBusy = true;
     this.reply = '';
     const previewNote = this.preview
       ? ` Preview ${this.preview.previewId} status ${this.preview.status} for ${this.preview.patient?.displayName ?? 'no patient'}. Missing: ${this.preview.fills.join(', ') || 'none'}.`
@@ -134,7 +195,7 @@ export class AyahOpsComponent {
     } catch (err) {
       this.reply = err instanceof Error ? err.message : 'Ayah is unavailable right now.';
     } finally {
-      this.busy = false;
+      this.ayahBusy = false;
     }
   }
 }
