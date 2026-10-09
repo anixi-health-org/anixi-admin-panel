@@ -26,10 +26,10 @@ describe('AppComponent', () => {
     expect(app.title).toEqual('anixi-admin-panel');
   });
 
-  it('should render title', () => {
+  it('should render the router outlet shell', () => {
     const fixture = TestBed.createComponent(AppComponent);
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent).toContain('Hello, anixi-admin-panel');
+    expect(compiled.querySelector('router-outlet')).toBeTruthy();
   });
 });
