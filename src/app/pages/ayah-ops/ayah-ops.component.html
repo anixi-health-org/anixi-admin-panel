@@ -1,26 +1,21 @@
-<div class="ops-page ayah-ops-page">
-  <header class="ops-page-header">
-    <div class="ops-page-header__copy">
-      <p class="ops-page-header__eyebrow">Clinical operations</p>
-      <h1 class="ops-page-header__title">Ayah · UniCharts</h1>
-      <p class="ops-page-header__subtitle">
-        Import a clinic export PDF (<code>Clinic_*.pdf</code>) into a practice roster, preview a single
-        patient chart, or ask Ayah about a preview before you apply it.
-      </p>
-    </div>
-  </header>
-
-  <section class="ops-panel">
-    <div class="ops-panel__header">
-      <div>
-        <p class="ops-section-label">Setup</p>
-        <h2 class="ops-panel__title">Practice & PDF</h2>
+<div class="ayah-workspace">
+  <aside class="ayah-rail" aria-label="Ayah setup">
+    <header class="ayah-rail__header">
+      <img src="/ayah.png" alt="" class="ayah-rail__avatar" width="36" height="36" />
+      <div class="ayah-rail__intro">
+        <p class="ayah-rail__eyebrow">Platform copilot</p>
+        <h1 class="ayah-rail__title">Ayah · UniCharts</h1>
       </div>
-    </div>
+    </header>
 
-    <label class="ops-field" for="ayah-practice">
-      <span class="ops-field__label">Clinic / practice</span>
-      <select id="ayah-practice" class="ops-select" [(ngModel)]="practiceId" name="practiceId">
+    <p class="ayah-rail__lede">
+      Import clinic export PDFs into a practice roster, preview one chart, or ask Ayah before you apply
+      changes.
+    </p>
+
+    <label class="ayah-field" for="ayah-practice">
+      <span class="ayah-field__label">Clinic / practice</span>
+      <select id="ayah-practice" class="ayah-select" [(ngModel)]="practiceId" name="practiceId">
         <option value="">Select a practice…</option>
         @for (p of practices; track p.id) {
           <option [value]="p.id">{{ p.name }}</option>
@@ -28,121 +23,159 @@
       </select>
     </label>
 
-    <div
-      class="ops-file-drop"
-      [class.ops-file-drop--active]="isDragOver"
-      (dragover)="onDragOver($event)"
-      (dragleave)="onDragLeave($event)"
-      (drop)="onDrop($event)"
-    >
-      <input
-        id="unichart-file"
-        type="file"
-        accept="application/pdf"
-        class="ops-file-drop__input"
-        (change)="onFile($event)"
-      />
-      <label for="unichart-file" class="ops-file-drop__label">
-        <span class="ops-file-drop__icon" aria-hidden="true">
-          <lucide-icon name="upload"></lucide-icon>
-        </span>
-        <span class="ops-file-drop__title">
-          @if (file) {
-            {{ file.name }}
-          } @else {
-            Drop UniCharts PDF here or click to browse
-          }
-        </span>
-        <span class="ops-file-drop__hint">
-          @if (file) {
-            {{ (file.size / (1024 * 1024)).toFixed(2) }} MB · bulk or single-chart actions below
-          } @else {
-            Clinic export or one patient chart · up to 50 MB
-          }
-        </span>
-      </label>
-    </div>
+    @if (selectedPracticeName) {
+      <p class="ayah-rail__practice">
+        Working in <strong>{{ selectedPracticeName }}</strong>
+      </p>
+    }
 
-    <div class="ayah-action-row">
-      <button
-        type="button"
-        class="ops-btn ops-btn--primary"
-        [disabled]="!file || !practiceId.trim() || bulkBusy"
-        (click)="runBulkImport()"
-      >
-        {{ bulkBusy ? 'Import running…' : 'Bulk UniCharts PDF import' }}
-      </button>
-      <button
-        type="button"
-        class="ops-btn ops-btn--secondary"
-        [disabled]="!file || chartBusy"
-        (click)="previewChart()"
-      >
-        {{ chartBusy ? 'Reading chart…' : 'Preview missing fields' }}
-      </button>
-    </div>
+    <section class="ayah-rail__section">
+      <p class="ayah-rail__section-label">Quick actions</p>
+      <div class="ayah-quick-actions">
+        <button
+          type="button"
+          class="ayah-quick-action"
+          [disabled]="!file || !practiceId.trim() || bulkBusy"
+          (click)="runBulkImport()"
+        >
+          <span class="ayah-quick-action__title">
+            {{ bulkBusy ? 'Import running…' : 'Bulk roster import' }}
+          </span>
+          <span class="ayah-quick-action__detail">Clinic export PDF · creates or updates patients</span>
+        </button>
+        <button
+          type="button"
+          class="ayah-quick-action"
+          [disabled]="!file || chartBusy"
+          (click)="previewChart()"
+        >
+          <span class="ayah-quick-action__title">
+            {{ chartBusy ? 'Reading chart…' : 'Preview one chart' }}
+          </span>
+          <span class="ayah-quick-action__detail">Fill empty fields after you confirm</span>
+        </button>
+        <button type="button" class="ayah-quick-action ayah-quick-action--ghost" (click)="setQuickNote(quickPromptBulk)">
+          <span class="ayah-quick-action__title">Ask about bulk import</span>
+          <span class="ayah-quick-action__detail">Creates vs updates, duplicates, errors</span>
+        </button>
+      </div>
+    </section>
 
     @if (status) {
-      <p class="ops-note ayah-status" [class.ayah-status--error]="statusError">{{ status }}</p>
+      <div class="ayah-status" [class.ayah-status--error]="statusError" role="status">
+        {{ status }}
+      </div>
     }
-  </section>
+  </aside>
 
-  @if (preview?.status === 'matched') {
-    <section class="ops-panel ayah-preview-panel">
-      <div class="ops-panel__header">
-        <div>
-          <p class="ops-section-label">Preview</p>
-          <h2 class="ops-panel__title">{{ preview?.patient?.displayName }}</h2>
-        </div>
-      </div>
-      <ul class="ayah-fill-list">
-        @if (!preview?.fills?.length) {
-          <li>No empty fields to fill on this patient.</li>
-        }
-        @for (key of preview?.fills; track key) {
-          <li>{{ label(key) }}</li>
-        }
-      </ul>
-      <button
-        type="button"
-        class="ops-btn ops-btn--primary"
-        [disabled]="chartBusy || !preview?.fills?.length"
-        (click)="confirm()"
-      >
-        Confirm and fill empty fields
-      </button>
-    </section>
-  }
+  <main class="ayah-main">
+    <div class="ayah-thread" aria-live="polite">
+      @for (msg of chatMessages; track msg.id) {
+        <article class="ayah-bubble" [class.ayah-bubble--user]="msg.role === 'user'">
+          @if (msg.role === 'assistant') {
+            <img src="/ayah.png" alt="" class="ayah-bubble__avatar" width="28" height="28" />
+          }
+          <div class="ayah-bubble__body">
+            <p class="ayah-bubble__meta">{{ msg.role === 'user' ? 'You' : 'Ayah' }}</p>
+            <div class="ayah-bubble__text">{{ msg.content }}</div>
+          </div>
+        </article>
+      }
 
-  <section class="ops-panel ayah-chat-panel">
-    <div class="ops-panel__header">
-      <div>
-        <p class="ops-section-label">Assist</p>
-        <h2 class="ops-panel__title">Message Ayah</h2>
-      </div>
-      <lucide-icon name="sparkles" class="ayah-sparkle" aria-hidden="true"></lucide-icon>
+      @if (preview?.status === 'matched') {
+        <article class="ayah-preview-card">
+          <header class="ayah-preview-card__header">
+            <p class="ayah-preview-card__label">Chart preview</p>
+            <h2 class="ayah-preview-card__title">{{ preview?.patient?.displayName }}</h2>
+          </header>
+          <ul class="ayah-preview-card__list">
+            @if (!preview?.fills?.length) {
+              <li>No empty fields to fill on this patient.</li>
+            }
+            @for (key of preview?.fills; track key) {
+              <li>{{ label(key) }}</li>
+            }
+          </ul>
+          <div class="ayah-preview-card__actions">
+            <button
+              type="button"
+              class="ops-btn ops-btn--primary"
+              [disabled]="chartBusy || !preview?.fills?.length"
+              (click)="confirm()"
+            >
+              Confirm and fill empty fields
+            </button>
+            <button type="button" class="ops-btn ops-btn--secondary" (click)="dismissPreview()">
+              Dismiss
+            </button>
+          </div>
+        </article>
+      }
+
+      @if (ayahBusy) {
+        <article class="ayah-bubble">
+          <img src="/ayah.png" alt="" class="ayah-bubble__avatar" width="28" height="28" />
+          <div class="ayah-bubble__body">
+            <p class="ayah-bubble__meta">Ayah</p>
+            <p class="ayah-bubble__text ayah-bubble__text--muted">Thinking…</p>
+          </div>
+        </article>
+      }
     </div>
-    <label class="ops-field" for="ayah-note">
-      <span class="ops-field__label">Question about this import or preview</span>
-      <textarea
-        id="ayah-note"
-        class="ops-textarea"
-        rows="4"
-        [(ngModel)]="note"
-        name="note"
-        placeholder="e.g. Which patients will this bulk file create vs update?"
-      ></textarea>
-    </label>
-    <button
-      type="button"
-      class="ops-btn ops-btn--primary"
-      [disabled]="ayahBusy || !note.trim()"
-      (click)="ask()"
-    >
-      {{ ayahBusy ? 'Ayah is thinking…' : 'Ask Ayah' }}
-    </button>
-    @if (reply) {
-      <div class="ayah-reply">{{ reply }}</div>
-    }
-  </section>
+
+    <footer class="ayah-composer">
+      <div
+        class="ayah-drop"
+        [class.ayah-drop--active]="isDragOver"
+        [class.ayah-drop--has-file]="!!file"
+        (dragover)="onDragOver($event)"
+        (dragleave)="onDragLeave($event)"
+        (drop)="onDrop($event)"
+      >
+        <input
+          id="unichart-file"
+          type="file"
+          accept="application/pdf"
+          class="ayah-drop__input"
+          (change)="onFile($event)"
+        />
+        <label for="unichart-file" class="ayah-drop__label">
+          <lucide-icon name="paperclip" class="ayah-drop__icon" aria-hidden="true"></lucide-icon>
+          <span class="ayah-drop__text">
+            @if (file) {
+              {{ file.name }} · {{ (file.size / (1024 * 1024)).toFixed(2) }} MB
+            } @else {
+              Attach UniCharts PDF (clinic export or single chart, up to 50 MB)
+            }
+          </span>
+        </label>
+        @if (file) {
+          <button type="button" class="ayah-drop__clear" (click)="clearFile()" aria-label="Remove file">
+            <lucide-icon name="x" aria-hidden="true"></lucide-icon>
+          </button>
+        }
+      </div>
+
+      <div class="ayah-composer__row">
+        <textarea
+          id="ayah-note"
+          class="ayah-composer__input"
+          rows="2"
+          [(ngModel)]="note"
+          name="note"
+          placeholder="Ask Ayah about this import, preview, or practice…"
+          (keydown.enter)="onComposerEnter($event)"
+        ></textarea>
+        <button
+          type="button"
+          class="ayah-composer__send"
+          [disabled]="ayahBusy || !note.trim()"
+          (click)="ask()"
+          aria-label="Send message"
+        >
+          <lucide-icon name="send-horizontal" aria-hidden="true"></lucide-icon>
+        </button>
+      </div>
+    </footer>
+  </main>
 </div>

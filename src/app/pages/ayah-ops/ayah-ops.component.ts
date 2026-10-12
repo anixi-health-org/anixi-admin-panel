@@ -13,6 +13,12 @@ type Practice = {
   name: string;
 };
 
+type ChatMessage = {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+};
+
 const FILL_LABELS: Record<string, string> = {
   gender: 'Gender',
   dateOfBirth: 'Date of birth',
@@ -51,11 +57,29 @@ export class AyahOpsComponent implements OnInit {
   note = '';
   reply = '';
   isDragOver = false;
+  chatMessages: ChatMessage[] = [];
+  readonly quickPromptBulk =
+    'Which patients will this bulk UniCharts file create vs update, and what should I watch for?';
+
+  private chatSeq = 0;
 
   constructor(private api: DjangoApiService) {}
 
   ngOnInit(): void {
+    this.chatMessages = [
+      {
+        id: this.nextChatId(),
+        role: 'assistant',
+        content:
+          'Hi — attach a UniCharts PDF below or pick a practice on the left. I can walk you through bulk roster import or a single-chart preview before anything is written.',
+      },
+    ];
     void this.loadPractices();
+  }
+
+  get selectedPracticeName(): string {
+    const match = this.practices.find((p) => p.id === this.practiceId);
+    return match?.name ?? '';
   }
 
   async loadPractices(): Promise<void> {
@@ -101,7 +125,39 @@ export class AyahOpsComponent implements OnInit {
     if (next) {
       this.status = '';
       this.statusError = false;
+      this.pushChat(
+        'assistant',
+        `Attached ${next.name}. Choose bulk import or preview on the left when you are ready.`,
+      );
     }
+  }
+
+  clearFile(): void {
+    this.setFile(null);
+  }
+
+  dismissPreview(): void {
+    this.preview = null;
+  }
+
+  setQuickNote(text: string): void {
+    this.note = text;
+  }
+
+  onComposerEnter(event: Event): void {
+    const ke = event as KeyboardEvent;
+    if (ke.shiftKey) return;
+    ke.preventDefault();
+    void this.ask();
+  }
+
+  private nextChatId(): string {
+    this.chatSeq += 1;
+    return `ayah-chat-${this.chatSeq}`;
+  }
+
+  private pushChat(role: ChatMessage['role'], content: string): void {
+    this.chatMessages = [...this.chatMessages, { id: this.nextChatId(), role, content }];
   }
 
   label(key: string): string {
@@ -185,6 +241,8 @@ export class AyahOpsComponent implements OnInit {
   async ask() {
     const message = this.note.trim();
     if (!message) return;
+    this.pushChat('user', message);
+    this.note = '';
     this.ayahBusy = true;
     this.reply = '';
     const previewNote = this.preview
@@ -192,8 +250,11 @@ export class AyahOpsComponent implements OnInit {
       : '';
     try {
       this.reply = await this.api.streamCompanion(`${message}.${previewNote}`, 'ops-admin');
+      this.pushChat('assistant', this.reply);
     } catch (err) {
-      this.reply = err instanceof Error ? err.message : 'Ayah is unavailable right now.';
+      const errText = err instanceof Error ? err.message : 'Ayah is unavailable right now.';
+      this.reply = errText;
+      this.pushChat('assistant', errText);
     } finally {
       this.ayahBusy = false;
     }
