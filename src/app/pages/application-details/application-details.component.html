@@ -7,7 +7,12 @@
     <div class="detail-header">
       <div class="detail-header-main">
         @if (profileImage(doctor)) {
-          <img [src]="profileImage(doctor)!" alt="" class="detail-avatar" />
+          <img
+            [src]="profileImage(doctor)!"
+            alt=""
+            class="detail-avatar"
+            (error)="onProfilePhotoError()"
+          />
         } @else {
           <div class="detail-avatar detail-avatar--placeholder">
             {{ displayName(doctor).charAt(0) }}

@@ -75,6 +75,7 @@
                   class="ops-avatar"
                   [src]="profilePhoto(doctor)!"
                   alt=""
+                  (error)="onProfilePhotoError(doctor)"
                 />
               } @else {
                 <span class="ops-avatar" aria-hidden="true">
