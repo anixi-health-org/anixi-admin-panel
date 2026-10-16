@@ -181,6 +181,17 @@ export function getPracticeLicenseUrl(doctor: DoctorRecord): string | null {
   return url && url.trim() ? url : null;
 }
 
+/** Legacy Firebase / invalid keys — show initials instead of a broken `<img>`. */
+export function isUnusableProfileMediaUrl(url: string): boolean {
+  const trimmed = url.trim();
+  if (!trimmed || trimmed === 'null' || trimmed === 'undefined') return true;
+  const lower = trimmed.toLowerCase();
+  if (lower.startsWith('gs://')) return true;
+  if (lower.includes('firebasestorage.googleapis.com')) return true;
+  if (lower.includes('firebaseapp.com/storage')) return true;
+  return false;
+}
+
 function isPracticeLetterheadUrl(url: string): boolean {
   let decoded = url;
   try {
@@ -198,7 +209,12 @@ function isPracticeLetterheadUrl(url: string): boolean {
 export function getDoctorProfilePhotoUrl(doctor: DoctorRecord): string | null {
   const photo = doctor.profileImageUrl?.trim() || '';
   const logo = doctor.logoUrl?.trim() || '';
-  if (!photo || isPracticeLetterheadUrl(photo) || (logo && photo === logo)) {
+  if (
+    !photo ||
+    isUnusableProfileMediaUrl(photo) ||
+    isPracticeLetterheadUrl(photo) ||
+    (logo && photo === logo)
+  ) {
     return null;
   }
   return photo;

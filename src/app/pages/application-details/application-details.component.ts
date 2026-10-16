@@ -60,6 +60,7 @@ export class ApplicationDetailsComponent {
   downloadingUrl: string | null = null;
   doctor: DoctorRecord | null = null;
   decisionModal: DecisionModalState | null = null;
+  profilePhotoFailed = false;
 
   details$ = this.doctorId$.pipe(
     filter((id): id is string => !!id),
@@ -72,6 +73,7 @@ export class ApplicationDetailsComponent {
       this._id = value;
       this.isLoadingDetail = true;
       this.doctor = null;
+      this.profilePhotoFailed = false;
       this.closeDecisionModal();
     }
     this.doctorId$.next(value);
@@ -84,6 +86,7 @@ export class ApplicationDetailsComponent {
   ) {
     this.details$.subscribe((doctor) => {
       this.doctor = doctor;
+      this.profilePhotoFailed = false;
       this.isLoadingDetail = false;
     });
   }
@@ -124,7 +127,12 @@ export class ApplicationDetailsComponent {
   }
 
   profileImage(doctor: DoctorRecord): string | null {
+    if (this.profilePhotoFailed) return null;
     return getDoctorProfilePhotoUrl(doctor);
+  }
+
+  onProfilePhotoError(): void {
+    this.profilePhotoFailed = true;
   }
 
   specialty(doctor: DoctorRecord): string {

@@ -65,6 +65,8 @@ export class DoctorVerificationComponent implements OnInit, OnDestroy {
   pageSize = 20;
   private sub = new Subscription();
   isResponsive = false;
+  /** Doctors whose profile URL failed to load (403/404) — show initials instead. */
+  private failedProfilePhotoIds = new Set<string>();
 
   constructor(
     public utilFunctions: UtilFunctions,
@@ -195,7 +197,14 @@ export class DoctorVerificationComponent implements OnInit, OnDestroy {
   }
 
   profilePhoto(doctor: any): string | null {
+    const id = String(doctor?.id ?? '');
+    if (id && this.failedProfilePhotoIds.has(id)) return null;
     return getDoctorProfilePhotoUrl(doctor);
+  }
+
+  onProfilePhotoError(doctor: any): void {
+    const id = String(doctor?.id ?? '');
+    if (id) this.failedProfilePhotoIds.add(id);
   }
 
   doctorStatus(doctor: any): string {

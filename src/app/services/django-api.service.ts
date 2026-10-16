@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { environment } from '../../environments/environment';
+import { isUnusableProfileMediaUrl } from '../utils/doctor-record.utils';
 
 type Envelope<T> = {
   success: boolean;
@@ -56,6 +57,10 @@ export class DjangoApiService {
     return this.refreshInflight;
   }
 
+  private isLegacyProfileMedia(url: string): boolean {
+    return isUnusableProfileMediaUrl(url);
+  }
+
   /** Append JWT so `<img>` tags can load protected Django media URLs. */
   resolveMediaUrl(url: string | null | undefined): string | null {
     const trimmed = url?.trim();
@@ -94,15 +99,17 @@ export class DjangoApiService {
   }
 
   enrichDoctorMedia<T extends Record<string, unknown>>(doctor: T): T {
-    const profileImageUrl = this.resolveMediaUrl(
-      String(doctor['profileImageUrl'] ?? doctor['profile_image_url'] ?? ''),
-    );
+    const rawProfile = String(doctor['profileImageUrl'] ?? doctor['profile_image_url'] ?? '');
+    const profileImageUrl =
+      rawProfile.trim() && !this.isLegacyProfileMedia(rawProfile)
+        ? this.resolveMediaUrl(rawProfile)
+        : null;
     const logoUrl = this.resolveMediaUrl(
       String(doctor['logoUrl'] ?? doctor['logo_url'] ?? ''),
     );
     return {
       ...doctor,
-      ...(profileImageUrl ? { profileImageUrl } : {}),
+      profileImageUrl: profileImageUrl ?? '',
       ...(logoUrl ? { logoUrl } : {}),
     };
   }
