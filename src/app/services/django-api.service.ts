@@ -365,6 +365,7 @@ export class DjangoApiService {
   getAdminStats() {
     return this.request<{
       totalUsers: number;
+      directoryUsers?: number;
       patients: number;
       doctors: number;
       clinicAdmins: number;
@@ -653,8 +654,17 @@ export class DjangoApiService {
     all?: boolean;
     practiceId?: string;
     templateId?: string;
+    channel?: 'whatsapp' | 'email' | 'whatsapp_and_email';
   }) {
-    return this.request<{ sent: number; skipped: number; failed: number; templateId?: string }>(
+    return this.request<{
+      sent: number;
+      skipped: number;
+      failed: number;
+      sentWhatsapp?: number;
+      sentEmail?: number;
+      templateId?: string;
+      channel?: string;
+    }>(
       '/api/v1/auth/admin/pending-activations/remind/',
       {
         method: 'POST',

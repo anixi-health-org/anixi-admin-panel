@@ -1,25 +1,4 @@
 <div class="ops-page users-page">
-  <header class="users-hero">
-    <div class="users-hero__copy">
-      <p class="users-hero__eyebrow">Clinical operations</p>
-      <h1 class="users-hero__title">Patients / Users</h1>
-      <p class="users-hero__subtitle">
-        Search and review platform accounts across patients, doctors, clinic admins,
-        marketplace partners, caregivers, and Anixi admins.
-      </p>
-    </div>
-    <div class="users-hero__aside">
-      <button
-        type="button"
-        class="users-hero__clear"
-        [class.users-hero__clear--visible]="roleFilter.value !== 'all'"
-        (click)="roleFilter.setValue('all')"
-      >
-        Show all roles
-      </button>
-    </div>
-  </header>
-
   <section class="users-census" aria-label="User counts">
     <button
       type="button"
@@ -35,7 +14,7 @@
       </div>
       <p class="users-census__total-value">{{ (totalCount$ | async) ?? '—' }}</p>
       <p class="users-census__total-hint">
-        Every account across Warriors, clinicians, clinic ops, and market partners
+        Directory accounts (excludes pending clinic roster placeholders)
       </p>
     </button>
 
@@ -54,7 +33,7 @@
           </span>
         </div>
         <p class="users-census__tile-value">{{ (patientCount$ | async) ?? '—' }}</p>
-        <p class="users-census__tile-hint">Registered Warrior accounts</p>
+        <p class="users-census__tile-hint">Activated Warrior accounts (signed in)</p>
       </button>
 
       <button
@@ -163,6 +142,12 @@
       </div>
 
       <div class="users-filters-wrap ops-tabs">
+        @if (roleFilter.value === 'patient' || roleFilter.value === 'all') {
+          <p class="users-patient-scope-note">
+            Directory lists activated Warriors only. Pending clinic roster rows are under
+            <strong>CRM → Pending activations</strong>.
+          </p>
+        }
         <div class="ops-filters" role="tablist" aria-label="Filter by role">
           @for (filter of roleFilters; track filter.value) {
             <button
@@ -202,7 +187,7 @@
                   <th>Role</th>
                   <th>Email</th>
                   <th>Phone</th>
-                  <th>Created</th>
+                  <th>Joined</th>
                 </tr>
               </thead>
               <tbody>
@@ -218,15 +203,15 @@
                     <td>
                       <div class="users-name-cell">
                         <span class="ops-avatar" aria-hidden="true">{{ initials(user) }}</span>
-                        <span>{{ displayName(user) }}</span>
+                        <span class="users-name-primary">{{ displayName(user) }}</span>
                       </div>
                     </td>
                     <td>
                       <span class="ops-badge" [class]="roleClass(user)">{{ role(user) }}</span>
                     </td>
-                    <td>{{ email(user) }}</td>
-                    <td>{{ phone(user) }}</td>
-                    <td>{{ created(user) }}</td>
+                    <td [class.users-cell--muted]="!hasContactEmail(user)">{{ email(user) }}</td>
+                    <td [class.users-cell--muted]="!hasPhone(user)">{{ phone(user) }}</td>
+                    <td class="users-cell--date">{{ created(user) }}</td>
                   </tr>
                 }
               </tbody>

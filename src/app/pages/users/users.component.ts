@@ -28,6 +28,8 @@ import {
   getUserDisplayName,
   getUserEmail,
   getUserPhone,
+  hasUserContactEmail,
+  hasUserPhone,
   getUserRole,
   PlatformUser,
   UserRoleFilter,
@@ -45,6 +47,7 @@ const roleFilters: { label: string; value: UserRoleFilter }[] = [
 
 type AdminUserStats = {
   totalUsers: number;
+  directoryUsers: number;
   patients: number;
   doctors: number;
   clinicAdmins: number;
@@ -111,6 +114,7 @@ export class UsersComponent implements OnInit, OnDestroy {
       map(
         (stats): AdminUserStats => ({
           totalUsers: stats.totalUsers ?? 0,
+          directoryUsers: stats.directoryUsers ?? stats.totalUsers ?? 0,
           patients: stats.patients ?? 0,
           doctors: stats.doctors ?? 0,
           clinicAdmins: stats.clinicAdmins ?? 0,
@@ -122,7 +126,7 @@ export class UsersComponent implements OnInit, OnDestroy {
       shareReplay(1)
     );
 
-    this.totalCount$ = this.stats$.pipe(map((s) => s.totalUsers));
+    this.totalCount$ = this.stats$.pipe(map((s) => s.directoryUsers));
     this.patientCount$ = this.stats$.pipe(map((s) => s.patients));
     this.doctorCount$ = this.stats$.pipe(map((s) => s.doctors));
     this.clinicAdminCount$ = this.stats$.pipe(map((s) => s.clinicAdmins));
@@ -242,6 +246,14 @@ export class UsersComponent implements OnInit, OnDestroy {
 
   phone(user: PlatformUser): string {
     return getUserPhone(user);
+  }
+
+  hasContactEmail(user: PlatformUser): boolean {
+    return hasUserContactEmail(user);
+  }
+
+  hasPhone(user: PlatformUser): boolean {
+    return hasUserPhone(user);
   }
 
   role(user: PlatformUser): string {

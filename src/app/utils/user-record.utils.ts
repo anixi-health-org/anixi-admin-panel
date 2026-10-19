@@ -1,3 +1,5 @@
+import { formatSaPhoneDisplay, formatSaPhoneIntlDisplay } from './format-sa-phone';
+
 export type PlatformUser = Record<string, unknown> & {
   id: string;
   displayName?: string;
@@ -5,6 +7,7 @@ export type PlatformUser = Record<string, unknown> & {
   lastName?: string;
   email?: string;
   phoneNumber?: string;
+  phoneNumberDisplay?: string;
   phone?: string;
   accountType?: string | null;
   role?: string | null;
@@ -79,11 +82,25 @@ export function getUserEmail(user: PlatformUser): string {
 }
 
 export function getUserPhone(user: PlatformUser): string {
-  const phone =
+  const display =
+    typeof user.phoneNumberDisplay === 'string' ? user.phoneNumberDisplay.trim() : '';
+  if (display) return display;
+
+  const raw =
     (typeof user.phoneNumber === 'string' && user.phoneNumber.trim()) ||
     (typeof user.phone === 'string' && user.phone.trim()) ||
     '';
-  return phone || '—';
+  if (!raw) return '—';
+  const formatted = formatSaPhoneIntlDisplay(null, raw);
+  return formatted || formatSaPhoneDisplay(raw) || raw;
+}
+
+export function hasUserContactEmail(user: PlatformUser): boolean {
+  return getUserEmail(user) !== '—';
+}
+
+export function hasUserPhone(user: PlatformUser): boolean {
+  return getUserPhone(user) !== '—';
 }
 
 export function getUserRole(user: PlatformUser): UserRoleFilter {
@@ -194,16 +211,24 @@ export function enrichUserWithPracticeContext(
   return enriched;
 }
 
+const USER_DATE_FORMAT: Intl.DateTimeFormatOptions = {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+};
+
 export function formatUserTimestamp(value: unknown): string {
   if (!value) return '—';
   if (typeof value === 'object' && value !== null && 'toDate' in value) {
     const date = (value as { toDate: () => Date }).toDate?.();
-    return date ? date.toLocaleDateString() : '—';
+    return date ? date.toLocaleDateString('en-ZA', USER_DATE_FORMAT) : '—';
   }
-  if (value instanceof Date) return value.toLocaleDateString();
+  if (value instanceof Date) return value.toLocaleDateString('en-ZA', USER_DATE_FORMAT);
   if (typeof value === 'string' || typeof value === 'number') {
     const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? '—' : date.toLocaleDateString();
+    return Number.isNaN(date.getTime())
+      ? '—'
+      : date.toLocaleDateString('en-ZA', USER_DATE_FORMAT);
   }
   return '—';
 }
