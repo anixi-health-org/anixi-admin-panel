@@ -36,6 +36,17 @@ type PlaceholderToken = {
   label: string;
 };
 
+export type ActivationReminderChannel = 'whatsapp' | 'email' | 'whatsapp_and_email';
+
+export type WhatsappReachabilityStatus =
+  | 'verified'
+  | 'reachable'
+  | 'not_on_whatsapp'
+  | 'unknown'
+  | 'invalid';
+
+const BULK_WHATSAPP_MAX = 250;
+
 @Component({
   selector: 'app-pending-activations',
   standalone: false,
@@ -70,6 +81,8 @@ export class PendingActivationsComponent implements OnInit {
     { key: 'clinic_name', label: 'Clinic name' },
     { key: 'clinic_code', label: 'Clinic code' },
   ];
+  reminderChannel: ActivationReminderChannel = 'whatsapp';
+  readonly bulkWhatsappMax = BULK_WHATSAPP_MAX;
 
   constructor(
     private djangoApi: DjangoApiService,
@@ -214,6 +227,8 @@ export class PendingActivationsComponent implements OnInit {
       displayName: String(row['displayName'] ?? ''),
       contactEmail: String(row['contactEmail'] ?? ''),
       phoneNumber: row['phoneNumber'] ? String(row['phoneNumber']) : undefined,
+      phoneE164: row['phoneE164'] ? String(row['phoneE164']) : null,
+      whatsappStatus: row['whatsappStatus'] as WhatsappReachabilityStatus | undefined,
       practiceId: row['practiceId'] ? String(row['practiceId']) : undefined,
       practiceName: row['practiceName'] ? String(row['practiceName']) : undefined,
       clinicCode: row['clinicCode'] ? String(row['clinicCode']) : undefined,
@@ -222,6 +237,8 @@ export class PendingActivationsComponent implements OnInit {
       mrn: row['mrn'] ? String(row['mrn']) : undefined,
       notes: row['notes'] ? String(row['notes']) : undefined,
       canRemind: Boolean(row['canRemind']),
+      canRemindEmail: Boolean(row['canRemindEmail'] ?? row['contactEmail']),
+      canRemindWhatsapp: this.resolveCanRemindWhatsapp(row),
       createdAt: row['createdAt'] ? String(row['createdAt']) : undefined,
       lastRemindedAt: row['lastRemindedAt'] ? String(row['lastRemindedAt']) : undefined,
     };
@@ -240,8 +257,53 @@ export class PendingActivationsComponent implements OnInit {
     };
   }
 
+  get remindsViaEmail(): boolean {
+    return this.reminderChannel === 'email' || this.reminderChannel === 'whatsapp_and_email';
+  }
+
+  get remindsViaWhatsapp(): boolean {
+    return this.reminderChannel === 'whatsapp' || this.reminderChannel === 'whatsapp_and_email';
+  }
+
+  private resolveCanRemindWhatsapp(row: Record<string, unknown>): boolean {
+    if (row['canRemindWhatsapp'] !== undefined && row['canRemindWhatsapp'] !== null) {
+      return Boolean(row['canRemindWhatsapp']);
+    }
+    const status = row['whatsappStatus'] as WhatsappReachabilityStatus | undefined;
+    if (status === 'invalid' || status === 'not_on_whatsapp') return false;
+    const digits = String(row['phoneNumber'] ?? row['phoneE164'] ?? '').replace(/\D/g, '');
+    return digits.length >= 9;
+  }
+
+  rowRemindable(row: PendingActivationRow): boolean {
+    if (this.remindsViaWhatsapp && row.canRemindWhatsapp) return true;
+    if (this.remindsViaEmail && row.canRemindEmail) return true;
+    return false;
+  }
+
   get remindableCount(): number {
-    return this.rows.filter((row) => row.contactEmail?.trim()).length;
+    return this.rows.filter((row) => this.rowRemindable(row)).length;
+  }
+
+  get overWhatsappBatchLimit(): boolean {
+    if (!this.remindsViaWhatsapp) return false;
+    const count = this.selectedIds.size > 0 ? this.selectedIds.size : this.remindableCount;
+    return count > BULK_WHATSAPP_MAX;
+  }
+
+  get missingContactHint(): string {
+    if (this.remindsViaWhatsapp && !this.remindsViaEmail) {
+      return 'add a valid mobile, or fix numbers marked Not on WhatsApp / Invalid';
+    }
+    if (this.remindsViaEmail && !this.remindsViaWhatsapp) {
+      return 'edit rows missing email to enable reminders';
+    }
+    return 'fix phone/email for the selected channel (Not on WhatsApp rows are skipped for WA)';
+  }
+
+  onReminderChannelChange(value: ActivationReminderChannel): void {
+    this.reminderChannel = value;
+    this.selectedIds.clear();
   }
 
   toggleRow(patientId: string, checked: boolean): void {
@@ -253,9 +315,27 @@ export class PendingActivationsComponent implements OnInit {
     this.selectedIds.clear();
     if (checked) {
       for (const row of this.rows) {
-        if (row.contactEmail?.trim()) this.selectedIds.add(row.patientId);
+        if (this.rowRemindable(row)) this.selectedIds.add(row.patientId);
       }
     }
+  }
+
+  clearSelection(): void {
+    this.selectedIds.clear();
+  }
+
+  primarySendLabel(): string {
+    if (this.isSending) return 'Sending…';
+    const count = this.selectedIds.size > 0 ? this.selectedIds.size : this.remindableCount;
+    const scope =
+      this.selectedIds.size > 0 ? `selected (${count})` : `all (${count})`;
+    if (this.reminderChannel === 'email') {
+      return `Send email to ${scope}`;
+    }
+    if (this.reminderChannel === 'whatsapp_and_email') {
+      return `Send WhatsApp + email to ${scope}`;
+    }
+    return `Send WhatsApp to ${scope}`;
   }
 
   clearEditError(): void {
@@ -430,21 +510,32 @@ export class PendingActivationsComponent implements OnInit {
   private async sendReminders(patientIds?: string[], all = false): Promise<void> {
     this.isSending = true;
     try {
+      if (this.overWhatsappBatchLimit) {
+        this.notification.error(
+          'Too many recipients',
+          `WhatsApp reminders: max ${BULK_WHATSAPP_MAX} per batch. Narrow your selection.`,
+          ERROR_NOTIFICATION_BOX_POSITION,
+        );
+        return;
+      }
       const result = await this.djangoApi.remindPendingActivations({
         patientIds,
         all,
         templateId: this.selectedTemplateId || undefined,
+        channel: this.reminderChannel,
       });
-      this.notification.success(
-        'Reminders sent',
-        `Sent ${result?.sent ?? 0}, skipped ${result?.skipped ?? 0}, failed ${result?.failed ?? 0}.`,
-        SUCCESS_NOTIFICATION_BOX_POSITION,
-      );
+      const wa = result?.sentWhatsapp ?? 0;
+      const em = result?.sentEmail ?? 0;
+      const detail =
+        wa || em
+          ? `WhatsApp ${wa}, email ${em}. Skipped ${result?.skipped ?? 0}, failed ${result?.failed ?? 0}.`
+          : `Sent ${result?.sent ?? 0}, skipped ${result?.skipped ?? 0}, failed ${result?.failed ?? 0}.`;
+      this.notification.success('Reminders sent', detail, SUCCESS_NOTIFICATION_BOX_POSITION);
       await this.loadRows();
     } catch (error) {
       this.notification.error(
         'Reminder send failed',
-        error instanceof Error ? error.message : 'Check SMTP settings and try again.',
+        error instanceof Error ? error.message : 'Check Meta WhatsApp and SMTP settings, then try again.',
         ERROR_NOTIFICATION_BOX_POSITION,
       );
     } finally {

@@ -2,6 +2,7 @@
   <nz-sider
     [nzWidth]="268"
     nzBreakpoint="lg"
+    [(nzCollapsed)]="isCollapsed"
     (nzCollapsedChange)="onChange($event)"
     [nzCollapsible]="true"
     [nzTrigger]="null"
@@ -62,7 +63,7 @@
     </div>
   </nz-sider>
 
-  <nz-layout class="admin-main">
+  <nz-layout class="admin-main" [class.admin-main--collapsed]="isCollapsed">
     <header class="admin-header">
       <div class="admin-header__spacer" aria-hidden="true"></div>
 

@@ -1,20 +1,22 @@
 :host {
   display: block;
-  margin: calc(-1 * var(--space-3)) calc(-1 * var(--space-2)) calc(-1 * var(--space-5));
+  /* Do not use negative horizontal margins — they bleed into admin-main’s
+     sider offset and clip the left rail under the fixed sidebar. */
+  margin: 0;
+  width: 100%;
+  max-width: 100%;
   min-height: calc(100dvh - 4rem);
-}
-
-@media (min-width: 1024px) {
-  :host {
-    margin: calc(-1 * var(--space-4)) calc(-1 * var(--space-4)) calc(-1 * var(--space-6));
-  }
+  box-sizing: border-box;
 }
 
 .ayah-workspace {
   display: flex;
   flex-direction: column;
+  width: 100%;
+  max-width: 100%;
   min-height: inherit;
   background: #f8faf8;
+  box-sizing: border-box;
 }
 
 @media (min-width: 1024px) {

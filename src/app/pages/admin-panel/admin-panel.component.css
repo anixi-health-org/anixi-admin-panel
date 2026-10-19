@@ -140,11 +140,24 @@
 .admin-main {
   min-height: 100dvh;
   margin-left: 268px;
+  width: calc(100% - 268px);
+  max-width: calc(100% - 268px);
+  min-width: 0;
+  box-sizing: border-box;
+  overflow-x: clip;
+}
+
+.admin-main--collapsed {
+  margin-left: 80px;
+  width: calc(100% - 80px);
+  max-width: calc(100% - 80px);
 }
 
 @media (max-width: 991px) {
   .admin-main {
     margin-left: 80px;
+    width: calc(100% - 80px);
+    max-width: calc(100% - 80px);
   }
 }
 
@@ -271,4 +284,10 @@
 .admin-content {
   background: var(--anixi-surface);
   min-height: calc(100dvh - 4rem);
+  min-width: 0;
+  overflow-x: clip;
+}
+
+.admin-content:has(app-ayah-ops) {
+  padding: 0;
 }

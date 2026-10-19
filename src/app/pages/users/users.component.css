@@ -352,6 +352,17 @@
   flex-wrap: wrap;
 }
 
+.users-patient-scope-note {
+  margin: 0 0 0.65rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid #dce6df;
+  background: #f4f8f5;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: #4a5c52;
+}
+
 .users-filters-wrap {
   padding: 0.75rem 1rem 0.25rem;
 }
@@ -416,6 +427,38 @@
   gap: 0.65rem;
   font-weight: 600;
   color: #1f2a26;
+}
+
+.users-name-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.users-name-primary {
+  font-weight: 600;
+  color: #1f2a26;
+  line-height: 1.25;
+}
+
+.users-name-secondary {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #8b9a90;
+  line-height: 1.2;
+  word-break: break-word;
+}
+
+.users-cell--muted {
+  color: #9aa8a0 !important;
+  font-style: normal;
+}
+
+.users-cell--date {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: #5b6b63;
 }
 
 .users-detail__body {

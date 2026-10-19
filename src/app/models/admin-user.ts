@@ -35,6 +35,8 @@ export interface PendingActivationRow {
   displayName: string;
   contactEmail: string;
   phoneNumber?: string;
+  phoneE164?: string | null;
+  whatsappStatus?: 'verified' | 'reachable' | 'not_on_whatsapp' | 'unknown' | 'invalid';
   practiceId?: string;
   practiceName?: string;
   clinicCode?: string;
@@ -43,6 +45,8 @@ export interface PendingActivationRow {
   mrn?: string;
   notes?: string;
   canRemind?: boolean;
+  canRemindEmail?: boolean;
+  canRemindWhatsapp?: boolean;
   createdAt?: string;
   lastRemindedAt?: string;
 }

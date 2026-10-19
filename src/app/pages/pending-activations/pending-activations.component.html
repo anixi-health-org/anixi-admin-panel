@@ -3,69 +3,116 @@
     <div class="ops-page-header__copy">
       <p class="ops-page-header__eyebrow">CRM</p>
       <h1 class="ops-page-header__title">Pending activations</h1>
-      <p class="ops-page-header__subtitle">
-        Clinic roster patients who have not activated their Anixi account yet. Edit contact details and send reminder emails.
-      </p>
     </div>
-    @if (canRemind) {
-      <div class="header-actions">
-        <button
-          type="button"
-          class="ops-btn ops-btn--secondary"
-          [disabled]="isSending || selectedIds.size === 0"
-          (click)="remindSelected()"
-        >
-          Remind selected ({{ selectedIds.size }})
-        </button>
-        <button
-          type="button"
-          class="ops-btn ops-btn--primary"
-          [disabled]="isSending || remindableCount === 0"
-          (click)="remindAll()"
-        >
-          {{ isSending ? 'Sending…' : 'Remind all (' + remindableCount + ')' }}
-        </button>
-      </div>
-    }
   </header>
 
   @if (canRemind) {
-    <section class="ops-panel template-panel">
-      <div class="ops-panel__header template-panel__header">
-        <div>
-          <p class="ops-section-label">Reminders</p>
-          <h2 class="ops-panel__title">Email template</h2>
-        </div>
-      </div>
-      <div class="template-panel__row">
-        <label class="ops-field template-field">
-          <span class="ops-field__label">Template for reminders</span>
-          <select id="template-select" class="ops-select" [(ngModel)]="selectedTemplateId">
-            @for (template of templates; track template.id) {
-              <option [value]="template.id">
-                {{ template.name }}{{ template.isDefault ? ' (default)' : '' }}
-              </option>
-            }
-          </select>
-        </label>
-        <div class="template-panel__actions">
-          @if (selectedTemplate()) {
-            <button type="button" class="ops-btn ops-btn--secondary" (click)="openEditTemplate(selectedTemplate()!)">
-              Edit
-            </button>
+    <section class="bulk-outreach">
+      <div class="bulk-outreach__summary">
+        <p class="bulk-outreach__count">
+          @if (selectedIds.size > 0) {
+            <strong>{{ selectedIds.size }}</strong> selected ·
           }
-          <button type="button" class="ops-btn ops-btn--ghost" (click)="openNewTemplate()">
-            New template
+          <strong>{{ remindableCount }}</strong> can receive reminders on this channel
+        </p>
+        @if (selectedIds.size > 0) {
+          <button
+            type="button"
+            class="bulk-outreach__clear"
+            [disabled]="isSending"
+            (click)="clearSelection()"
+          >
+            Clear selection
           </button>
-        </div>
+        }
       </div>
-      @if (!templates.length) {
-        <p class="template-panel__empty">No templates yet. Create one or run the backend migration to seed the default invite.</p>
-      } @else {
-        <p class="ops-note ops-note--info template-panel__note">
-          Each email is personalised with the patient name, clinic, and signup link automatically.
+
+      @if (overWhatsappBatchLimit) {
+        <p class="bulk-outreach__warn" role="status">
+          WhatsApp reminders: max {{ bulkWhatsappMax }} per batch — narrow your selection or filter the list.
         </p>
       }
+
+      <div class="bulk-outreach__grid">
+        <section class="bulk-card bulk-card--whatsapp">
+          <h2 class="bulk-card__title">Activation reminders</h2>
+          <p class="bulk-card__lede">
+            @if (reminderChannel === 'email') {
+              Send personalised activation emails using the template on the right.
+            } @else if (reminderChannel === 'whatsapp_and_email') {
+              WhatsApp uses your approved Meta template (download link + clinic code); email uses the CRM
+              template beside this card.
+            } @else {
+              Sends the Anixi download link and clinic code via WhatsApp.
+            }
+          </p>
+          <div class="bulk-card__actions">
+            <button
+              type="button"
+              class="bulk-card__primary"
+              [disabled]="isSending || overWhatsappBatchLimit || remindableCount === 0"
+              (click)="selectedIds.size > 0 ? remindSelected() : remindAll()"
+            >
+              {{ primarySendLabel() }}
+            </button>
+            <label class="bulk-card__channel">
+              <span class="sr-only">Delivery channel</span>
+              <select
+                class="bulk-card__select"
+                [ngModel]="reminderChannel"
+                (ngModelChange)="onReminderChannelChange($event)"
+                [disabled]="isSending"
+                aria-label="Reminder delivery channel"
+              >
+                <option value="whatsapp">WhatsApp only</option>
+                <option value="whatsapp_and_email">WhatsApp + email</option>
+                <option value="email">Email only</option>
+              </select>
+            </label>
+          </div>
+        </section>
+
+        @if (remindsViaEmail) {
+          <section class="bulk-card bulk-card--email">
+            <h2 class="bulk-card__title bulk-card__title--muted">Email template</h2>
+            <p class="bulk-card__lede">
+              Used when you include email. Each message is personalised with patient name, clinic, and signup
+              link.
+            </p>
+            <div class="bulk-card__email-row">
+              <label class="ops-field bulk-card__field">
+                <span class="ops-field__label">Template for email reminders</span>
+                <select id="template-select" class="ops-select" [(ngModel)]="selectedTemplateId">
+                  @for (template of templates; track template.id) {
+                    <option [value]="template.id">
+                      {{ template.name }}{{ template.isDefault ? ' (default)' : '' }}
+                    </option>
+                  }
+                </select>
+              </label>
+              <div class="bulk-card__email-actions">
+                @if (selectedTemplate()) {
+                  <button
+                    type="button"
+                    class="ops-btn ops-btn--secondary"
+                    (click)="openEditTemplate(selectedTemplate()!)"
+                  >
+                    Edit
+                  </button>
+                }
+                <button type="button" class="ops-btn ops-btn--ghost" (click)="openNewTemplate()">
+                  New template
+                </button>
+              </div>
+            </div>
+            @if (!templates.length) {
+              <p class="bulk-card__empty">
+                No templates yet. Create one or run the backend migration to seed the default invite.
+              </p>
+            }
+          </section>
+        }
+      </div>
     </section>
   }
 
@@ -85,7 +132,7 @@
           <strong>{{ rows.length }}</strong> pending patients ·
           <strong>{{ remindableCount }}</strong> can receive reminders
           @if (remindableCount < rows.length) {
-            · edit rows missing email to enable reminders
+            · {{ missingContactHint }}
           }
         </p>
       </div>
@@ -104,8 +151,8 @@
                 </th>
               }
               <th>Patient</th>
+              <th>Mobile</th>
               <th>Contact email</th>
-              <th>Phone</th>
               <th>Clinic</th>
               <th>Code</th>
               <th>Last reminded</th>
@@ -116,12 +163,21 @@
           </thead>
           <tbody>
             @for (row of pagedRows; track row.id) {
-              <tr [class.row--missing-email]="!row.contactEmail">
+              <tr
+                [class.row--missing-contact]="
+                  remindsViaWhatsapp && !row.canRemindWhatsapp && remindsViaEmail && !row.canRemindEmail
+                "
+                [class.row--missing-phone]="
+                  remindsViaWhatsapp && (row.whatsappStatus === 'invalid' || !row.phoneNumber)
+                "
+                [class.row--not-on-wa]="row.whatsappStatus === 'not_on_whatsapp'"
+                [class.row--missing-email]="remindsViaEmail && !row.canRemindEmail && !row.contactEmail"
+              >
                 @if (canRemind) {
                   <td>
                     <input
                       type="checkbox"
-                      [disabled]="!row.contactEmail"
+                      [disabled]="!rowRemindable(row)"
                       [checked]="selectedIds.has(row.patientId)"
                       (change)="toggleRow(row.patientId, $any($event.target).checked)"
                       [attr.aria-label]="'Select ' + row.displayName"
@@ -135,13 +191,19 @@
                   }
                 </td>
                 <td>
+                  @if (row.phoneNumber || row.phoneE164) {
+                    <span class="phone-display">{{ row.phoneNumber || row.phoneE164 }}</span>
+                  } @else {
+                    <span class="missing">No phone — edit to add</span>
+                  }
+                </td>
+                <td>
                   @if (row.contactEmail) {
                     {{ row.contactEmail }}
                   } @else {
                     <span class="missing">No email — edit to add</span>
                   }
                 </td>
-                <td>{{ row.phoneNumber || '—' }}</td>
                 <td>{{ row.practiceName || '—' }}</td>
                 <td>{{ row.clinicCode || row.activationCode || '—' }}</td>
                 <td>{{ row.lastRemindedAt ? (row.lastRemindedAt | date: 'mediumDate') : 'Never' }}</td>
@@ -189,7 +251,7 @@
     }
 
     <p class="edit-modal__intro">
-      Update contact details so this patient can receive activation reminders.
+      Update contact details so this patient can receive WhatsApp and email activation reminders.
     </p>
 
     <div class="form-grid edit-modal__grid">
@@ -202,6 +264,15 @@
         />
       </label>
       <label>
+        <span>Mobile phone (WhatsApp)</span>
+        <input
+          type="tel"
+          [(ngModel)]="editDraft.phoneNumber"
+          (input)="clearEditError()"
+          placeholder="+27… or 0…"
+        />
+      </label>
+      <label>
         <span>Contact email</span>
         <input
           type="email"
@@ -210,14 +281,6 @@
           placeholder="name@example.com"
           autocomplete="email"
           [class.input--error]="editError && editError.includes('email')"
-        />
-      </label>
-      <label>
-        <span>Phone</span>
-        <input
-          type="tel"
-          [(ngModel)]="editDraft.phoneNumber"
-          (input)="clearEditError()"
         />
       </label>
       <label>
