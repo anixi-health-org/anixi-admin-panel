@@ -172,6 +172,7 @@ export class AuthService {
   }
 
   async signOut(): Promise<void> {
+    await this.djangoApi.revokeRefreshToken();
     this.clearSession();
   }
 

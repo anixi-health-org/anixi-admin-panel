@@ -7,6 +7,8 @@ export type AdminPermissions = {
   verifyDoctors?: boolean;
   sendActivationReminders?: boolean;
   viewAudit?: boolean;
+  manageCatalog?: boolean;
+  manageContent?: boolean;
 };
 
 export interface AdminUser {

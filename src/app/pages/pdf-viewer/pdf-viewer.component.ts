@@ -1,6 +1,26 @@
 import { Component, OnInit } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { ActivatedRoute } from '@angular/router';
+import { environment } from '../../../environments/environment';
+
+/** Only documents served by the Anixi API (or its storage) may be framed or fetched. */
+const ALLOWED_DOCUMENT_HOST_SUFFIXES = ['.amazonaws.com', 'firebasestorage.googleapis.com'];
+
+export function isAllowedDocumentUrl(value: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    return false;
+  }
+  const apiOrigin = new URL(environment.apiUrl).origin;
+  if (parsed.origin === apiOrigin) return true;
+  if (parsed.protocol !== 'https:') return false;
+  const host = parsed.hostname.toLowerCase();
+  return ALLOWED_DOCUMENT_HOST_SUFFIXES.some(
+    (suffix) => host === suffix.replace(/^\./, '') || host.endsWith(suffix),
+  );
+}
 
 @Component({
   selector: 'app-pdf-viewer',
@@ -27,7 +47,7 @@ export class PdfViewerComponent implements OnInit {
     const fileUrl = this.route.snapshot.queryParams['file'];
     const providedName = this.route.snapshot.queryParams['name'];
 
-    if (!fileUrl) {
+    if (!fileUrl || !isAllowedDocumentUrl(fileUrl)) {
       this.hasError = true;
       return;
     }

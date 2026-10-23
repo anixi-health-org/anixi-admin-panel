@@ -38,6 +38,21 @@ export class DjangoApiService {
     this.refreshToken = refresh;
   }
 
+  /** Blacklist the refresh token server-side; best effort so sign-out never blocks. */
+  async revokeRefreshToken(): Promise<void> {
+    const refresh = this.refreshToken;
+    if (!refresh || !this.enabled) return;
+    try {
+      await fetch(`${environment.apiUrl}/api/v1/auth/logout/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Client': 'admin-panel' },
+        body: JSON.stringify({ refresh }),
+      });
+    } catch {
+      // Network failure: the token still expires on its own.
+    }
+  }
+
   /** Called when refresh fails so the shell can leave the idle page immediately. */
   setUnauthorizedHandler(handler: () => void): void {
     this.unauthorizedHandler = handler;

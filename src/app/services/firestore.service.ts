@@ -94,34 +94,21 @@ export class FirestoreService {
     return from(this.djangoApi.getAdminStats());
   }
 
-  private historyEvent(
-    action: string,
-    reason?: string,
-    entity?: { type: string; id: string },
-  ) {
-    const adminId = this.authService.getAdminUserId() || 'unknown';
-    return {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      action,
-      adminId,
-      at: new Date().toISOString(),
-      ...(reason?.trim() ? { reason: reason.trim() } : {}),
-      ...(entity ? { entityType: entity.type, entityId: entity.id } : {}),
-    };
-  }
 
+  /** The API stamps adminId/at and appends; the client only names the action. */
   private async appendDoctorHistory(
     doctorId: string,
     action: string,
     reason?: string,
     entity?: { type: string; id: string },
   ): Promise<void> {
-    const current = await this.djangoApi.getDoctor(doctorId);
-    const history = Array.isArray(current['verificationHistory'])
-      ? [...(current['verificationHistory'] as unknown[])]
-      : [];
-    history.push(this.historyEvent(action, reason, entity));
-    await this.djangoApi.patchDoctor(doctorId, { verificationHistory: history });
+    await this.djangoApi.patchDoctor(doctorId, {
+      verificationHistoryEntry: {
+        action,
+        ...(reason?.trim() ? { reason: reason.trim() } : {}),
+        ...(entity ? { entityType: entity.type, entityId: entity.id } : {}),
+      },
+    });
   }
 
   async updateDoctorStatus(
@@ -139,27 +126,12 @@ export class FirestoreService {
       }
     }
 
-    const actionLabel =
-      status === 'approved'
-        ? 'Application approved'
-        : status === 'rejected'
-          ? 'Application rejected'
-          : status === 'suspended'
-            ? 'Doctor suspended'
-            : status === 'on_hold'
-              ? 'Held for further review'
-              : `Status set to ${status}`;
 
+    // The API appends the verification history entry (who, when, from/to status).
     await this.djangoApi.updateDoctorStatus(
       doctorId,
       status,
       options?.reason,
-    );
-    await this.appendDoctorHistory(
-      doctorId,
-      actionLabel,
-      options?.reason,
-      { type: 'doctor', id: doctorId },
     );
 
     if (status === 'approved') {
