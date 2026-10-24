@@ -124,6 +124,23 @@ export class MarketplacePartnersComponent implements OnInit, OnDestroy {
     return text || fallback;
   }
 
+  partnerTypeLabel(row: Record<string, unknown> | null): string {
+    const labels: Record<string, string> = {
+      wellness: 'Wellness',
+      pharmacy: 'Pharmacy',
+      caregiver: 'Professional caregiver',
+    };
+    const type = this.textField(row, 'partnerType', '');
+    return labels[type] || type || '—';
+  }
+
+  organization(row: Record<string, unknown> | null): string {
+    const metadata = row?.['metadata'];
+    if (!metadata || typeof metadata !== 'object') return '—';
+    const value = String((metadata as Record<string, unknown>)['organization'] ?? '').trim();
+    return value || '—';
+  }
+
   offeringList(
     row: Record<string, unknown> | null,
   ): Array<{ name: string; description: string; price: string }> {

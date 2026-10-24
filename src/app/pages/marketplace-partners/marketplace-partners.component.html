@@ -92,7 +92,7 @@
                       {{ row['city'] || '—' }} · {{ row['email'] }}
                     </div>
                   </td>
-                  <td>{{ row['partnerType'] }}</td>
+                  <td>{{ partnerTypeLabel(row) }}</td>
                   <td>
                     <span
                       class="ops-badge"
@@ -157,8 +157,14 @@
             <dl class="application-detail__grid">
               <div>
                 <dt>Partner type</dt>
-                <dd>{{ textField(app, 'partnerType') }}</dd>
+                <dd>{{ partnerTypeLabel(app) }}</dd>
               </div>
+              @if (app['partnerType'] === 'caregiver') {
+                <div>
+                  <dt>Organisation</dt>
+                  <dd>{{ organization(app) }}</dd>
+                </div>
+              }
               @if (app['partnerType'] === 'wellness') {
                 <div>
                   <dt>Category</dt>
