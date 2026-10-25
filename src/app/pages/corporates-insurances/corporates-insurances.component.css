@@ -1,0 +1,210 @@
+.sponsor-readonly {
+  margin-bottom: 1rem;
+}
+
+.sponsor-decision--first {
+  border: 1px solid #c5ddd4;
+  border-radius: 12px;
+  background: #f6fbf8;
+  padding: 1rem 1.1rem;
+  margin-bottom: 0.5rem;
+  border-top: 1px solid #c5ddd4;
+}
+
+.sponsor-search-icon {
+  width: 16px;
+  height: 16px;
+  color: #98a2b3;
+}
+
+.sponsor-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.sponsor-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.sponsor-chip {
+  display: inline-block;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  background: #eef4f1;
+  color: #1a4d4d;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.sponsor-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.06em;
+}
+
+.sponsor-programmes {
+  list-style: none;
+  margin: 0;
+  padding: 0 1.25rem 1rem;
+  display: grid;
+  gap: 0.85rem;
+}
+
+.sponsor-programme {
+  border: 1px solid #e1e7ef;
+  border-radius: 12px;
+  background: #ffffff;
+  padding: 1rem 1.1rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.sponsor-programme__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.sponsor-programme__name {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1f2a37;
+}
+
+.sponsor-programme__desc {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #475467;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.sponsor-programme__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  border-top: 1px solid #eef2f6;
+  padding-top: 0.75rem;
+}
+
+.sponsor-benefits {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.sponsor-benefits li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 8px;
+  background: #fafcfb;
+  border: 1px solid #eef2f6;
+}
+
+.sponsor-benefits strong {
+  color: var(--anixi-green, #427160);
+  text-align: right;
+}
+
+.sponsor-org-programmes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.sponsor-org-programmes li {
+  border: 1px solid #e1e7ef;
+  border-radius: 10px;
+  background: #fafcfb;
+  padding: 0.7rem 0.85rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+/* Four-up grid only — do not inherit dashboard 6-column ops-metrics breakpoints. */
+.sponsor-metrics.ops-metrics {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0 0 0.25rem;
+}
+
+@media (min-width: 560px) {
+  .sponsor-metrics.ops-metrics {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.sponsor-metrics .ops-metric {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.sponsor-metrics .ops-metric__label {
+  display: block;
+  width: 100%;
+  line-height: 1.25;
+}
+
+.sponsor-metrics .ops-metric__value {
+  display: block;
+  width: 100%;
+  margin-top: 0.35rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.sponsor-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 1rem;
+}
+
+.sponsor-form-grid--modal {
+  gap: 0 1.25rem;
+}
+
+.sponsor-form-grid .ops-field {
+  margin-bottom: 0;
+}
+
+.sponsor-form-grid__cell {
+  margin-bottom: 0.85rem;
+  min-width: 0;
+}
+
+.sponsor-form-grid__hint {
+  line-height: 1.4;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+}
+
+.sponsor-form-grid__full {
+  grid-column: 1 / -1;
+}
+
+.sponsor-decision {
+  border-top: 1px solid #eef2f6;
+  padding-top: 1rem;
+}
+
+.sponsor-decision__hint {
+  margin: 0 0 0.85rem;
+  font-size: 0.85rem;
+  color: #65758b;
+}
+
+@media (max-width: 640px) {
+  .sponsor-form-grid {
+    grid-template-columns: 1fr;
+  }
+}

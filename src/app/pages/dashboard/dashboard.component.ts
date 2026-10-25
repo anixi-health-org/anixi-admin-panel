@@ -73,6 +73,8 @@ type AdminStats = {
   pendingDoctors: number;
   verifiedDoctors: number;
   pendingMarketplacePartners: number;
+  pendingSponsorPartners?: number;
+  sponsorOrganizations?: number;
 };
 
 @Component({
@@ -92,6 +94,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   communityPosts = 0;
   pendingActivations = 0;
   pendingMarketplacePartners = 0;
+  pendingSponsorPartners = 0;
+  sponsorOrganizations = 0;
   marketplacePartners = 0;
   communities = COMMUNITIES.length;
 
@@ -105,15 +109,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return this.metricCards.find((m) => m.id === 'patients') ?? null;
   }
 
-  get endMetric(): MetricCard | null {
-    return this.metricCards.find((m) => m.id === 'marketplace-partners') ?? null;
+  get mosaicMetrics(): MetricCard[] {
+    const featuredId = this.featuredMetric?.id;
+    return this.metricCards.filter((m) => m.id !== featuredId);
   }
 
-  get mosaicMetrics(): MetricCard[] {
-    const exclude = new Set(
-      [this.featuredMetric?.id, this.endMetric?.id].filter(Boolean) as string[],
-    );
-    return this.metricCards.filter((m) => !exclude.has(m.id));
+  formatMetricValue(value: string | number): string {
+    if (typeof value === 'number') return value.toLocaleString('en-ZA');
+    return value;
   }
 
   quickActions: QuickAction[] = [
@@ -267,6 +270,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.totalPatients = stats.patients ?? 0;
     this.pendingActivations = stats.pendingActivations ?? 0;
     this.pendingMarketplacePartners = stats.pendingMarketplacePartners ?? 0;
+    this.pendingSponsorPartners = stats.pendingSponsorPartners ?? 0;
+    this.sponsorOrganizations = stats.sponsorOrganizations ?? 0;
     this.marketplacePartners = stats.marketplacePartners ?? 0;
 
     this.attentionItems = [];
@@ -286,6 +291,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
         detail: 'Review wellness and pharmacy applications before they appear on the patient Market.',
         tone: 'amber',
         route: ['/marketplace-partners'],
+        queryParams: { tab: 'applications' },
+      });
+    }
+    if (this.pendingSponsorPartners > 0) {
+      this.attentionItems.push({
+        id: 'pending-sponsors',
+        title: `${this.pendingSponsorPartners} corporate or insurance partner${this.pendingSponsorPartners === 1 ? '' : 's'} awaiting approval`,
+        detail: 'Review applications from the partner portal before organisations and programmes go live.',
+        tone: 'amber',
+        route: ['/corporates-insurances'],
         queryParams: { tab: 'applications' },
       });
     }
@@ -493,6 +508,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
         icon: 'store',
         tone: this.pendingMarketplacePartners > 0 ? 'amber' : 'slate',
         route: '/marketplace-partners',
+      },
+      {
+        id: 'corporates-insurances',
+        label: 'Corporates & Insurances',
+        value: this.sponsorOrganizations,
+        hint:
+          this.pendingSponsorPartners > 0
+            ? `${this.pendingSponsorPartners} application${this.pendingSponsorPartners === 1 ? '' : 's'} awaiting approval`
+            : 'Active insurance & employer partners',
+        icon: 'handshake',
+        tone: this.pendingSponsorPartners > 0 ? 'amber' : 'slate',
+        route: '/corporates-insurances',
       },
     ];
   }

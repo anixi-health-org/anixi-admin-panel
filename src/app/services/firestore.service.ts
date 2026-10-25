@@ -576,15 +576,50 @@ export class FirestoreService {
     );
   }
 
-  async approveMarketplacePartnerApplication(applicationId: string): Promise<void> {
-    await this.djangoApi.approveMarketplacePartnerApplication(applicationId);
+  async approveMarketplacePartnerApplication(
+    applicationId: string,
+  ): Promise<Record<string, unknown>> {
+    return this.djangoApi.approveMarketplacePartnerApplication(applicationId);
   }
 
   async rejectMarketplacePartnerApplication(
     applicationId: string,
     reason?: string,
-  ): Promise<void> {
-    await this.djangoApi.rejectMarketplacePartnerApplication(applicationId, reason);
+  ): Promise<Record<string, unknown>> {
+    return this.djangoApi.rejectMarketplacePartnerApplication(applicationId, reason);
+  }
+
+  listProfessionalCaregiversOnce(): Promise<Array<Record<string, unknown> & { id: string }>> {
+    return this.djangoApi.listProfessionalCaregivers().then((rows) =>
+      rows.map((row) => ({ ...row, id: String(row['id'] ?? '') })),
+    );
+  }
+
+  listWellnessProvidersOnce(): Promise<Array<Record<string, unknown> & { id: string }>> {
+    return this.djangoApi.listWellnessProviders().then((rows) =>
+      rows.map((row) => ({ ...row, id: String(row['id'] ?? '') })),
+    );
+  }
+
+  listPharmaciesOnce(): Promise<Array<Record<string, unknown> & { id: string }>> {
+    return this.djangoApi.listPharmacies().then((rows) =>
+      rows.map((row) => ({ ...row, id: String(row['id'] ?? '') })),
+    );
+  }
+
+  listMarketplacePartnerApplicationsOnce(
+    status?: string,
+  ): Promise<Array<Record<string, unknown> & { id: string }>> {
+    return this.djangoApi.listMarketplacePartnerApplications(status).then((rows) =>
+      rows.map((row) => ({ ...row, id: String(row['id'] ?? '') })),
+    );
+  }
+
+  async setMarketplacePartnerListingPublished(
+    applicationId: string,
+    published: boolean,
+  ): Promise<Record<string, unknown>> {
+    return this.djangoApi.setMarketplacePartnerListingPublished(applicationId, published);
   }
 
   async upsertWellnessProvider(
@@ -638,6 +673,29 @@ export class FirestoreService {
 
   async deletePharmacy(id: string): Promise<void> {
     await this.djangoApi.deletePharmacy(id);
+  }
+
+  getProfessionalCaregivers(): Observable<Array<Record<string, unknown> & { id: string }>> {
+    return interval(30_000).pipe(
+      startWith(0),
+      switchMap(() => from(this.djangoApi.listProfessionalCaregivers())),
+      map((rows) => rows.map((row) => ({ ...row, id: String(row['id'] ?? '') }))),
+    );
+  }
+
+  async upsertProfessionalCaregiver(
+    id: string | null,
+    data: Record<string, unknown>,
+  ): Promise<string> {
+    if (!id) {
+      throw new Error('New caregivers must request listing from their caregiver profile.');
+    }
+    await this.djangoApi.patchProfessionalCaregiver(id, data);
+    return id;
+  }
+
+  async deleteProfessionalCaregiver(id: string): Promise<void> {
+    await this.djangoApi.deleteProfessionalCaregiver(id);
   }
 
   getEmployers(): Observable<Array<Record<string, unknown> & { id: string }>> {

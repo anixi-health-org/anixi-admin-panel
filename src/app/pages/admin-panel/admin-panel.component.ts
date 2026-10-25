@@ -16,6 +16,10 @@ type NavItem = {
 type NavGroup = {
   label: string;
   items: NavItem[];
+  /** Section can be toggled open/closed in the sidebar. */
+  collapsible?: boolean;
+  /** When collapsible, start closed unless the user opens it or navigates here. */
+  defaultCollapsed?: boolean;
 };
 
 const navGroups: NavGroup[] = [
@@ -29,6 +33,7 @@ const navGroups: NavGroup[] = [
       { name: 'Doctor Verification', icon: 'stethoscope', path: '/doctor-verification' },
       { name: 'Clinics', icon: 'building-2', path: '/establishments' },
       { name: 'Marketplace partners', icon: 'store', path: '/marketplace-partners' },
+      { name: 'Corporates & Insurances', icon: 'handshake', path: '/corporates-insurances' },
       { name: 'Patients / Users', icon: 'users', path: '/users' },
       { name: 'Patient Import', icon: 'upload', path: '/patient-import' },
       { name: 'Ayah', icon: 'sparkles', path: '/ayah' },
@@ -36,6 +41,8 @@ const navGroups: NavGroup[] = [
   },
   {
     label: 'Community',
+    collapsible: true,
+    defaultCollapsed: true,
     items: [
       { name: 'Community', icon: 'file-text', path: '/content', exact: true },
       {
@@ -91,6 +98,8 @@ const navGroups: NavGroup[] = [
 export class AdminPanelComponent implements OnInit, OnDestroy {
   isCollapsed = false;
   navGroups = navGroups;
+  /** Sidebar section expand/collapse (Community collapsed by default). */
+  expandedGroups: Record<string, boolean> = {};
   adminUser: AdminUser | null = null;
   searchQuery = '';
   currentPath = '';
@@ -103,6 +112,9 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    for (const group of this.navGroups) {
+      this.expandedGroups[group.label] = !(group.defaultCollapsed ?? false);
+    }
     this.syncRoute(this.router.url);
     this.sub.add(
       this.authService.adminUser$.subscribe((admin) => {
@@ -126,6 +138,28 @@ export class AdminPanelComponent implements OnInit, OnDestroy {
     const [pathPart, queryPart = ''] = url.split('?');
     this.currentPath = pathPart || '';
     this.currentQuery = new URLSearchParams(queryPart);
+    if (pathPart === '/content' || pathPart.startsWith('/content/')) {
+      this.expandedGroups = { ...this.expandedGroups, ['Community']: true };
+    }
+  }
+
+  isGroupExpanded(group: NavGroup): boolean {
+    if (this.isCollapsed) return true;
+    if (!group.collapsible) return true;
+    return this.expandedGroups[group.label] ?? true;
+  }
+
+  toggleGroup(group: NavGroup, event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.expandedGroups = {
+      ...this.expandedGroups,
+      [group.label]: !this.isGroupExpanded(group),
+    };
+  }
+
+  isGroupActive(group: NavGroup): boolean {
+    return group.items.some((item) => this.isActive(item));
   }
 
   onChange(isCollapsed: boolean): void {

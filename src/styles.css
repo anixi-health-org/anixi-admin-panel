@@ -774,19 +774,32 @@ body.content-modal-open {
 
 /* Shared pagination footer (also used by app-ops-pagination) */
 .ops-pagination {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
   gap: 0.75rem 1rem;
+  width: 100%;
+  box-sizing: border-box;
   padding: 0.85rem 1rem;
   border-top: 1px solid #eef2ef;
   background: #fcfdfb;
 }
 
+.ops-panel > app-ops-pagination {
+  display: block;
+  width: 100%;
+}
+
 .ops-panel__footer {
   border-top: 1px solid #eef2ef;
   background: #fcfdfb;
+  overflow: hidden;
+  border-radius: 0 0 var(--anixi-radius) var(--anixi-radius);
+}
+
+.ops-panel__footer .ops-pagination {
+  border-top: none;
+  border-radius: 0;
 }
 
 .ops-table-meta {
@@ -840,4 +853,38 @@ body.content-modal-open {
 .ant-notification-notice-description {
   color: var(--anixi-text-secondary);
   font-size: 0.875rem;
+}
+
+/* Partner / sponsor detail modals (rendered on document body) */
+.marketplace-detail-modal .ant-modal-content {
+  display: flex;
+  flex-direction: column;
+  max-height: min(88vh, 820px);
+}
+
+.marketplace-detail-modal .ant-modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  padding: 1.15rem 1.35rem 1rem;
+}
+
+.marketplace-detail-modal .ant-modal-footer {
+  border-top: 1px solid #eef2f6;
+  padding: 0.85rem 1.35rem 1rem;
+}
+
+.marketplace-detail-modal .ant-modal-footer .marketplace-row-actions {
+  width: 100%;
+  gap: 0.65rem;
+}
+
+.marketplace-detail-modal .ant-modal-footer .ops-btn {
+  min-width: 5.5rem;
+  white-space: nowrap;
+}
+
+.marketplace-detail-modal .ant-modal-header {
+  padding: 1rem 1.35rem 0.85rem;
+  margin-bottom: 0;
 }

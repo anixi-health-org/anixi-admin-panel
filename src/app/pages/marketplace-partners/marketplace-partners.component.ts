@@ -1,11 +1,13 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
+import { AuthService } from '../../services/auth.service';
 import { FirestoreService } from '../../services/firestore.service';
+import { formatCityEmailSubline } from '../../utils/ops-subline.utils';
 import { paginateItems } from '../../utils/pagination.utils';
 
-type PartnerTab = 'applications' | 'wellness' | 'pharmacies';
+type PartnerTab = 'applications' | 'wellness' | 'pharmacies' | 'caregivers';
 
 @Component({
   selector: 'app-marketplace-partners',
@@ -14,6 +16,7 @@ type PartnerTab = 'applications' | 'wellness' | 'pharmacies';
   styleUrl: './marketplace-partners.component.css',
 })
 export class MarketplacePartnersComponent implements OnInit, OnDestroy {
+  readonly formatCityEmailSubline = formatCityEmailSubline;
   tab: PartnerTab = 'applications';
   isSaving = false;
   isLoading = true;
@@ -22,15 +25,18 @@ export class MarketplacePartnersComponent implements OnInit, OnDestroy {
   pageSize = 10;
   wellnessPageIndex = 1;
   pharmacyPageIndex = 1;
+  caregiverPageIndex = 1;
   applicationPageIndex = 1;
 
   wellnessRows: Array<Record<string, unknown> & { id: string }> = [];
   pharmacyRows: Array<Record<string, unknown> & { id: string }> = [];
+  caregiverRows: Array<Record<string, unknown> & { id: string }> = [];
   applicationRows: Array<Record<string, unknown> & { id: string }> = [];
   selectedApplicationId: string | null = null;
   editingId: string | null = null;
-  editModalKind: 'wellness' | 'pharmacy' | null = null;
+  editModalKind: 'wellness' | 'pharmacy' | 'caregiver' | null = null;
   detailModalVisible = false;
+  canManageCatalog = false;
 
   wellnessCategories = [
     'nutrition',
@@ -43,13 +49,16 @@ export class MarketplacePartnersComponent implements OnInit, OnDestroy {
 
   wellnessForm!: FormGroup;
   pharmacyForm!: FormGroup;
+  caregiverForm!: FormGroup;
 
   private sub = new Subscription();
 
   constructor(
     private fb: FormBuilder,
     private firestore: FirestoreService,
-    private route: ActivatedRoute
+    private authService: AuthService,
+    private route: ActivatedRoute,
+    private router: Router
   ) {
     this.wellnessForm = this.fb.group({
       name: ['', Validators.required],
@@ -76,6 +85,17 @@ export class MarketplacePartnersComponent implements OnInit, OnDestroy {
       published: [false],
       verified: [false],
     });
+
+    this.caregiverForm = this.fb.group({
+      displayName: ['', Validators.required],
+      organization: [''],
+      bio: [''],
+      city: [''],
+      province: [''],
+      services: [''],
+      published: [false],
+      verified: [false],
+    });
   }
 
   get pagedWellnessRows(): Array<Record<string, unknown> & { id: string }> {
@@ -84,6 +104,61 @@ export class MarketplacePartnersComponent implements OnInit, OnDestroy {
 
   get pagedPharmacyRows(): Array<Record<string, unknown> & { id: string }> {
     return paginateItems(this.pharmacyRows, this.pharmacyPageIndex, this.pageSize);
+  }
+
+  get caregiverDirectoryRows(): Array<Record<string, unknown> & { id: string }> {
+    type CaregiverDirectoryRow = Record<string, unknown> & { id: string };
+
+    const listingIds = new Set(this.caregiverRows.map((row) => row.id));
+    const pendingFromApplications: CaregiverDirectoryRow[] = this.applicationRows
+      .filter((row) => row['partnerType'] === 'caregiver' && row['status'] === 'pending')
+      .filter((row) => {
+        const linkedId = String(row['professionalCaregiverId'] ?? '');
+        return !linkedId || !listingIds.has(linkedId);
+      })
+      .map(
+        (row): CaregiverDirectoryRow => ({
+          id: `application:${row.id}`,
+          displayName: row['businessName'],
+          name: row['businessName'],
+          organization: this.organization(row),
+          city: row['city'],
+          province: row['province'],
+          published: false,
+          directorySource: 'application',
+          applicationId: row.id,
+          applicationStatus: row['status'],
+        })
+      );
+
+    const listings: CaregiverDirectoryRow[] = this.caregiverRows.map((row) => ({
+      ...row,
+      directorySource: 'listing',
+    }));
+
+    const label = (row: CaregiverDirectoryRow) =>
+      String(row['displayName'] ?? row['name'] ?? '');
+
+    return [...pendingFromApplications, ...listings].sort((a, b) =>
+      label(a).localeCompare(label(b))
+    );
+  }
+
+  get pagedCaregiverRows(): Array<Record<string, unknown> & { id: string }> {
+    return paginateItems(this.caregiverDirectoryRows, this.caregiverPageIndex, this.pageSize);
+  }
+
+  isCaregiverApplicationRow(row: Record<string, unknown>): boolean {
+    return row['directorySource'] === 'application';
+  }
+
+  openCaregiverApplication(row: Record<string, unknown> & { id: string }): void {
+    const applicationId = String(row['applicationId'] ?? '');
+    if (!applicationId) return;
+    const application = this.applicationRows.find((item) => item.id === applicationId);
+    if (!application) return;
+    this.setTab('applications');
+    this.selectApplication(application);
   }
 
   get pagedApplicationRows(): Array<Record<string, unknown> & { id: string }> {
@@ -132,6 +207,31 @@ export class MarketplacePartnersComponent implements OnInit, OnDestroy {
     };
     const type = this.textField(row, 'partnerType', '');
     return labels[type] || type || '—';
+  }
+
+  /** Application review status, with approved-but-unpublished shown as suspended. */
+  applicationDisplayStatus(row: Record<string, unknown> | null): string {
+    if (!row) return '';
+    const status = String(row['status'] ?? '').toLowerCase();
+    if (status === 'approved' && row['listingPublished'] === false) {
+      return 'suspended';
+    }
+    return status;
+  }
+
+  applicationStatusLabel(row: Record<string, unknown> | null): string {
+    const key = this.applicationDisplayStatus(row);
+    const labels: Record<string, string> = {
+      pending: 'Pending review',
+      approved: 'Approved',
+      rejected: 'Rejected',
+      suspended: 'Suspended',
+    };
+    return labels[key] ?? key;
+  }
+
+  isListingLive(row: Record<string, unknown> | null): boolean {
+    return this.applicationDisplayStatus(row) === 'approved' && row?.['listingPublished'] === true;
   }
 
   organization(row: Record<string, unknown> | null): string {
@@ -185,6 +285,10 @@ export class MarketplacePartnersComponent implements OnInit, OnDestroy {
     this.pharmacyPageIndex = page;
   }
 
+  onCaregiverPageIndexChange(page: number): void {
+    this.caregiverPageIndex = page;
+  }
+
   onApplicationPageIndexChange(page: number): void {
     this.applicationPageIndex = page;
   }
@@ -193,14 +297,21 @@ export class MarketplacePartnersComponent implements OnInit, OnDestroy {
     this.pageSize = size;
     this.wellnessPageIndex = 1;
     this.pharmacyPageIndex = 1;
+    this.caregiverPageIndex = 1;
     this.applicationPageIndex = 1;
   }
 
   ngOnInit(): void {
+    this.canManageCatalog = this.authService.hasPermission('manageCatalog');
     this.sub.add(
       this.route.queryParamMap.subscribe((params) => {
         const tab = params.get('tab');
-        if (tab === 'applications' || tab === 'wellness' || tab === 'pharmacies') {
+        if (
+          tab === 'applications' ||
+          tab === 'wellness' ||
+          tab === 'pharmacies' ||
+          tab === 'caregivers'
+        ) {
           this.tab = tab;
         }
       })
@@ -218,6 +329,16 @@ export class MarketplacePartnersComponent implements OnInit, OnDestroy {
       this.firestore.getPharmacies().subscribe((rows) => {
         this.pharmacyRows = rows.sort((a, b) =>
           String(a['name'] ?? '').localeCompare(String(b['name'] ?? ''))
+        );
+        this.isLoading = false;
+      })
+    );
+    this.sub.add(
+      this.firestore.getProfessionalCaregivers().subscribe((rows) => {
+        this.caregiverRows = rows.sort((a, b) =>
+          String(a['displayName'] ?? a['name'] ?? '').localeCompare(
+            String(b['displayName'] ?? b['name'] ?? '')
+          )
         );
         this.isLoading = false;
       })
@@ -244,16 +365,106 @@ export class MarketplacePartnersComponent implements OnInit, OnDestroy {
     );
   }
 
+  private sortCaregiverRows(
+    rows: Array<Record<string, unknown> & { id: string }>,
+  ): Array<Record<string, unknown> & { id: string }> {
+    return rows.sort((a, b) =>
+      String(a['displayName'] ?? a['name'] ?? '').localeCompare(
+        String(b['displayName'] ?? b['name'] ?? ''),
+      ),
+    );
+  }
+
+  private mergeApplicationRow(updated: Record<string, unknown>): void {
+    const id = String(updated['id'] ?? '');
+    if (!id) return;
+    const row = { ...updated, id };
+    const exists = this.applicationRows.some((item) => item.id === id);
+    this.applicationRows = exists
+      ? this.applicationRows.map((item) => (item.id === id ? { ...item, ...row } : item))
+      : [row, ...this.applicationRows];
+  }
+
+  private async refreshMarketplaceDirectories(
+    partnerType?: string,
+  ): Promise<void> {
+    const type = String(partnerType ?? '').toLowerCase();
+    const tasks: Promise<void>[] = [];
+
+    if (!type || type === 'caregiver') {
+      tasks.push(
+        this.firestore.listProfessionalCaregiversOnce().then((rows) => {
+          this.caregiverRows = this.sortCaregiverRows(rows);
+        }),
+      );
+    }
+    if (!type || type === 'wellness') {
+      tasks.push(
+        this.firestore.listWellnessProvidersOnce().then((rows) => {
+          this.wellnessRows = rows.sort((a, b) =>
+            String(a['name'] ?? '').localeCompare(String(b['name'] ?? '')),
+          );
+        }),
+      );
+    }
+    if (!type || type === 'pharmacy') {
+      tasks.push(
+        this.firestore.listPharmaciesOnce().then((rows) => {
+          this.pharmacyRows = rows.sort((a, b) =>
+            String(a['name'] ?? '').localeCompare(String(b['name'] ?? '')),
+          );
+        }),
+      );
+    }
+
+    await Promise.all(tasks);
+  }
+
   async approveApplication(id: string): Promise<void> {
     this.isSaving = true;
     this.error = '';
     try {
-      await this.firestore.approveMarketplacePartnerApplication(id);
+      const updated = await this.firestore.approveMarketplacePartnerApplication(id);
+      this.mergeApplicationRow(updated);
+      await this.refreshMarketplaceDirectories(String(updated['partnerType'] ?? ''));
       this.message = 'Application approved — listing is now live on the patient Market.';
       this.clearSelectedApplication();
-      this.reloadApplications();
     } catch (err) {
       this.error = err instanceof Error ? err.message : 'Approve failed';
+    } finally {
+      this.isSaving = false;
+    }
+  }
+
+  async suspendFromPatientMarket(id: string): Promise<void> {
+    if (
+      !window.confirm(
+        'Suspend this partner on the patient Market? Warriors will not see their listing until you restore it.',
+      )
+    ) {
+      return;
+    }
+    await this.setListingPublished(id, false, 'Partner suspended on the patient Market.');
+  }
+
+  async restoreToPatientMarket(id: string): Promise<void> {
+    await this.setListingPublished(id, true, 'Partner is live on the patient Market again.');
+  }
+
+  private async setListingPublished(
+    id: string,
+    published: boolean,
+    successMessage: string,
+  ): Promise<void> {
+    this.isSaving = true;
+    this.error = '';
+    try {
+      const updated = await this.firestore.setMarketplacePartnerListingPublished(id, published);
+      this.mergeApplicationRow(updated);
+      await this.refreshMarketplaceDirectories(String(updated['partnerType'] ?? ''));
+      this.message = successMessage;
+    } catch (err) {
+      this.error = err instanceof Error ? err.message : 'Could not update Market visibility';
     } finally {
       this.isSaving = false;
     }
@@ -264,10 +475,10 @@ export class MarketplacePartnersComponent implements OnInit, OnDestroy {
     this.isSaving = true;
     this.error = '';
     try {
-      await this.firestore.rejectMarketplacePartnerApplication(id, reason.trim());
+      const updated = await this.firestore.rejectMarketplacePartnerApplication(id, reason.trim());
+      this.mergeApplicationRow(updated);
       this.message = 'Application rejected.';
       this.clearSelectedApplication();
-      this.reloadApplications();
     } catch (err) {
       this.error = err instanceof Error ? err.message : 'Reject failed';
     } finally {
@@ -298,6 +509,12 @@ export class MarketplacePartnersComponent implements OnInit, OnDestroy {
   setTab(tab: PartnerTab): void {
     this.tab = tab;
     this.clearForm();
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { tab },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
   }
 
   clearForm(): void {
@@ -310,6 +527,10 @@ export class MarketplacePartnersComponent implements OnInit, OnDestroy {
     });
     this.pharmacyForm.reset({
       deliveryAvailable: false,
+      published: false,
+      verified: false,
+    });
+    this.caregiverForm.reset({
       published: false,
       verified: false,
     });
@@ -378,6 +599,7 @@ export class MarketplacePartnersComponent implements OnInit, OnDestroy {
       });
       this.message = 'Wellness partner updated.';
       this.clearForm();
+      await this.refreshMarketplaceDirectories('wellness');
     } catch (err) {
       this.error = err instanceof Error ? err.message : 'Save failed';
     } finally {
@@ -408,6 +630,7 @@ export class MarketplacePartnersComponent implements OnInit, OnDestroy {
       });
       this.message = 'Pharmacy updated.';
       this.clearForm();
+      await this.refreshMarketplaceDirectories('pharmacy');
     } catch (err) {
       this.error = err instanceof Error ? err.message : 'Save failed';
     } finally {
@@ -418,10 +641,68 @@ export class MarketplacePartnersComponent implements OnInit, OnDestroy {
   async unpublishWellness(id: string): Promise<void> {
     await this.firestore.deleteWellnessProvider(id);
     this.message = 'Wellness partner unpublished.';
+    await this.refreshMarketplaceDirectories('wellness');
   }
 
   async unpublishPharmacy(id: string): Promise<void> {
     await this.firestore.deletePharmacy(id);
     this.message = 'Pharmacy unpublished.';
+    await this.refreshMarketplaceDirectories('pharmacy');
+  }
+
+  editCaregiver(row: Record<string, unknown> & { id: string }): void {
+    this.editingId = row.id;
+    this.editModalKind = 'caregiver';
+    const services = Array.isArray(row['services']) ? (row['services'] as string[]).join(', ') : '';
+    this.caregiverForm.patchValue({
+      displayName: String(row['displayName'] ?? row['name'] ?? ''),
+      organization: String(row['organization'] ?? ''),
+      bio: String(row['bio'] ?? ''),
+      city: String(row['city'] ?? ''),
+      province: String(row['province'] ?? ''),
+      services,
+      published: row['published'] === true,
+      verified: row['verified'] === true,
+    });
+  }
+
+  async saveCaregiver(): Promise<void> {
+    if (!this.editingId) {
+      this.error = 'New caregivers must request listing from their caregiver profile.';
+      return;
+    }
+    if (this.caregiverForm.invalid) return;
+    this.isSaving = true;
+    this.error = '';
+    try {
+      const raw = this.caregiverForm.getRawValue();
+      const services = String(raw.services ?? '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+      await this.firestore.upsertProfessionalCaregiver(this.editingId, {
+        displayName: raw.displayName?.trim(),
+        organization: raw.organization?.trim() || '',
+        bio: raw.bio?.trim() || '',
+        city: raw.city?.trim() || '',
+        province: raw.province?.trim() || '',
+        services,
+        published: raw.published === true,
+        verified: raw.verified === true,
+      });
+      this.message = 'Professional caregiver updated.';
+      this.clearForm();
+      await this.refreshMarketplaceDirectories('caregiver');
+    } catch (err) {
+      this.error = err instanceof Error ? err.message : 'Save failed';
+    } finally {
+      this.isSaving = false;
+    }
+  }
+
+  async unpublishCaregiver(id: string): Promise<void> {
+    await this.firestore.deleteProfessionalCaregiver(id);
+    this.message = 'Professional caregiver unpublished.';
+    await this.refreshMarketplaceDirectories('caregiver');
   }
 }

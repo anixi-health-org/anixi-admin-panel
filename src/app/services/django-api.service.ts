@@ -1,6 +1,25 @@
 import { Injectable } from '@angular/core';
 import { environment } from '../../environments/environment';
+import {
+  SponsorApplication,
+  SponsorApprovalInput,
+  SponsorOrganization,
+  SponsorOrganizationDetail,
+  SponsorOrganizationUpdate,
+  SponsorProgramme,
+  SponsorProgrammeRow,
+} from '../models/sponsor';
 import { isUnusableProfileMediaUrl } from '../utils/doctor-record.utils';
+
+function sponsorQuery(filters?: Record<string, string | undefined>): string {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(filters ?? {})) {
+    const trimmed = value?.trim();
+    if (trimmed) params.set(key, trimmed);
+  }
+  const qs = params.toString();
+  return qs ? `?${qs}` : '';
+}
 
 type Envelope<T> = {
   success: boolean;
@@ -392,6 +411,8 @@ export class DjangoApiService {
       pendingDoctors: number;
       verifiedDoctors: number;
       pendingMarketplacePartners?: number;
+      pendingSponsorPartners?: number;
+      sponsorOrganizations?: number;
     }>('/api/v1/auth/admin/stats/');
   }
 
@@ -473,6 +494,70 @@ export class DjangoApiService {
     );
   }
 
+  setMarketplacePartnerListingPublished(applicationId: string, published: boolean) {
+    return this.request<Record<string, unknown>>(
+      `/api/v1/marketplace/admin/partner-applications/${encodeURIComponent(applicationId)}/publish/`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ published }),
+      },
+    );
+  }
+
+  // Insurance and corporate partners (apps/sponsors admin routes)
+
+  listSponsorApplications(filters?: { status?: string; kind?: string }) {
+    return this.request<SponsorApplication[]>(
+      `/api/v1/sponsors/admin/applications${sponsorQuery(filters)}`,
+    );
+  }
+
+  approveSponsorApplication(applicationId: string, data: SponsorApprovalInput) {
+    return this.request<SponsorApplication>(
+      `/api/v1/sponsors/admin/applications/${encodeURIComponent(applicationId)}/approve/`,
+      { method: 'POST', body: JSON.stringify(data) },
+    );
+  }
+
+  rejectSponsorApplication(applicationId: string, reason: string) {
+    return this.request<SponsorApplication>(
+      `/api/v1/sponsors/admin/applications/${encodeURIComponent(applicationId)}/reject/`,
+      { method: 'POST', body: JSON.stringify({ reason }) },
+    );
+  }
+
+  listSponsorOrganizations(filters?: { kind?: string; status?: string; q?: string }) {
+    return this.request<SponsorOrganization[]>(
+      `/api/v1/sponsors/admin/organizations${sponsorQuery(filters)}`,
+    );
+  }
+
+  getSponsorOrganization(orgId: string) {
+    return this.request<SponsorOrganizationDetail>(
+      `/api/v1/sponsors/admin/organizations/${encodeURIComponent(orgId)}/`,
+    );
+  }
+
+  updateSponsorOrganization(orgId: string, data: SponsorOrganizationUpdate) {
+    return this.request<SponsorOrganizationDetail>(
+      `/api/v1/sponsors/admin/organizations/${encodeURIComponent(orgId)}/`,
+      { method: 'PATCH', body: JSON.stringify(data) },
+    );
+  }
+
+  listSponsorProgrammes(filters?: { status?: string }) {
+    return this.request<SponsorProgrammeRow[]>(
+      `/api/v1/sponsors/admin/programmes${sponsorQuery(filters)}`,
+    );
+  }
+
+  runSponsorProgrammeAction(programmeId: string, action: 'activate' | 'return' | 'close', reason = '') {
+    return this.request<SponsorProgramme>(
+      `/api/v1/sponsors/admin/programmes/${encodeURIComponent(programmeId)}/${action}/`,
+      { method: 'POST', body: JSON.stringify({ reason }) },
+    );
+  }
+
   listMarketplaceOrders(options?: { status?: string; source?: string; q?: string }) {
     const params = new URLSearchParams();
     if (options?.status) params.set('status', options.status);
@@ -527,6 +612,29 @@ export class DjangoApiService {
   deletePharmacy(pharmacyId: string) {
     return this.request<{ deleted: boolean }>(
       `/api/v1/auth/admin/pharmacies/${encodeURIComponent(pharmacyId)}/`,
+      { method: 'DELETE' },
+    );
+  }
+
+  listProfessionalCaregivers() {
+    return this.request<Array<Record<string, unknown>>>(
+      '/api/v1/auth/admin/professional-caregivers/',
+    );
+  }
+
+  patchProfessionalCaregiver(caregiverId: string, data: Record<string, unknown>) {
+    return this.request<Record<string, unknown>>(
+      `/api/v1/auth/admin/professional-caregivers/${encodeURIComponent(caregiverId)}/`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      },
+    );
+  }
+
+  deleteProfessionalCaregiver(caregiverId: string) {
+    return this.request<{ deleted: boolean }>(
+      `/api/v1/auth/admin/professional-caregivers/${encodeURIComponent(caregiverId)}/`,
       { method: 'DELETE' },
     );
   }
