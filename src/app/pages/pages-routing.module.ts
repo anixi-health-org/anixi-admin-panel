@@ -11,6 +11,7 @@ import { UsersComponent } from './users/users.component';
 import { EstablishmentsComponent } from './establishments/establishments.component';
 import { NotificationsComponent } from './notifications/notifications.component';
 import { MarketplacePartnersComponent } from './marketplace-partners/marketplace-partners.component';
+import { CorporatesInsurancesComponent } from './corporates-insurances/corporates-insurances.component';
 import { PatientImportComponent } from './patient-import/patient-import.component';
 import { AyahOpsComponent } from './ayah-ops/ayah-ops.component';
 import { AnalyticsComponent } from './analytics/analytics.component';
@@ -41,6 +42,7 @@ const routes: Routes = [
       { path: 'doctor-verification', component: DoctorVerificationComponent },
       { path: 'establishments', component: EstablishmentsComponent },
       { path: 'marketplace-partners', component: MarketplacePartnersComponent },
+      { path: 'corporates-insurances', component: CorporatesInsurancesComponent },
       { path: 'patient-import', component: PatientImportComponent },
       { path: 'ayah', component: AyahOpsComponent },
       { path: 'certificat-viewer', component: PdfViewerComponent },

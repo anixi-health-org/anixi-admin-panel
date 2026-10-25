@@ -7,6 +7,9 @@ export type AdminPermissions = {
   verifyDoctors?: boolean;
   sendActivationReminders?: boolean;
   viewAudit?: boolean;
+  manageCatalog?: boolean;
+  manageContent?: boolean;
+  managePartners?: boolean;
 };
 
 export interface AdminUser {
@@ -16,6 +19,7 @@ export interface AdminUser {
   role: 'admin' | 'super_admin';
   opsRole?: AdminOpsRole;
   permissions?: AdminPermissions;
+  isSuperuser?: boolean;
 }
 
 export interface AdminTeamMember {

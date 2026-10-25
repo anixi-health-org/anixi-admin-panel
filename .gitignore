@@ -41,7 +41,11 @@ testem.log
 .DS_Store
 Thumbs.db
 
-#env
+# env and deploy
 .env
 .env.local
+.env.production
+.env.*.local
+.vercel
+*.log
 src/environments/environment.local.ts

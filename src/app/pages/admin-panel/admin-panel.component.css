@@ -13,6 +13,11 @@
   overflow: hidden;
 }
 
+/* ng-zorro leaves a white collapse trigger at the sider foot when nzCollapsible is true. */
+.admin-sider ::ng-deep .ant-layout-sider-trigger {
+  display: none !important;
+}
+
 .sider-inner {
   display: flex;
   flex-direction: column;
@@ -63,6 +68,48 @@
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.38);
+}
+
+.nav-section-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  width: 100%;
+  margin: 0 0 0.35rem;
+  padding: 0.35rem 0.7rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font-family: var(--font-body);
+  font-size: 0.625rem;
+  font-weight: 650;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.38);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.nav-section-toggle:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.nav-group--active .nav-section-toggle {
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.nav-section-chevron {
+  width: 0.85rem;
+  height: 0.85rem;
+  flex-shrink: 0;
+  opacity: 0.75;
+  transition: transform 0.2s ease;
+}
+
+.nav-section-toggle--expanded .nav-section-chevron {
+  transform: rotate(180deg);
 }
 
 .nav-list {

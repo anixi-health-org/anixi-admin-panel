@@ -8,7 +8,7 @@ import { DoctorVerificationComponent } from './doctor-verification/doctor-verifi
 import { DashboardComponent } from './dashboard/dashboard.component';
 import { NzLayoutModule } from 'ng-zorro-antd/layout';
 import {NzIconModule} from 'ng-zorro-antd/icon';
-import {Activity, BarChart3, Bell, Building2, Calendar, ChartColumn, CheckCircle, ChevronDown, ClipboardList, Clock, Download, ExternalLink, Eye, FilePen, FileText, Heart, LayoutDashboard, LogOut, LucideAngularModule, MessageSquare, Paperclip, ScrollText, Search, SendHorizontal, Shield, ShieldCheck, ShoppingBag, Sparkles, Stethoscope, Store, TriangleAlert, Upload, Users, UserX, X} from 'lucide-angular';
+import {Activity, BarChart3, Bell, Building2, Calendar, ChartColumn, CheckCircle, ChevronDown, ClipboardList, Clock, Download, ExternalLink, Eye, FilePen, FileText, Handshake, Heart, LayoutDashboard, LogOut, LucideAngularModule, MessageSquare, Paperclip, ScrollText, Search, SendHorizontal, Shield, ShieldCheck, ShoppingBag, Sparkles, Stethoscope, Store, TriangleAlert, Upload, Users, UserX, X} from 'lucide-angular';
 import {NzAvatarModule} from 'ng-zorro-antd/avatar';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ApplicationDetailsComponent } from './application-details/application-details.component'
@@ -29,11 +29,13 @@ import {NzResultModule} from 'ng-zorro-antd/result';
 import {NzSpinModule} from 'ng-zorro-antd/spin';
 import { PostTitlePipe } from '../pipes/post-title.pipe';
 import {NzPopconfirmModule} from 'ng-zorro-antd/popconfirm';
+import { NzDrawerModule } from 'ng-zorro-antd/drawer';
 import { LinkifyPipe } from '../pipes/linkify-pipe';
 import { UsersComponent } from './users/users.component';
 import { EstablishmentsComponent } from './establishments/establishments.component';
 import { NotificationsComponent } from './notifications/notifications.component';
 import { MarketplacePartnersComponent } from './marketplace-partners/marketplace-partners.component';
+import { CorporatesInsurancesComponent } from './corporates-insurances/corporates-insurances.component';
 import { PatientImportComponent } from './patient-import/patient-import.component';
 import { AyahOpsComponent } from './ayah-ops/ayah-ops.component';
 import { AnalyticsComponent } from './analytics/analytics.component';
@@ -63,6 +65,7 @@ import { MedicalSchemesComponent } from './medical-schemes/medical-schemes.compo
     EstablishmentsComponent,
     NotificationsComponent,
     MarketplacePartnersComponent,
+    CorporatesInsurancesComponent,
     PatientImportComponent,
     AyahOpsComponent,
     AnalyticsComponent,
@@ -92,7 +95,7 @@ import { MedicalSchemesComponent } from './medical-schemes/medical-schemes.compo
       ShieldCheck, Sparkles, Download, ExternalLink, Search, Calendar,
       ClipboardList, CheckCircle, FilePen, Clock, ChartColumn, BarChart3,
       ScrollText, Shield, Building2, Store, Upload, ShoppingBag, Heart,
-      Paperclip, SendHorizontal, X
+      Paperclip, SendHorizontal, X, Handshake
     }),
     NzButtonComponent,
     NgxEchartsDirective,
@@ -103,6 +106,7 @@ import { MedicalSchemesComponent } from './medical-schemes/medical-schemes.compo
     NzResultModule,
     NzSpinModule,
     NzPopconfirmModule,
+    NzDrawerModule,
 
 ]
 })

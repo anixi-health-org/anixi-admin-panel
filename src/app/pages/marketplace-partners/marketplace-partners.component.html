@@ -6,26 +6,26 @@
     </div>
   </header>
 
-  <div class="marketplace-tabs ops-tabs">
-    <div class="ops-filters" role="tablist" aria-label="Partner type">
+  <nav class="marketplace-tabs" aria-label="Partner type">
+    <div class="marketplace-tablist" role="tablist">
       <button
         type="button"
-        class="ops-filter"
+        class="marketplace-tab"
         role="tab"
-        [class.ops-filter--active]="tab === 'applications'"
+        [class.marketplace-tab--active]="tab === 'applications'"
         [attr.aria-selected]="tab === 'applications'"
         (click)="setTab('applications')"
       >
         Applications
         @if (pendingApplicationCount > 0) {
-          <span class="users-filter-count">({{ pendingApplicationCount }})</span>
+          <span class="marketplace-tab__count">({{ pendingApplicationCount }})</span>
         }
       </button>
       <button
         type="button"
-        class="ops-filter"
+        class="marketplace-tab"
         role="tab"
-        [class.ops-filter--active]="tab === 'wellness'"
+        [class.marketplace-tab--active]="tab === 'wellness'"
         [attr.aria-selected]="tab === 'wellness'"
         (click)="setTab('wellness')"
       >
@@ -33,16 +33,26 @@
       </button>
       <button
         type="button"
-        class="ops-filter"
+        class="marketplace-tab"
         role="tab"
-        [class.ops-filter--active]="tab === 'pharmacies'"
+        [class.marketplace-tab--active]="tab === 'pharmacies'"
         [attr.aria-selected]="tab === 'pharmacies'"
         (click)="setTab('pharmacies')"
       >
         Pharmacies
       </button>
+      <button
+        type="button"
+        class="marketplace-tab"
+        role="tab"
+        [class.marketplace-tab--active]="tab === 'caregivers'"
+        [attr.aria-selected]="tab === 'caregivers'"
+        (click)="setTab('caregivers')"
+      >
+        Caregivers
+      </button>
     </div>
-  </div>
+  </nav>
 
   @if (message) {
     <p class="ops-flash ops-flash--ok">{{ message }}</p>
@@ -68,7 +78,7 @@
         <div class="ops-empty">
           <p class="ops-empty__title">No partner applications yet</p>
           <p class="ops-empty__text">
-            When wellness providers or pharmacies sign up via Market Partner on the doctor portal,
+            When wellness providers, pharmacies, or professional caregivers request a Market listing,
             they appear here for approval.
           </p>
         </div>
@@ -89,18 +99,19 @@
                   <td>
                     <div>{{ row['businessName'] }}</div>
                     <div class="users-detail__note">
-                      {{ row['city'] || '—' }} · {{ row['email'] }}
+                      {{ formatCityEmailSubline(row['city'], row['email']) }}
                     </div>
                   </td>
-                  <td>{{ row['partnerType'] }}</td>
+                  <td>{{ partnerTypeLabel(row) }}</td>
                   <td>
                     <span
                       class="ops-badge"
-                      [class.ops-badge--pending]="row['status'] === 'pending'"
-                      [class.ops-badge--green]="row['status'] === 'approved'"
-                      [class.ops-badge--red]="row['status'] === 'rejected'"
+                      [class.ops-badge--pending]="applicationDisplayStatus(row) === 'pending'"
+                      [class.ops-badge--green]="applicationDisplayStatus(row) === 'approved'"
+                      [class.ops-badge--red]="applicationDisplayStatus(row) === 'rejected'"
+                      [class.ops-badge--suspended]="applicationDisplayStatus(row) === 'suspended'"
                     >
-                      {{ row['status'] }}
+                      {{ applicationStatusLabel(row) }}
                     </span>
                   </td>
                   <td>
@@ -117,39 +128,454 @@
             </tbody>
           </table>
         </div>
+        @if (!detailModalVisible) {
+          <div class="ops-panel__footer">
+            <app-ops-pagination
+              [total]="applicationRows.length"
+              [pageIndex]="applicationPageIndex"
+              [pageSize]="pageSize"
+              itemLabel="applications"
+              (pageIndexChange)="onApplicationPageIndexChange($event)"
+              (pageSizeChange)="onPageSizeChange($event)"
+            ></app-ops-pagination>
+          </div>
+        }
+      }
+    </section>
+  }
+
+  @if (tab === 'wellness') {
+    <section class="ops-panel">
+      <div class="ops-panel__header">
+        <div>
+          <p class="ops-section-label">Directory</p>
+          <h2 class="ops-panel__title">Wellness partners</h2>
+        </div>
+        @if (!isLoading) {
+          <span class="ops-badge ops-badge--slate">{{ wellnessRows.length }}</span>
+        }
+      </div>
+      @if (isLoading) {
+        <div class="ops-panel__body">
+          <app-ops-page-skeleton variant="table" [rows]="6"></app-ops-page-skeleton>
+        </div>
+      } @else if (!wellnessRows.length) {
+        <div class="ops-empty">
+          <div class="ops-empty__icon" aria-hidden="true">
+            <lucide-icon name="store"></lucide-icon>
+          </div>
+          <p class="ops-empty__title">No wellness partners yet</p>
+          <p class="ops-empty__text">
+            Partners appear here after you approve a wellness application.
+          </p>
+        </div>
+      } @else {
+        <div class="users-table-wrap">
+          <table class="users-table">
+            <thead><tr><th>Name</th><th>Category</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+              @for (row of pagedWellnessRows; track row.id) {
+                <tr>
+                  <td>{{ row['name'] }}</td>
+                  <td>{{ row['category'] }}</td>
+                  <td>
+                    @if (row['published']) { <span class="ops-badge ops-badge--green">Live</span> }
+                    @else { <span class="ops-badge ops-badge--slate">Draft</span> }
+                  </td>
+                  <td class="marketplace-row-actions">
+                    <button type="button" class="ops-btn ops-btn--secondary" (click)="editWellness(row)">Edit</button>
+                    @if (row['published']) {
+                      <button type="button" class="ops-btn ops-btn--secondary" (click)="unpublishWellness(row.id)">Unpublish</button>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
         <app-ops-pagination
-          [total]="applicationRows.length"
-          [pageIndex]="applicationPageIndex"
+          [total]="wellnessRows.length"
+          [pageIndex]="wellnessPageIndex"
           [pageSize]="pageSize"
-          itemLabel="applications"
-          (pageIndexChange)="onApplicationPageIndexChange($event)"
+          itemLabel="partners"
+          (pageIndexChange)="onWellnessPageIndexChange($event)"
           (pageSizeChange)="onPageSizeChange($event)"
         ></app-ops-pagination>
       }
     </section>
 
     <nz-modal
-      [nzVisible]="detailModalVisible"
-      [nzTitle]="selectedApplication ? textField(selectedApplication, 'businessName') : 'Application details'"
-      [nzWidth]="760"
-      [nzFooter]="detailModalFooter"
+      [nzVisible]="editModalKind === 'wellness'"
+      nzTitle="Edit wellness partner"
+      [nzWidth]="640"
       [nzCentered]="true"
-      nzClassName="marketplace-detail-modal"
-      (nzVisibleChange)="onDetailModalVisibleChange($event)"
-      (nzOnCancel)="clearSelectedApplication()"
+      [nzFooter]="wellnessEditFooter"
+      (nzOnCancel)="clearForm()"
     >
       <ng-container *nzModalContent>
+        <form class="marketplace-form marketplace-form--modal" [formGroup]="wellnessForm" id="wellness-edit-form" (ngSubmit)="saveWellness()">
+          <label class="ops-field">
+            <span class="ops-field__label">Name</span>
+            <input class="ops-input" formControlName="name" />
+          </label>
+          <label class="ops-field">
+            <span class="ops-field__label">Category</span>
+            <select class="ops-select" formControlName="category">
+              @for (cat of wellnessCategories; track cat) {
+                <option [value]="cat">{{ cat }}</option>
+              }
+            </select>
+          </label>
+          <label class="ops-field">
+            <span class="ops-field__label">Tagline</span>
+            <input class="ops-input" formControlName="tagline" />
+          </label>
+          <label class="ops-field">
+            <span class="ops-field__label">Description</span>
+            <textarea class="ops-textarea" formControlName="description" rows="3"></textarea>
+          </label>
+          <label class="ops-field">
+            <span class="ops-field__label">Email</span>
+            <input class="ops-input" formControlName="email" type="email" />
+          </label>
+          <label class="ops-field">
+            <span class="ops-field__label">Phone</span>
+            <input class="ops-input" formControlName="phone" />
+          </label>
+          <label class="ops-field">
+            <span class="ops-field__label">City</span>
+            <input class="ops-input" formControlName="city" />
+          </label>
+          <label class="ops-field">
+            <span class="ops-field__label">Province</span>
+            <input class="ops-input" formControlName="province" />
+          </label>
+          <label class="ops-field">
+            <span class="ops-field__label">Services (comma-separated)</span>
+            <input class="ops-input" formControlName="services" />
+          </label>
+          <label class="marketplace-check">
+            <input type="checkbox" formControlName="verified" />
+            <span>Verified</span>
+          </label>
+          <label class="marketplace-check">
+            <input type="checkbox" formControlName="published" />
+            <span>Published in app</span>
+          </label>
+        </form>
+      </ng-container>
+    </nz-modal>
+    <ng-template #wellnessEditFooter>
+      <div class="marketplace-row-actions marketplace-row-actions--end">
+        <button type="button" class="ops-btn ops-btn--secondary" (click)="clearForm()">Cancel</button>
+        <button
+          type="submit"
+          form="wellness-edit-form"
+          class="ops-btn ops-btn--primary"
+          [disabled]="isSaving || wellnessForm.invalid || !editingId"
+        >
+          {{ isSaving ? 'Saving…' : 'Save changes' }}
+        </button>
+      </div>
+    </ng-template>
+  }
+
+  @if (tab === 'pharmacies') {
+    <section class="ops-panel">
+      <div class="ops-panel__header">
+        <div>
+          <p class="ops-section-label">Directory</p>
+          <h2 class="ops-panel__title">Pharmacies</h2>
+        </div>
+        @if (!isLoading) {
+          <span class="ops-badge ops-badge--slate">{{ pharmacyRows.length }}</span>
+        }
+      </div>
+      @if (isLoading) {
+        <div class="ops-panel__body">
+          <app-ops-page-skeleton variant="table" [rows]="6"></app-ops-page-skeleton>
+        </div>
+      } @else if (!pharmacyRows.length) {
+        <div class="ops-empty">
+          <div class="ops-empty__icon" aria-hidden="true">
+            <lucide-icon name="store"></lucide-icon>
+          </div>
+          <p class="ops-empty__title">No pharmacies yet</p>
+          <p class="ops-empty__text">
+            Pharmacies appear here after you approve a pharmacy application.
+          </p>
+        </div>
+      } @else {
+        <div class="users-table-wrap">
+          <table class="users-table">
+            <thead><tr><th>Name</th><th>Email</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+              @for (row of pagedPharmacyRows; track row.id) {
+                <tr>
+                  <td>{{ row['name'] }}</td>
+                  <td>{{ row['email'] }}</td>
+                  <td>
+                    @if (row['published']) { <span class="ops-badge ops-badge--green">Live</span> }
+                    @else { <span class="ops-badge ops-badge--slate">Draft</span> }
+                  </td>
+                  <td class="marketplace-row-actions">
+                    <button type="button" class="ops-btn ops-btn--secondary" (click)="editPharmacy(row)">Edit</button>
+                    @if (row['published']) {
+                      <button type="button" class="ops-btn ops-btn--secondary" (click)="unpublishPharmacy(row.id)">Unpublish</button>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <app-ops-pagination
+          [total]="pharmacyRows.length"
+          [pageIndex]="pharmacyPageIndex"
+          [pageSize]="pageSize"
+          itemLabel="pharmacies"
+          (pageIndexChange)="onPharmacyPageIndexChange($event)"
+          (pageSizeChange)="onPageSizeChange($event)"
+        ></app-ops-pagination>
+      }
+    </section>
+
+    <nz-modal
+      [nzVisible]="editModalKind === 'pharmacy'"
+      nzTitle="Edit pharmacy"
+      [nzWidth]="640"
+      [nzCentered]="true"
+      [nzFooter]="pharmacyEditFooter"
+      (nzOnCancel)="clearForm()"
+    >
+      <ng-container *nzModalContent>
+        <form class="marketplace-form marketplace-form--modal" [formGroup]="pharmacyForm" id="pharmacy-edit-form" (ngSubmit)="savePharmacy()">
+          <label class="ops-field">
+            <span class="ops-field__label">Name</span>
+            <input class="ops-input" formControlName="name" />
+          </label>
+          <label class="ops-field">
+            <span class="ops-field__label">Email</span>
+            <input class="ops-input" formControlName="email" type="email" />
+          </label>
+          <label class="ops-field">
+            <span class="ops-field__label">Phone</span>
+            <input class="ops-input" formControlName="phone" />
+          </label>
+          <label class="ops-field">
+            <span class="ops-field__label">Address</span>
+            <input class="ops-input" formControlName="address" />
+          </label>
+          <label class="ops-field">
+            <span class="ops-field__label">City</span>
+            <input class="ops-input" formControlName="city" />
+          </label>
+          <label class="ops-field">
+            <span class="ops-field__label">Province</span>
+            <input class="ops-input" formControlName="province" />
+          </label>
+          <label class="marketplace-check">
+            <input type="checkbox" formControlName="deliveryAvailable" />
+            <span>Delivery available</span>
+          </label>
+          <label class="marketplace-check">
+            <input type="checkbox" formControlName="verified" />
+            <span>Verified</span>
+          </label>
+          <label class="marketplace-check">
+            <input type="checkbox" formControlName="published" />
+            <span>Published in app</span>
+          </label>
+        </form>
+      </ng-container>
+    </nz-modal>
+    <ng-template #pharmacyEditFooter>
+      <div class="marketplace-row-actions marketplace-row-actions--end">
+        <button type="button" class="ops-btn ops-btn--secondary" (click)="clearForm()">Cancel</button>
+        <button
+          type="submit"
+          form="pharmacy-edit-form"
+          class="ops-btn ops-btn--primary"
+          [disabled]="isSaving || pharmacyForm.invalid || !editingId"
+        >
+          {{ isSaving ? 'Saving…' : 'Save changes' }}
+        </button>
+      </div>
+    </ng-template>
+  }
+
+  @if (tab === 'caregivers') {
+    <section class="ops-panel">
+      <div class="ops-panel__header">
+        <div>
+          <p class="ops-section-label">Directory</p>
+          <h2 class="ops-panel__title">Professional caregivers</h2>
+        </div>
+        @if (!isLoading) {
+          <span class="ops-badge ops-badge--slate">{{ caregiverDirectoryRows.length }}</span>
+        }
+      </div>
+      @if (isLoading) {
+        <div class="ops-panel__body">
+          <app-ops-page-skeleton variant="table" [rows]="6"></app-ops-page-skeleton>
+        </div>
+      } @else if (!caregiverDirectoryRows.length) {
+        <div class="ops-empty">
+          <div class="ops-empty__icon" aria-hidden="true">
+            <lucide-icon name="store"></lucide-icon>
+          </div>
+          <p class="ops-empty__title">No professional caregivers yet</p>
+          <p class="ops-empty__text">
+            Professional carers appear here when they finish onboarding and request a marketplace
+            listing. Approve pending rows to publish them live for patients.
+          </p>
+        </div>
+      } @else {
+        <div class="users-table-wrap">
+          <table class="users-table">
+            <thead><tr><th>Name</th><th>Organisation</th><th>Location</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+              @for (row of pagedCaregiverRows; track row.id) {
+                <tr>
+                  <td>{{ row['displayName'] || row['name'] }}</td>
+                  <td>{{ row['organization'] || '—' }}</td>
+                  <td>
+                    @if (row['city'] || row['province']) {
+                      {{ row['city'] }}{{ row['city'] && row['province'] ? ', ' : '' }}{{ row['province'] }}
+                    } @else {
+                      —
+                    }
+                  </td>
+                  <td>
+                    @if (isCaregiverApplicationRow(row)) {
+                      <span class="ops-badge ops-badge--pending">Pending review</span>
+                    } @else if (row['published']) {
+                      <span class="ops-badge ops-badge--green">Live</span>
+                    } @else {
+                      <span class="ops-badge ops-badge--slate">Draft</span>
+                    }
+                  </td>
+                  <td class="marketplace-row-actions">
+                    @if (isCaregiverApplicationRow(row)) {
+                      <button
+                        type="button"
+                        class="ops-btn ops-btn--secondary"
+                        (click)="openCaregiverApplication(row)"
+                      >
+                        Review
+                      </button>
+                    } @else {
+                      <button type="button" class="ops-btn ops-btn--secondary" (click)="editCaregiver(row)">Edit</button>
+                      @if (row['published']) {
+                        <button type="button" class="ops-btn ops-btn--secondary" (click)="unpublishCaregiver(row.id)">Unpublish</button>
+                      }
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <app-ops-pagination
+          [total]="caregiverDirectoryRows.length"
+          [pageIndex]="caregiverPageIndex"
+          [pageSize]="pageSize"
+          itemLabel="caregivers"
+          (pageIndexChange)="onCaregiverPageIndexChange($event)"
+          (pageSizeChange)="onPageSizeChange($event)"
+        ></app-ops-pagination>
+      }
+    </section>
+
+    <nz-modal
+      [nzVisible]="editModalKind === 'caregiver'"
+      nzTitle="Edit professional caregiver"
+      [nzWidth]="640"
+      [nzCentered]="true"
+      [nzFooter]="caregiverEditFooter"
+      (nzOnCancel)="clearForm()"
+    >
+      <ng-container *nzModalContent>
+        <form class="marketplace-form marketplace-form--modal" [formGroup]="caregiverForm" id="caregiver-edit-form" (ngSubmit)="saveCaregiver()">
+          <label class="ops-field">
+            <span class="ops-field__label">Display name</span>
+            <input class="ops-input" formControlName="displayName" />
+          </label>
+          <label class="ops-field">
+            <span class="ops-field__label">Organisation</span>
+            <input class="ops-input" formControlName="organization" />
+          </label>
+          <label class="ops-field">
+            <span class="ops-field__label">Bio</span>
+            <textarea class="ops-textarea" formControlName="bio" rows="3"></textarea>
+          </label>
+          <label class="ops-field">
+            <span class="ops-field__label">City</span>
+            <input class="ops-input" formControlName="city" />
+          </label>
+          <label class="ops-field">
+            <span class="ops-field__label">Province</span>
+            <input class="ops-input" formControlName="province" />
+          </label>
+          <label class="ops-field">
+            <span class="ops-field__label">Services (comma-separated)</span>
+            <input class="ops-input" formControlName="services" />
+          </label>
+          <label class="marketplace-check">
+            <input type="checkbox" formControlName="verified" />
+            <span>Verified</span>
+          </label>
+          <label class="marketplace-check">
+            <input type="checkbox" formControlName="published" />
+            <span>Published in app</span>
+          </label>
+        </form>
+      </ng-container>
+    </nz-modal>
+    <ng-template #caregiverEditFooter>
+      <div class="marketplace-row-actions marketplace-row-actions--end">
+        <button type="button" class="ops-btn ops-btn--secondary" (click)="clearForm()">Cancel</button>
+        <button
+          type="submit"
+          form="caregiver-edit-form"
+          class="ops-btn ops-btn--primary"
+          [disabled]="isSaving || caregiverForm.invalid || !editingId"
+        >
+          {{ isSaving ? 'Saving…' : 'Save changes' }}
+        </button>
+      </div>
+    </ng-template>
+  }
+
+  <nz-modal
+    [nzVisible]="detailModalVisible"
+    [nzTitle]="selectedApplication ? textField(selectedApplication, 'businessName') : 'Application details'"
+    [nzWidth]="760"
+    [nzFooter]="detailModalFooter"
+    [nzCentered]="true"
+    nzClassName="marketplace-detail-modal"
+    (nzVisibleChange)="onDetailModalVisibleChange($event)"
+    (nzOnCancel)="clearSelectedApplication()"
+  >
+    <ng-container *nzModalContent>
       @if (selectedApplication; as app) {
         <div class="application-detail application-detail--modal">
           <div class="application-detail__status">
             <span
               class="ops-badge"
-              [class.ops-badge--pending]="app['status'] === 'pending'"
-              [class.ops-badge--green]="app['status'] === 'approved'"
-              [class.ops-badge--red]="app['status'] === 'rejected'"
+              [class.ops-badge--pending]="applicationDisplayStatus(app) === 'pending'"
+              [class.ops-badge--green]="applicationDisplayStatus(app) === 'approved'"
+              [class.ops-badge--red]="applicationDisplayStatus(app) === 'rejected'"
+              [class.ops-badge--suspended]="applicationDisplayStatus(app) === 'suspended'"
             >
-              {{ app['status'] }}
+              {{ applicationStatusLabel(app) }}
             </span>
+            @if (isListingLive(app)) {
+              <span class="ops-badge ops-badge--green">Live on patient Market</span>
+            }
+            @if (applicationDisplayStatus(app) === 'suspended') {
+              <span class="ops-badge ops-badge--slate">Hidden on patient Market</span>
+            }
           </div>
 
           <section class="application-detail__section">
@@ -157,8 +583,14 @@
             <dl class="application-detail__grid">
               <div>
                 <dt>Partner type</dt>
-                <dd>{{ textField(app, 'partnerType') }}</dd>
+                <dd>{{ partnerTypeLabel(app) }}</dd>
               </div>
+              @if (app['partnerType'] === 'caregiver') {
+                <div>
+                  <dt>Organisation</dt>
+                  <dd>{{ organization(app) }}</dd>
+                </div>
+              }
               @if (app['partnerType'] === 'wellness') {
                 <div>
                   <dt>Category</dt>
@@ -296,14 +728,15 @@
           </section>
         </div>
       }
-      </ng-container>
-    </nz-modal>
+    </ng-container>
+  </nz-modal>
 
-    <ng-template #detailModalFooter>
+  <ng-template #detailModalFooter>
+    <div class="marketplace-row-actions marketplace-row-actions--end">
       <button type="button" class="ops-btn ops-btn--secondary" (click)="clearSelectedApplication()">
         Close
       </button>
-      @if (selectedApplication?.['status'] === 'pending') {
+      @if (selectedApplication?.['status'] === 'pending' && canManageCatalog) {
         <button
           type="button"
           class="ops-btn ops-btn--secondary"
@@ -321,262 +754,27 @@
           Approve &amp; publish
         </button>
       }
-    </ng-template>
-  }
-
-  @if (tab === 'wellness') {
-    <section class="ops-panel">
-      <div class="ops-panel__header">
-        <div>
-          <p class="ops-section-label">Directory</p>
-          <h2 class="ops-panel__title">Wellness partners</h2>
-        </div>
-        @if (!isLoading) {
-          <span class="ops-badge ops-badge--slate">{{ wellnessRows.length }}</span>
+      @if (selectedApplication?.['status'] === 'approved' && canManageCatalog) {
+        @if (isListingLive(selectedApplication)) {
+          <button
+            type="button"
+            class="ops-btn ops-btn--danger"
+            [disabled]="isSaving"
+            (click)="suspendFromPatientMarket(selectedApplication!.id)"
+          >
+            {{ isSaving ? 'Working…' : 'Suspend from Market' }}
+          </button>
+        } @else {
+          <button
+            type="button"
+            class="ops-btn ops-btn--primary"
+            [disabled]="isSaving"
+            (click)="restoreToPatientMarket(selectedApplication!.id)"
+          >
+            {{ isSaving ? 'Working…' : 'Restore to Market' }}
+          </button>
         }
-      </div>
-      @if (isLoading) {
-        <div class="ops-panel__body">
-          <app-ops-page-skeleton variant="table" [rows]="6"></app-ops-page-skeleton>
-        </div>
-      } @else if (!wellnessRows.length) {
-        <div class="ops-empty">
-          <div class="ops-empty__icon" aria-hidden="true">
-            <lucide-icon name="store"></lucide-icon>
-          </div>
-          <p class="ops-empty__title">No wellness partners yet</p>
-          <p class="ops-empty__text">
-            Partners appear here after you approve a wellness application.
-          </p>
-        </div>
-      } @else {
-        <div class="users-table-wrap">
-          <table class="users-table">
-            <thead><tr><th>Name</th><th>Category</th><th>Status</th><th></th></tr></thead>
-            <tbody>
-              @for (row of pagedWellnessRows; track row.id) {
-                <tr>
-                  <td>{{ row['name'] }}</td>
-                  <td>{{ row['category'] }}</td>
-                  <td>
-                    @if (row['published']) { <span class="ops-badge ops-badge--green">Live</span> }
-                    @else { <span class="ops-badge ops-badge--slate">Draft</span> }
-                  </td>
-                  <td class="marketplace-row-actions">
-                    <button type="button" class="ops-btn ops-btn--secondary" (click)="editWellness(row)">Edit</button>
-                    @if (row['published']) {
-                      <button type="button" class="ops-btn ops-btn--secondary" (click)="unpublishWellness(row.id)">Unpublish</button>
-                    }
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-        <app-ops-pagination
-          [total]="wellnessRows.length"
-          [pageIndex]="wellnessPageIndex"
-          [pageSize]="pageSize"
-          itemLabel="partners"
-          (pageIndexChange)="onWellnessPageIndexChange($event)"
-          (pageSizeChange)="onPageSizeChange($event)"
-        ></app-ops-pagination>
       }
-    </section>
-
-    <nz-modal
-      [nzVisible]="editModalKind === 'wellness'"
-      nzTitle="Edit wellness partner"
-      [nzWidth]="640"
-      [nzCentered]="true"
-      [nzFooter]="wellnessEditFooter"
-      (nzOnCancel)="clearForm()"
-    >
-      <ng-container *nzModalContent>
-        <form class="marketplace-form marketplace-form--modal" [formGroup]="wellnessForm" id="wellness-edit-form" (ngSubmit)="saveWellness()">
-          <label class="ops-field">
-            <span class="ops-field__label">Name</span>
-            <input class="ops-input" formControlName="name" />
-          </label>
-          <label class="ops-field">
-            <span class="ops-field__label">Category</span>
-            <select class="ops-select" formControlName="category">
-              @for (cat of wellnessCategories; track cat) {
-                <option [value]="cat">{{ cat }}</option>
-              }
-            </select>
-          </label>
-          <label class="ops-field">
-            <span class="ops-field__label">Tagline</span>
-            <input class="ops-input" formControlName="tagline" />
-          </label>
-          <label class="ops-field">
-            <span class="ops-field__label">Description</span>
-            <textarea class="ops-textarea" formControlName="description" rows="3"></textarea>
-          </label>
-          <label class="ops-field">
-            <span class="ops-field__label">Email</span>
-            <input class="ops-input" formControlName="email" type="email" />
-          </label>
-          <label class="ops-field">
-            <span class="ops-field__label">Phone</span>
-            <input class="ops-input" formControlName="phone" />
-          </label>
-          <label class="ops-field">
-            <span class="ops-field__label">City</span>
-            <input class="ops-input" formControlName="city" />
-          </label>
-          <label class="ops-field">
-            <span class="ops-field__label">Province</span>
-            <input class="ops-input" formControlName="province" />
-          </label>
-          <label class="ops-field">
-            <span class="ops-field__label">Services (comma-separated)</span>
-            <input class="ops-input" formControlName="services" />
-          </label>
-          <label class="marketplace-check">
-            <input type="checkbox" formControlName="verified" />
-            <span>Verified</span>
-          </label>
-          <label class="marketplace-check">
-            <input type="checkbox" formControlName="published" />
-            <span>Published in app</span>
-          </label>
-        </form>
-      </ng-container>
-    </nz-modal>
-    <ng-template #wellnessEditFooter>
-      <button type="button" class="ops-btn ops-btn--secondary" (click)="clearForm()">Cancel</button>
-      <button
-        type="submit"
-        form="wellness-edit-form"
-        class="ops-btn ops-btn--primary"
-        [disabled]="isSaving || wellnessForm.invalid || !editingId"
-      >
-        {{ isSaving ? 'Saving…' : 'Save changes' }}
-      </button>
-    </ng-template>
-  }
-
-  @if (tab === 'pharmacies') {
-    <section class="ops-panel">
-      <div class="ops-panel__header">
-        <div>
-          <p class="ops-section-label">Directory</p>
-          <h2 class="ops-panel__title">Pharmacies</h2>
-        </div>
-        @if (!isLoading) {
-          <span class="ops-badge ops-badge--slate">{{ pharmacyRows.length }}</span>
-        }
-      </div>
-      @if (isLoading) {
-        <div class="ops-panel__body">
-          <app-ops-page-skeleton variant="table" [rows]="6"></app-ops-page-skeleton>
-        </div>
-      } @else if (!pharmacyRows.length) {
-        <div class="ops-empty">
-          <div class="ops-empty__icon" aria-hidden="true">
-            <lucide-icon name="store"></lucide-icon>
-          </div>
-          <p class="ops-empty__title">No pharmacies yet</p>
-          <p class="ops-empty__text">
-            Pharmacies appear here after you approve a pharmacy application.
-          </p>
-        </div>
-      } @else {
-        <div class="users-table-wrap">
-          <table class="users-table">
-            <thead><tr><th>Name</th><th>Email</th><th>Status</th><th></th></tr></thead>
-            <tbody>
-              @for (row of pagedPharmacyRows; track row.id) {
-                <tr>
-                  <td>{{ row['name'] }}</td>
-                  <td>{{ row['email'] }}</td>
-                  <td>
-                    @if (row['published']) { <span class="ops-badge ops-badge--green">Live</span> }
-                    @else { <span class="ops-badge ops-badge--slate">Draft</span> }
-                  </td>
-                  <td class="marketplace-row-actions">
-                    <button type="button" class="ops-btn ops-btn--secondary" (click)="editPharmacy(row)">Edit</button>
-                    @if (row['published']) {
-                      <button type="button" class="ops-btn ops-btn--secondary" (click)="unpublishPharmacy(row.id)">Unpublish</button>
-                    }
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-        <app-ops-pagination
-          [total]="pharmacyRows.length"
-          [pageIndex]="pharmacyPageIndex"
-          [pageSize]="pageSize"
-          itemLabel="pharmacies"
-          (pageIndexChange)="onPharmacyPageIndexChange($event)"
-          (pageSizeChange)="onPageSizeChange($event)"
-        ></app-ops-pagination>
-      }
-    </section>
-
-    <nz-modal
-      [nzVisible]="editModalKind === 'pharmacy'"
-      nzTitle="Edit pharmacy"
-      [nzWidth]="640"
-      [nzCentered]="true"
-      [nzFooter]="pharmacyEditFooter"
-      (nzOnCancel)="clearForm()"
-    >
-      <ng-container *nzModalContent>
-        <form class="marketplace-form marketplace-form--modal" [formGroup]="pharmacyForm" id="pharmacy-edit-form" (ngSubmit)="savePharmacy()">
-          <label class="ops-field">
-            <span class="ops-field__label">Name</span>
-            <input class="ops-input" formControlName="name" />
-          </label>
-          <label class="ops-field">
-            <span class="ops-field__label">Email</span>
-            <input class="ops-input" formControlName="email" type="email" />
-          </label>
-          <label class="ops-field">
-            <span class="ops-field__label">Phone</span>
-            <input class="ops-input" formControlName="phone" />
-          </label>
-          <label class="ops-field">
-            <span class="ops-field__label">Address</span>
-            <input class="ops-input" formControlName="address" />
-          </label>
-          <label class="ops-field">
-            <span class="ops-field__label">City</span>
-            <input class="ops-input" formControlName="city" />
-          </label>
-          <label class="ops-field">
-            <span class="ops-field__label">Province</span>
-            <input class="ops-input" formControlName="province" />
-          </label>
-          <label class="marketplace-check">
-            <input type="checkbox" formControlName="deliveryAvailable" />
-            <span>Delivery available</span>
-          </label>
-          <label class="marketplace-check">
-            <input type="checkbox" formControlName="verified" />
-            <span>Verified</span>
-          </label>
-          <label class="marketplace-check">
-            <input type="checkbox" formControlName="published" />
-            <span>Published in app</span>
-          </label>
-        </form>
-      </ng-container>
-    </nz-modal>
-    <ng-template #pharmacyEditFooter>
-      <button type="button" class="ops-btn ops-btn--secondary" (click)="clearForm()">Cancel</button>
-      <button
-        type="submit"
-        form="pharmacy-edit-form"
-        class="ops-btn ops-btn--primary"
-        [disabled]="isSaving || pharmacyForm.invalid || !editingId"
-      >
-        {{ isSaving ? 'Saving…' : 'Save changes' }}
-      </button>
-    </ng-template>
-  }
+    </div>
+  </ng-template>
 </div>

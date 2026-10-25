@@ -172,6 +172,7 @@ export class AuthService {
   }
 
   async signOut(): Promise<void> {
+    await this.djangoApi.revokeRefreshToken();
     this.clearSession();
   }
 
@@ -186,7 +187,9 @@ export class AuthService {
   hasPermission(key: keyof AdminPermissions): boolean {
     const admin = this.adminSubject.value;
     if (!admin) return false;
-    if (admin.role === 'super_admin' || admin.opsRole === 'super_admin') return true;
+    if (admin.isSuperuser || admin.role === 'super_admin' || admin.opsRole === 'super_admin') {
+      return true;
+    }
     return Boolean(admin.permissions?.[key]);
   }
 
@@ -199,13 +202,16 @@ export class AuthService {
       | undefined;
     const opsRole = String(profile?.['opsRole'] ?? profile?.['ops_role'] ?? '') as AdminOpsRole;
     const permissions = (profile?.['permissions'] ?? {}) as AdminPermissions;
+    const isSuperuser = Boolean(profile?.['isSuperuser'] ?? profile?.['is_superuser']);
+    const effectiveOpsRole = isSuperuser ? 'super_admin' : opsRole;
     return {
       uid: String(me['id'] ?? me['uid'] ?? fallback.uid),
       email: String(me['email'] ?? fallback.email),
       displayName: String(me['displayName'] ?? me['display_name'] ?? fallback.displayName),
-      role: opsRole === 'super_admin' ? 'super_admin' : 'admin',
-      opsRole: opsRole || fallback.opsRole,
+      role: effectiveOpsRole === 'super_admin' ? 'super_admin' : 'admin',
+      opsRole: effectiveOpsRole || fallback.opsRole,
       permissions,
+      isSuperuser,
     };
   }
 }

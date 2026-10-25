@@ -94,34 +94,21 @@ export class FirestoreService {
     return from(this.djangoApi.getAdminStats());
   }
 
-  private historyEvent(
-    action: string,
-    reason?: string,
-    entity?: { type: string; id: string },
-  ) {
-    const adminId = this.authService.getAdminUserId() || 'unknown';
-    return {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      action,
-      adminId,
-      at: new Date().toISOString(),
-      ...(reason?.trim() ? { reason: reason.trim() } : {}),
-      ...(entity ? { entityType: entity.type, entityId: entity.id } : {}),
-    };
-  }
 
+  /** The API stamps adminId/at and appends; the client only names the action. */
   private async appendDoctorHistory(
     doctorId: string,
     action: string,
     reason?: string,
     entity?: { type: string; id: string },
   ): Promise<void> {
-    const current = await this.djangoApi.getDoctor(doctorId);
-    const history = Array.isArray(current['verificationHistory'])
-      ? [...(current['verificationHistory'] as unknown[])]
-      : [];
-    history.push(this.historyEvent(action, reason, entity));
-    await this.djangoApi.patchDoctor(doctorId, { verificationHistory: history });
+    await this.djangoApi.patchDoctor(doctorId, {
+      verificationHistoryEntry: {
+        action,
+        ...(reason?.trim() ? { reason: reason.trim() } : {}),
+        ...(entity ? { entityType: entity.type, entityId: entity.id } : {}),
+      },
+    });
   }
 
   async updateDoctorStatus(
@@ -139,27 +126,12 @@ export class FirestoreService {
       }
     }
 
-    const actionLabel =
-      status === 'approved'
-        ? 'Application approved'
-        : status === 'rejected'
-          ? 'Application rejected'
-          : status === 'suspended'
-            ? 'Doctor suspended'
-            : status === 'on_hold'
-              ? 'Held for further review'
-              : `Status set to ${status}`;
 
+    // The API appends the verification history entry (who, when, from/to status).
     await this.djangoApi.updateDoctorStatus(
       doctorId,
       status,
       options?.reason,
-    );
-    await this.appendDoctorHistory(
-      doctorId,
-      actionLabel,
-      options?.reason,
-      { type: 'doctor', id: doctorId },
     );
 
     if (status === 'approved') {
@@ -604,15 +576,50 @@ export class FirestoreService {
     );
   }
 
-  async approveMarketplacePartnerApplication(applicationId: string): Promise<void> {
-    await this.djangoApi.approveMarketplacePartnerApplication(applicationId);
+  async approveMarketplacePartnerApplication(
+    applicationId: string,
+  ): Promise<Record<string, unknown>> {
+    return this.djangoApi.approveMarketplacePartnerApplication(applicationId);
   }
 
   async rejectMarketplacePartnerApplication(
     applicationId: string,
     reason?: string,
-  ): Promise<void> {
-    await this.djangoApi.rejectMarketplacePartnerApplication(applicationId, reason);
+  ): Promise<Record<string, unknown>> {
+    return this.djangoApi.rejectMarketplacePartnerApplication(applicationId, reason);
+  }
+
+  listProfessionalCaregiversOnce(): Promise<Array<Record<string, unknown> & { id: string }>> {
+    return this.djangoApi.listProfessionalCaregivers().then((rows) =>
+      rows.map((row) => ({ ...row, id: String(row['id'] ?? '') })),
+    );
+  }
+
+  listWellnessProvidersOnce(): Promise<Array<Record<string, unknown> & { id: string }>> {
+    return this.djangoApi.listWellnessProviders().then((rows) =>
+      rows.map((row) => ({ ...row, id: String(row['id'] ?? '') })),
+    );
+  }
+
+  listPharmaciesOnce(): Promise<Array<Record<string, unknown> & { id: string }>> {
+    return this.djangoApi.listPharmacies().then((rows) =>
+      rows.map((row) => ({ ...row, id: String(row['id'] ?? '') })),
+    );
+  }
+
+  listMarketplacePartnerApplicationsOnce(
+    status?: string,
+  ): Promise<Array<Record<string, unknown> & { id: string }>> {
+    return this.djangoApi.listMarketplacePartnerApplications(status).then((rows) =>
+      rows.map((row) => ({ ...row, id: String(row['id'] ?? '') })),
+    );
+  }
+
+  async setMarketplacePartnerListingPublished(
+    applicationId: string,
+    published: boolean,
+  ): Promise<Record<string, unknown>> {
+    return this.djangoApi.setMarketplacePartnerListingPublished(applicationId, published);
   }
 
   async upsertWellnessProvider(
@@ -666,6 +673,29 @@ export class FirestoreService {
 
   async deletePharmacy(id: string): Promise<void> {
     await this.djangoApi.deletePharmacy(id);
+  }
+
+  getProfessionalCaregivers(): Observable<Array<Record<string, unknown> & { id: string }>> {
+    return interval(30_000).pipe(
+      startWith(0),
+      switchMap(() => from(this.djangoApi.listProfessionalCaregivers())),
+      map((rows) => rows.map((row) => ({ ...row, id: String(row['id'] ?? '') }))),
+    );
+  }
+
+  async upsertProfessionalCaregiver(
+    id: string | null,
+    data: Record<string, unknown>,
+  ): Promise<string> {
+    if (!id) {
+      throw new Error('New caregivers must request listing from their caregiver profile.');
+    }
+    await this.djangoApi.patchProfessionalCaregiver(id, data);
+    return id;
+  }
+
+  async deleteProfessionalCaregiver(id: string): Promise<void> {
+    await this.djangoApi.deleteProfessionalCaregiver(id);
   }
 
   getEmployers(): Observable<Array<Record<string, unknown> & { id: string }>> {

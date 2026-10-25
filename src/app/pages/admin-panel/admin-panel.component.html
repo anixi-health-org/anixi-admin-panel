@@ -21,10 +21,24 @@
 
       <nav class="sider-nav" aria-label="Admin navigation">
         @for (group of navGroups; track group.label) {
-          <div class="nav-group">
+          <div class="nav-group" [class.nav-group--active]="isGroupActive(group)">
             @if (!isCollapsed) {
-              <p class="nav-section-label">{{ group.label }}</p>
+              @if (group.collapsible) {
+                <button
+                  type="button"
+                  class="nav-section-toggle"
+                  [class.nav-section-toggle--expanded]="isGroupExpanded(group)"
+                  [attr.aria-expanded]="isGroupExpanded(group)"
+                  (click)="toggleGroup(group, $event)"
+                >
+                  <span>{{ group.label }}</span>
+                  <lucide-icon name="chevron-down" class="nav-section-chevron"></lucide-icon>
+                </button>
+              } @else {
+                <p class="nav-section-label">{{ group.label }}</p>
+              }
             }
+            @if (isGroupExpanded(group)) {
             <ul class="nav-list" [class.nav-list--collapsed]="isCollapsed">
               @for (menu of group.items; track menu.name) {
                 @if (menu.comingSoon) {
@@ -57,6 +71,7 @@
                 }
               }
             </ul>
+            }
           </div>
         }
       </nav>

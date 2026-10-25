@@ -1,0 +1,977 @@
+<div class="ops-page marketplace-page sponsor-page">
+  <header class="ops-page-header">
+    <div class="ops-page-header__copy">
+      <p class="ops-page-header__eyebrow">Clinical operations</p>
+      <h1 class="ops-page-header__title">Corporates &amp; Insurances</h1>
+    </div>
+  </header>
+
+  <nav class="marketplace-tabs" aria-label="Partner section">
+    <div class="marketplace-tablist" role="tablist">
+      <button
+        type="button"
+        class="marketplace-tab"
+        role="tab"
+        [class.marketplace-tab--active]="tab === 'applications'"
+        [attr.aria-selected]="tab === 'applications'"
+        (click)="setTab('applications')"
+      >
+        Applications
+        @if (pendingApplicationCount > 0) {
+          <span class="marketplace-tab__count">({{ pendingApplicationCount }})</span>
+        }
+      </button>
+      <button
+        type="button"
+        class="marketplace-tab"
+        role="tab"
+        [class.marketplace-tab--active]="tab === 'organisations'"
+        [attr.aria-selected]="tab === 'organisations'"
+        (click)="setTab('organisations')"
+      >
+        Organisations
+      </button>
+      <button
+        type="button"
+        class="marketplace-tab"
+        role="tab"
+        [class.marketplace-tab--active]="tab === 'programmes'"
+        [attr.aria-selected]="tab === 'programmes'"
+        (click)="setTab('programmes')"
+      >
+        Programmes
+      </button>
+    </div>
+  </nav>
+
+  @if (!canManage) {
+    <p class="ops-note ops-note--info sponsor-readonly">
+      You can view partners here. Approving, rejecting and changing partners needs the Manage partners permission.
+    </p>
+  }
+  @if (message) {
+    <p class="ops-flash ops-flash--ok">{{ message }}</p>
+  }
+  @if (error) {
+    <p class="ops-flash ops-flash--error">{{ error }}</p>
+  }
+
+  <!-- Applications -->
+  @if (tab === 'applications') {
+    <section class="ops-panel">
+      <div class="ops-panel__header">
+        <div>
+          <p class="ops-section-label">Queue</p>
+          <h2 class="ops-panel__title">Partner applications</h2>
+        </div>
+        <span class="ops-badge ops-badge--slate">{{ applications.length }}</span>
+      </div>
+      <div class="marketplace-subfilters">
+        <div class="marketplace-tablist marketplace-tablist--compact" role="group" aria-label="Application status">
+          @for (option of applicationStatuses; track option.value) {
+            <button
+              type="button"
+              class="marketplace-tab"
+              [class.marketplace-tab--active]="appStatus === option.value"
+              (click)="setAppStatus(option.value)"
+            >
+              {{ option.label }}
+            </button>
+          }
+        </div>
+        <label class="marketplace-subfilters__select">
+          <span class="sr-only">Partner type</span>
+          <select class="ops-select" [ngModel]="appKind" (ngModelChange)="setAppKind($event)" aria-label="Partner type">
+            @for (option of kindFilters; track option.value) {
+              <option [value]="option.value">{{ option.label }}</option>
+            }
+          </select>
+        </label>
+      </div>
+
+      @if (applicationsLoading) {
+        <div class="ops-panel__body">
+          <app-ops-page-skeleton variant="table" [rows]="5"></app-ops-page-skeleton>
+        </div>
+      } @else if (!applications.length) {
+        <div class="ops-empty">
+          <p class="ops-empty__title">No applications match these filters</p>
+          <p class="ops-empty__text">
+            Insurers and employers apply through the partner portal. New applications show up here for review.
+          </p>
+        </div>
+      } @else {
+        <div class="users-table-wrap">
+          <table class="users-table">
+            <thead>
+              <tr>
+                <th>Organisation</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (app of pagedApplications; track app.id) {
+                <tr class="application-row" (click)="openApplication(app)">
+                  <td>
+                    <div>{{ app.organizationName }}</div>
+                    <div class="users-detail__note">
+                      {{ formatCityEmailSubline(app.city, app.contactEmail) }}
+                    </div>
+                  </td>
+                  <td>{{ kindLabel(app.kind) }}</td>
+                  <td>
+                    <span
+                      class="ops-badge"
+                      [class.ops-badge--pending]="app.status === 'pending'"
+                      [class.ops-badge--green]="app.status === 'approved'"
+                      [class.ops-badge--red]="app.status === 'rejected'"
+                    >
+                      {{ app.status }}
+                    </span>
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      class="ops-btn ops-btn--secondary"
+                      (click)="openApplication(app); $event.stopPropagation()"
+                    >
+                      View
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <app-ops-pagination
+          [total]="applications.length"
+          [pageIndex]="applicationPageIndex"
+          [pageSize]="pageSize"
+          itemLabel="applications"
+          (pageIndexChange)="applicationPageIndex = $event"
+          (pageSizeChange)="onPageSizeChange($event)"
+        ></app-ops-pagination>
+      }
+    </section>
+  }
+
+  <!-- Organisations -->
+  @if (tab === 'organisations') {
+    <section class="ops-panel">
+      <div class="ops-panel__header">
+        <div>
+          <p class="ops-section-label">Directory</p>
+          <h2 class="ops-panel__title">Partner organisations</h2>
+        </div>
+        <div class="ops-search">
+          <lucide-icon name="search" class="sponsor-search-icon"></lucide-icon>
+          <input
+            type="search"
+            [ngModel]="orgQuery"
+            (ngModelChange)="onOrgQueryChange($event)"
+            placeholder="Search name or registration number"
+            aria-label="Search organisations"
+          />
+        </div>
+      </div>
+      <div class="marketplace-subfilters">
+        <label class="marketplace-subfilters__select">
+          <span class="sr-only">Partner type</span>
+          <select class="ops-select" [ngModel]="orgKind" (ngModelChange)="setOrgKind($event)" aria-label="Partner type">
+            @for (option of kindFilters; track option.value) {
+              <option [value]="option.value">{{ option.label }}</option>
+            }
+          </select>
+        </label>
+        <label class="marketplace-subfilters__select">
+          <span class="sr-only">Status</span>
+          <select class="ops-select" [ngModel]="orgStatus" (ngModelChange)="setOrgStatus($event)" aria-label="Organisation status">
+            <option value="">All statuses</option>
+            @for (option of orgStatuses; track option.value) {
+              <option [value]="option.value">{{ option.label }}</option>
+            }
+          </select>
+        </label>
+      </div>
+
+      @if (organizationsLoading) {
+        <div class="ops-panel__body">
+          <app-ops-page-skeleton variant="table" [rows]="5"></app-ops-page-skeleton>
+        </div>
+      } @else if (!organizations.length) {
+        <div class="ops-empty">
+          <p class="ops-empty__title">No organisations match these filters</p>
+          <p class="ops-empty__text">An organisation is created when you approve its application.</p>
+        </div>
+      } @else {
+        <div class="users-table-wrap">
+          <table class="users-table">
+            <thead>
+              <tr>
+                <th>Organisation</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th class="sponsor-num">Team</th>
+                <th class="sponsor-num">Programmes</th>
+                <th class="sponsor-num">Eligible</th>
+                <th class="sponsor-num">Active enrolments</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (org of pagedOrganizations; track org.id) {
+                <tr class="application-row" (click)="openOrganization(org)">
+                  <td>
+                    <div>{{ org.name }}</div>
+                    @if (org.medicalSchemeName) {
+                      <div class="users-detail__note">{{ org.medicalSchemeName }}</div>
+                    } @else if (org.industry) {
+                      <div class="users-detail__note">{{ org.industry }}</div>
+                    }
+                  </td>
+                  <td>{{ kindLabel(org.kind) }}</td>
+                  <td>
+                    <span
+                      class="ops-badge"
+                      [class.ops-badge--green]="org.status === 'active'"
+                      [class.ops-badge--suspended]="org.status === 'suspended'"
+                      [class.ops-badge--slate]="org.status === 'offboarded'"
+                    >
+                      {{ statusLabel(org.status) }}
+                    </span>
+                  </td>
+                  <td class="sponsor-num">{{ count(org.counts.members) }}</td>
+                  <td class="sponsor-num">{{ count(org.counts.programmes) }}</td>
+                  <td class="sponsor-num">{{ count(org.counts.eligible) }}</td>
+                  <td class="sponsor-num">{{ count(org.counts.activeEnrolments) }}</td>
+                  <td>
+                    <button
+                      type="button"
+                      class="ops-btn ops-btn--secondary"
+                      (click)="openOrganization(org); $event.stopPropagation()"
+                    >
+                      View
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <app-ops-pagination
+          [total]="organizations.length"
+          [pageIndex]="orgPageIndex"
+          [pageSize]="pageSize"
+          itemLabel="organisations"
+          (pageIndexChange)="orgPageIndex = $event"
+          (pageSizeChange)="onPageSizeChange($event)"
+        ></app-ops-pagination>
+      }
+    </section>
+  }
+
+  <!-- Programmes -->
+  @if (tab === 'programmes') {
+    <section class="ops-panel">
+      <div class="ops-panel__header">
+        <div>
+          <p class="ops-section-label">Activation</p>
+          <h2 class="ops-panel__title">Sponsored programmes</h2>
+        </div>
+        <span class="ops-badge ops-badge--slate">{{ programmes.length }}</span>
+      </div>
+      <div class="marketplace-subfilters">
+        <div class="marketplace-tablist marketplace-tablist--compact" role="group" aria-label="Programme status">
+          @for (option of programmeStatuses; track option.value) {
+            <button
+              type="button"
+              class="marketplace-tab"
+              [class.marketplace-tab--active]="programmeStatus === option.value"
+              (click)="setProgrammeStatus(option.value)"
+            >
+              {{ option.label }}
+            </button>
+          }
+        </div>
+      </div>
+
+      @if (programmesLoading) {
+        <div class="ops-panel__body">
+          <app-ops-page-skeleton variant="table" [rows]="4"></app-ops-page-skeleton>
+        </div>
+      } @else if (!programmes.length) {
+        <div class="ops-empty">
+          <p class="ops-empty__title">No programmes match this filter</p>
+          <p class="ops-empty__text">
+            Partners build programmes in the partner portal and submit them. Submitted programmes wait here for Anixi to activate them.
+          </p>
+        </div>
+      } @else {
+        <ul class="sponsor-programmes">
+          @for (programme of pagedProgrammes; track programme.id) {
+            <li class="sponsor-programme">
+              <div class="sponsor-programme__head">
+                <div>
+                  <h3 class="sponsor-programme__name">{{ programme.name }}</h3>
+                  <p class="users-detail__note">
+                    {{ programme.organizationName }} · {{ kindLabel(programme.organizationKind) }}
+                  </p>
+                </div>
+                <span
+                  class="ops-badge"
+                  [class.ops-badge--pending]="programme.status === 'pending_activation'"
+                  [class.ops-badge--green]="programme.status === 'active'"
+                  [class.ops-badge--draft]="programme.status === 'draft'"
+                  [class.ops-badge--slate]="programme.status === 'closed'"
+                >
+                  {{ programmeStatusLabel(programme.status) }}
+                </span>
+              </div>
+
+              @if (programme.description) {
+                <p class="sponsor-programme__desc">{{ programme.description }}</p>
+              }
+
+              <dl class="application-detail__grid sponsor-programme__facts">
+                <div>
+                  <dt>Programme type</dt>
+                  <dd>{{ programmeKindLabel(programme.kind) }}</dd>
+                </div>
+                <div>
+                  <dt>How Warriors join</dt>
+                  <dd>{{ enrolmentModeLabel(programme.enrolmentMode) }}</dd>
+                </div>
+                <div>
+                  <dt>Runs</dt>
+                  <dd>{{ programme.startsOn ? formatDay(programme.startsOn) : 'From activation' }} to {{ programme.endsOn ? formatDay(programme.endsOn) : 'no end date' }}</dd>
+                </div>
+                <div>
+                  <dt>Care management offered</dt>
+                  <dd>{{ programme.offersCareManagement ? 'Yes, Warriors can opt in' : 'No' }}</dd>
+                </div>
+                <div>
+                  <dt>Consent version</dt>
+                  <dd>{{ text(programme.consentVersion) }}</dd>
+                </div>
+                <div>
+                  <dt>Last updated</dt>
+                  <dd>{{ formatDateTime(programme.updatedAt) }}</dd>
+                </div>
+                @if (programme.activatedAt) {
+                  <div>
+                    <dt>Activated</dt>
+                    <dd>{{ formatDateTime(programme.activatedAt) }}</dd>
+                  </div>
+                }
+                @if (programme.joinCode) {
+                  <div>
+                    <dt>Join code</dt>
+                    <dd class="sponsor-code">{{ programme.joinCode }}</dd>
+                  </div>
+                }
+                <div class="application-detail__full">
+                  <dt>Conditions</dt>
+                  <dd>
+                    @if (programme.conditions.length) {
+                      <span class="sponsor-chips">
+                        @for (condition of programme.conditions; track condition) {
+                          <span class="sponsor-chip">{{ conditionLabel(condition) }}</span>
+                        }
+                      </span>
+                    } @else {
+                      No specific conditions
+                    }
+                  </dd>
+                </div>
+                <div class="application-detail__full">
+                  <dt>Benefits</dt>
+                  <dd>
+                    @if (benefitList(programme.benefits).length) {
+                      <ul class="sponsor-benefits">
+                        @for (benefit of benefitList(programme.benefits); track benefit.label) {
+                          <li>
+                            <span>{{ benefit.label }}</span>
+                            <strong>{{ benefit.value }}</strong>
+                          </li>
+                        }
+                      </ul>
+                    } @else {
+                      No benefits listed
+                    }
+                  </dd>
+                </div>
+              </dl>
+
+              @if (canManage && programmeActions(programme).length) {
+                <div class="sponsor-programme__actions">
+                  @for (action of programmeActions(programme); track action) {
+                    <button
+                      type="button"
+                      class="ops-btn"
+                      [class.ops-btn--primary]="action === 'activate'"
+                      [class.ops-btn--secondary]="action === 'return'"
+                      [class.ops-btn--danger]="action === 'close'"
+                      [disabled]="programmeBusyId === programme.id"
+                      (click)="confirmProgrammeAction(programme, action)"
+                    >
+                      {{ actionLabel(action) }}
+                    </button>
+                  }
+                </div>
+              }
+            </li>
+          }
+        </ul>
+        <app-ops-pagination
+          [total]="programmes.length"
+          [pageIndex]="programmePageIndex"
+          [pageSize]="pageSize"
+          itemLabel="programmes"
+          (pageIndexChange)="programmePageIndex = $event"
+          (pageSizeChange)="onPageSizeChange($event)"
+        ></app-ops-pagination>
+      }
+    </section>
+  }
+</div>
+
+<!-- Application review (marketplace-style modal) -->
+<nz-modal
+  [nzVisible]="applicationModalVisible"
+  [nzTitle]="selectedApplication?.organizationName || 'Application details'"
+  [nzWidth]="760"
+  [nzFooter]="applicationFooter"
+  [nzCentered]="true"
+  nzClassName="marketplace-detail-modal"
+  (nzVisibleChange)="onApplicationModalVisibleChange($event)"
+  (nzOnCancel)="closeApplication()"
+>
+  <ng-container *nzModalContent>
+    @if (selectedApplication; as app) {
+      <div class="application-detail application-detail--modal">
+        <div class="application-detail__status">
+          <span
+            class="ops-badge"
+            [class.ops-badge--pending]="app.status === 'pending'"
+            [class.ops-badge--green]="app.status === 'approved'"
+            [class.ops-badge--red]="app.status === 'rejected'"
+          >
+            {{ app.status }}
+          </span>
+        </div>
+
+        @if (decisionMode === 'approve') {
+          <section class="application-detail__section sponsor-decision sponsor-decision--first">
+            <h3>Approve</h3>
+            <p class="sponsor-decision__hint">
+              Approving creates the organisation and makes the applicant its owner. Confirm the signed data processing agreement.
+            </p>
+            <div class="sponsor-form-grid sponsor-form-grid--modal">
+              <label class="ops-field sponsor-form-grid__cell">
+                <span class="ops-field__label">Date the data processing agreement was signed (required)</span>
+                <input type="date" class="ops-input" [(ngModel)]="approveForm.dpaSignedAt" required />
+              </label>
+              <label class="ops-field sponsor-form-grid__cell">
+                <span class="ops-field__label">Agreement version (optional)</span>
+                <input type="text" class="ops-input" maxlength="32" [(ngModel)]="approveForm.dpaVersion" placeholder="For example v1.0" />
+              </label>
+              <label class="ops-field sponsor-form-grid__cell">
+                <span class="ops-field__label">Contract start (optional)</span>
+                <input type="date" class="ops-input" [(ngModel)]="approveForm.contractStart" />
+              </label>
+              <label class="ops-field sponsor-form-grid__cell">
+                <span class="ops-field__label">Contract end (optional)</span>
+                <input type="date" class="ops-input" [(ngModel)]="approveForm.contractEnd" />
+              </label>
+            </div>
+          </section>
+        }
+
+        @if (decisionMode === 'reject') {
+          <section class="application-detail__section sponsor-decision sponsor-decision--first">
+            <h3>Reject</h3>
+            <label class="ops-field">
+              <span class="ops-field__label">Reason (the applicant sees this)</span>
+              <textarea
+                class="ops-textarea"
+                rows="4"
+                maxlength="2000"
+                [(ngModel)]="rejectReason"
+                placeholder="Tell them what is missing or what to fix"
+              ></textarea>
+            </label>
+          </section>
+        }
+
+        <section class="application-detail__section">
+          <h3>Organisation</h3>
+          <dl class="application-detail__grid">
+            <div>
+              <dt>Partner type</dt>
+              <dd>{{ kindLabel(app.kind) }}</dd>
+            </div>
+            <div>
+              <dt>Trading name</dt>
+              <dd>{{ text(app.organizationName) }}</dd>
+            </div>
+            <div>
+              <dt>Legal name</dt>
+              <dd>{{ text(app.legalName) }}</dd>
+            </div>
+            <div>
+              <dt>Registration number</dt>
+              <dd>{{ text(app.registrationNumber) }}</dd>
+            </div>
+            @if (app.kind === 'insurer') {
+              <div>
+                <dt>Medical scheme</dt>
+                <dd>{{ text(app.medicalSchemeName) }}</dd>
+              </div>
+            } @else {
+              <div>
+                <dt>Industry</dt>
+                <dd>{{ text(app.industry) }}</dd>
+              </div>
+            }
+            <div>
+              <dt>{{ app.kind === 'insurer' ? 'Members covered' : 'Employees' }}</dt>
+              <dd>{{ number(app.coveredLives) }}</dd>
+            </div>
+            <div class="application-detail__full">
+              <dt>Website</dt>
+              <dd>
+                @if (app.website) {
+                  <a [href]="app.website" target="_blank" rel="noopener noreferrer">{{ app.website }}</a>
+                } @else {
+                  {{ empty }}
+                }
+              </dd>
+            </div>
+          </dl>
+        </section>
+
+        <section class="application-detail__section">
+          <h3>Location and contact</h3>
+          <dl class="application-detail__grid">
+            <div>
+              <dt>Contact person</dt>
+              <dd>{{ text(app.contactName) }}</dd>
+            </div>
+            <div>
+              <dt>Contact email</dt>
+              <dd>{{ text(app.contactEmail) }}</dd>
+            </div>
+            <div>
+              <dt>Contact phone</dt>
+              <dd>{{ text(app.contactPhone) }}</dd>
+            </div>
+            <div>
+              <dt>City</dt>
+              <dd>{{ text(app.city) }}</dd>
+            </div>
+            <div>
+              <dt>Province</dt>
+              <dd>{{ text(app.province) }}</dd>
+            </div>
+            <div>
+              <dt>Country</dt>
+              <dd>{{ text(app.country) }}</dd>
+            </div>
+          </dl>
+        </section>
+
+        <section class="application-detail__section">
+          <h3>What they want</h3>
+          <dl class="application-detail__grid">
+            <div class="application-detail__full">
+              <dt>Interests</dt>
+              <dd>
+                @if (app.interests.length) {
+                  <span class="sponsor-chips">
+                    @for (interest of app.interests; track interest) {
+                      <span class="sponsor-chip">{{ conditionLabel(interest) }}</span>
+                    }
+                  </span>
+                } @else {
+                  {{ empty }}
+                }
+              </dd>
+            </div>
+            <div class="application-detail__full">
+              <dt>Notes from the applicant</dt>
+              <dd class="application-detail__multiline">{{ text(app.notes) }}</dd>
+            </div>
+          </dl>
+        </section>
+
+        <section class="application-detail__section">
+          <h3>Applicant account and review</h3>
+          <dl class="application-detail__grid">
+            <div>
+              <dt>Account email</dt>
+              <dd>{{ text(app.applicantEmail) }}</dd>
+            </div>
+            <div>
+              <dt>Submitted</dt>
+              <dd>{{ formatDateTime(app.createdAt) }}</dd>
+            </div>
+            @if (app.reviewedAt) {
+              <div>
+                <dt>Reviewed</dt>
+                <dd>{{ formatDateTime(app.reviewedAt) }}</dd>
+              </div>
+            }
+            @if (app.rejectionReason) {
+              <div class="application-detail__full">
+                <dt>Reason given</dt>
+                <dd class="application-detail__multiline">{{ app.rejectionReason }}</dd>
+              </div>
+            }
+          </dl>
+        </section>
+
+        @if (drawerError) {
+          <p class="ops-flash ops-flash--error">{{ drawerError }}</p>
+        }
+      </div>
+    }
+  </ng-container>
+</nz-modal>
+
+<ng-template #applicationFooter>
+  <div class="marketplace-row-actions marketplace-row-actions--end">
+    @if (decisionMode === 'view') {
+      <button type="button" class="ops-btn ops-btn--secondary" (click)="closeApplication()">Close</button>
+      @if (canManage && selectedApplication?.status === 'pending') {
+        <button type="button" class="ops-btn ops-btn--secondary" (click)="startDecision('reject')">Reject</button>
+        <button type="button" class="ops-btn ops-btn--primary" (click)="startDecision('approve')">Approve</button>
+      }
+    } @else {
+      <button type="button" class="ops-btn ops-btn--secondary" [disabled]="isSaving" (click)="backToView()">
+        Back
+      </button>
+      @if (decisionMode === 'approve') {
+        <button
+          type="button"
+          class="ops-btn ops-btn--primary"
+          [disabled]="isSaving || !approveForm.dpaSignedAt"
+          (click)="approveSelected()"
+        >
+          {{ isSaving ? 'Approving…' : 'Approve application' }}
+        </button>
+      } @else {
+        <button
+          type="button"
+          class="ops-btn ops-btn--danger"
+          [disabled]="isSaving || !rejectReason.trim()"
+          (click)="rejectSelected()"
+        >
+          {{ isSaving ? 'Rejecting…' : 'Reject application' }}
+        </button>
+      }
+    }
+  </div>
+</ng-template>
+
+<!-- Organisation detail -->
+<nz-modal
+  [nzVisible]="orgModalVisible"
+  [nzWidth]="760"
+  [nzTitle]="selectedOrg?.name || 'Organisation'"
+  [nzFooter]="selectedOrg ? (canManage ? orgFooter : orgReadonlyFooter) : undefined"
+  [nzCentered]="true"
+  nzClassName="marketplace-detail-modal"
+  (nzVisibleChange)="onOrgModalVisibleChange($event)"
+  (nzOnCancel)="closeOrganization()"
+>
+  <ng-container *nzModalContent>
+    @if (orgDetailLoading) {
+      <app-ops-page-skeleton variant="table" [rows]="6"></app-ops-page-skeleton>
+    } @else if (selectedOrg; as org) {
+      <div class="application-detail application-detail--modal">
+        <div class="application-detail__status">
+          <span
+            class="ops-badge"
+            [class.ops-badge--green]="org.status === 'active'"
+            [class.ops-badge--suspended]="org.status === 'suspended'"
+            [class.ops-badge--slate]="org.status === 'offboarded'"
+          >
+            {{ statusLabel(org.status) }}
+          </span>
+        </div>
+
+        @let metrics = orgCounts(org);
+        <div class="ops-metrics ops-metrics--compact sponsor-metrics" aria-label="Organisation summary">
+          <article class="ops-metric ops-metric--slate">
+            <p class="ops-metric__label">Team</p>
+            <p class="ops-metric__value">{{ count(metrics.members) }}</p>
+          </article>
+          <article class="ops-metric ops-metric--slate">
+            <p class="ops-metric__label">Programmes</p>
+            <p class="ops-metric__value">{{ count(metrics.programmes) }}</p>
+          </article>
+          <article class="ops-metric ops-metric--slate">
+            <p class="ops-metric__label">Eligible</p>
+            <p class="ops-metric__value">{{ count(metrics.eligible) }}</p>
+          </article>
+          <article class="ops-metric ops-metric--green">
+            <p class="ops-metric__label">Active enrolments</p>
+            <p class="ops-metric__value">{{ count(metrics.activeEnrolments) }}</p>
+          </article>
+        </div>
+
+        <section class="application-detail__section">
+          <h3>Organisation</h3>
+          <dl class="application-detail__grid">
+            <div>
+              <dt>Partner type</dt>
+              <dd>{{ kindLabel(org.kind) }}</dd>
+            </div>
+            <div>
+              <dt>Legal name</dt>
+              <dd>{{ text(org.legalName) }}</dd>
+            </div>
+            <div>
+              <dt>Registration number</dt>
+              <dd>{{ text(org.registrationNumber) }}</dd>
+            </div>
+            @if (org.kind === 'insurer') {
+              <div>
+                <dt>Medical scheme</dt>
+                <dd>{{ text(org.medicalSchemeName) }}</dd>
+              </div>
+            } @else {
+              <div>
+                <dt>Industry</dt>
+                <dd>{{ text(org.industry) }}</dd>
+              </div>
+            }
+            <div>
+              <dt>{{ org.kind === 'insurer' ? 'Members covered' : 'Employees' }}</dt>
+              <dd>{{ number(org.coveredLives) }}</dd>
+            </div>
+            <div>
+              <dt>Location</dt>
+              <dd>{{ location(org) }}</dd>
+            </div>
+            <div>
+              <dt>Website</dt>
+              <dd>
+                @if (org.website) {
+                  <a [href]="org.website" target="_blank" rel="noopener noreferrer">{{ org.website }}</a>
+                } @else {
+                  {{ empty }}
+                }
+              </dd>
+            </div>
+            <div>
+              <dt>Created</dt>
+              <dd>{{ formatDateTime(org.createdAt) }}</dd>
+            </div>
+          </dl>
+        </section>
+
+        <section class="application-detail__section">
+          <h3>Agreement and settings</h3>
+          @if (canManage) {
+            <div class="sponsor-form-grid sponsor-form-grid--modal">
+              <label class="ops-field sponsor-form-grid__cell">
+                <span class="ops-field__label">Status</span>
+                <select class="ops-select" [(ngModel)]="orgForm.status">
+                  @for (option of orgStatuses; track option.value) {
+                    <option [value]="option.value">{{ option.label }}</option>
+                  }
+                </select>
+              </label>
+              <label class="ops-field sponsor-form-grid__cell">
+                <span class="ops-field__label">Minimum group size (5 to 100)</span>
+                <input type="number" class="ops-input" min="5" max="100" step="1" [(ngModel)]="orgForm.minCohortSize" />
+                <span class="ops-field__hint sponsor-form-grid__hint">
+                  Totals for groups smaller than this are hidden from the partner.
+                </span>
+              </label>
+              <label class="ops-field sponsor-form-grid__cell">
+                <span class="ops-field__label">Data processing agreement signed</span>
+                <input type="date" class="ops-input" [(ngModel)]="orgForm.dpaSignedAt" />
+              </label>
+              <label class="ops-field sponsor-form-grid__cell">
+                <span class="ops-field__label">Agreement version</span>
+                <input type="text" class="ops-input" maxlength="32" [(ngModel)]="orgForm.dpaVersion" />
+              </label>
+              <label class="ops-field sponsor-form-grid__cell">
+                <span class="ops-field__label">Contract start</span>
+                <input type="date" class="ops-input" [(ngModel)]="orgForm.contractStart" />
+              </label>
+              <label class="ops-field sponsor-form-grid__cell">
+                <span class="ops-field__label">Contract end</span>
+                <input type="date" class="ops-input" [(ngModel)]="orgForm.contractEnd" />
+              </label>
+              <label class="ops-field sponsor-form-grid__full">
+                <span class="ops-field__label">Billing email</span>
+                <input type="email" class="ops-input" [(ngModel)]="orgForm.billingEmail" />
+              </label>
+            </div>
+          } @else {
+            <dl class="application-detail__grid">
+              <div>
+                <dt>Minimum group size</dt>
+                <dd>{{ org.minCohortSize }}</dd>
+              </div>
+              <div>
+                <dt>Billing email</dt>
+                <dd>{{ text(org.billingEmail) }}</dd>
+              </div>
+              <div>
+                <dt>Data processing agreement signed</dt>
+                <dd>{{ formatDay(org.dpaSignedAt) }}</dd>
+              </div>
+              <div>
+                <dt>Agreement version</dt>
+                <dd>{{ text(org.dpaVersion) }}</dd>
+              </div>
+              <div>
+                <dt>Contract start</dt>
+                <dd>{{ formatDay(org.contractStart) }}</dd>
+              </div>
+              <div>
+                <dt>Contract end</dt>
+                <dd>{{ formatDay(org.contractEnd) }}</dd>
+              </div>
+            </dl>
+          }
+        </section>
+
+        <section class="application-detail__section">
+          <h3>Team ({{ org.members.length }})</h3>
+          @if (!org.members.length) {
+            <p class="application-detail__empty">No team members yet.</p>
+          } @else {
+            <div class="users-table-wrap">
+              <table class="users-table">
+                <thead>
+                  <tr>
+                    <th>Person</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (member of org.members; track member.id) {
+                    <tr>
+                      <td>
+                        <div class="sponsor-row__title">{{ member.displayName || member.email || empty }}</div>
+                        @if (member.displayName && member.email) {
+                          <div class="users-detail__note">{{ member.email }}</div>
+                        }
+                      </td>
+                      <td>{{ roleLabel(member.role) }}</td>
+                      <td>
+                        {{ statusLabel(member.status) }}
+                        @if (member.inviteExpiresAt) {
+                          <div class="users-detail__note">Invite expires {{ formatDay(member.inviteExpiresAt) }}</div>
+                        }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </section>
+
+        <section class="application-detail__section">
+          <h3>Programmes ({{ org.programmes.length }})</h3>
+          @if (!org.programmes.length) {
+            <p class="application-detail__empty">This partner has not created any programmes yet.</p>
+          } @else {
+            <ul class="sponsor-org-programmes">
+              @for (programme of org.programmes; track programme.id) {
+                <li>
+                  <div class="sponsor-programme__head">
+                    <div>
+                      <span class="sponsor-row__title">{{ programme.name }}</span>
+                      <div class="users-detail__note">
+                        {{ programmeKindLabel(programme.kind) }} · {{ enrolmentModeLabel(programme.enrolmentMode) }}
+                      </div>
+                    </div>
+                    <span
+                      class="ops-badge"
+                      [class.ops-badge--pending]="programme.status === 'pending_activation'"
+                      [class.ops-badge--green]="programme.status === 'active'"
+                      [class.ops-badge--draft]="programme.status === 'draft'"
+                      [class.ops-badge--slate]="programme.status === 'closed'"
+                    >
+                      {{ programmeStatusLabel(programme.status) }}
+                    </span>
+                  </div>
+                  @if (programme.conditions.length) {
+                    <span class="sponsor-chips">
+                      @for (condition of programme.conditions; track condition) {
+                        <span class="sponsor-chip">{{ conditionLabel(condition) }}</span>
+                      }
+                    </span>
+                  }
+                </li>
+              }
+            </ul>
+          }
+        </section>
+
+        @if (orgError) {
+          <p class="ops-flash ops-flash--error">{{ orgError }}</p>
+        }
+      </div>
+    } @else if (orgError) {
+      <p class="ops-flash ops-flash--error">{{ orgError }}</p>
+    }
+  </ng-container>
+</nz-modal>
+
+<ng-template #orgFooter>
+  <div class="marketplace-row-actions marketplace-row-actions--spread">
+    <div class="marketplace-row-actions">
+      <button type="button" class="ops-btn ops-btn--secondary" (click)="closeOrganization()">Close</button>
+      @if (selectedOrg?.status === 'active') {
+        <button
+          type="button"
+          class="ops-btn ops-btn--secondary"
+          [disabled]="isSaving"
+          (click)="quickOrgStatus('suspended')"
+        >
+          Suspend on patient app
+        </button>
+      }
+      @if (selectedOrg?.status === 'suspended') {
+        <button
+          type="button"
+          class="ops-btn ops-btn--primary"
+          [disabled]="isSaving"
+          (click)="quickOrgStatus('active')"
+        >
+          Reactivate for patients
+        </button>
+      }
+    </div>
+    <div class="marketplace-row-actions">
+      <button type="button" class="ops-btn ops-btn--secondary" [disabled]="isSaving || !orgHasChanges" (click)="resetOrgForm()">
+        Undo changes
+      </button>
+      <button
+        type="button"
+        class="ops-btn ops-btn--primary"
+        [disabled]="isSaving || !orgHasChanges"
+        (click)="saveOrganization()"
+      >
+        {{ isSaving ? 'Saving…' : 'Save changes' }}
+      </button>
+    </div>
+  </div>
+</ng-template>
+
+<ng-template #orgReadonlyFooter>
+  <div class="marketplace-row-actions">
+    <button type="button" class="ops-btn ops-btn--secondary" (click)="closeOrganization()">Close</button>
+  </div>
+</ng-template>

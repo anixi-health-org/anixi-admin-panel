@@ -1,20 +1,31 @@
 :host {
   display: block;
+  width: 100%;
+  max-width: 100%;
 }
 
 .ops-pagination {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
   gap: 0.75rem 1rem;
+  width: 100%;
+  box-sizing: border-box;
   padding: 0.85rem 1rem;
   border-top: 1px solid #eef2ef;
   background: #fcfdfb;
+  border-radius: 0 0 var(--anixi-radius, 12px) var(--anixi-radius, 12px);
+}
+
+@media (max-width: 720px) {
+  .ops-pagination {
+    grid-template-columns: 1fr;
+  }
 }
 
 .ops-pagination__summary {
   margin: 0;
+  min-width: 0;
   font-size: 0.8125rem;
   color: var(--anixi-text-secondary);
 }

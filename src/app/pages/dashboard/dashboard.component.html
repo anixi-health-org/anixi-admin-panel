@@ -13,7 +13,7 @@
   </header>
 
   @if (isLoading) {
-    <app-ops-page-skeleton variant="metrics" [metrics]="6"></app-ops-page-skeleton>
+    <app-ops-page-skeleton variant="metrics" [metrics]="7"></app-ops-page-skeleton>
   } @else {
     <section class="dashboard-census" aria-label="Key metrics">
       @if (featuredMetric; as featured) {
@@ -32,7 +32,7 @@
             </span>
           </div>
           <div class="dashboard-census__total-body">
-            <p class="dashboard-census__total-value">{{ featured.value }}</p>
+            <p class="dashboard-census__total-value">{{ formatMetricValue(featured.value) }}</p>
             <p class="dashboard-census__total-hint">{{ featured.hint }}</p>
           </div>
         </button>
@@ -56,33 +56,12 @@
                 <lucide-icon [name]="metric.icon"></lucide-icon>
               </span>
             </div>
-            <p class="dashboard-census__tile-value">{{ metric.value }}</p>
+            <p class="dashboard-census__tile-value">{{ formatMetricValue(metric.value) }}</p>
             <p class="dashboard-census__tile-hint">{{ metric.hint }}</p>
           </button>
         }
       </div>
 
-      @if (endMetric; as end) {
-        <button
-          type="button"
-          class="dashboard-census__end"
-          [attr.data-tone]="end.tone || null"
-          [class.dashboard-census__end--clickable]="!!end.route && !end.disabled"
-          [disabled]="end.disabled"
-          (click)="openMetric(end)"
-        >
-          <div class="dashboard-census__tile-top">
-            <p class="dashboard-census__tile-label">{{ end.label }}</p>
-            <span class="dashboard-census__tile-icon" aria-hidden="true">
-              <lucide-icon [name]="end.icon"></lucide-icon>
-            </span>
-          </div>
-          <div class="dashboard-census__end-body">
-            <p class="dashboard-census__end-value">{{ end.value }}</p>
-            <p class="dashboard-census__tile-hint">{{ end.hint }}</p>
-          </div>
-        </button>
-      }
     </section>
   }
 
